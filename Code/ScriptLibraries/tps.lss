@@ -1,0 +1,569 @@
+'++LotusScript Development Environment:2:5:(Options):0:74
+Option Public
+Option Declare
+
+Use "fbyte"
+
+Use "tps.common"
+Use "tps.payments"
+Use "tps.contragents"
+Use "tps.contracts"
+Use "tps.hr"
+Use "tps.trc"
+Use "tps.payterms"
+Use "tps.bankguarantees"
+Use "tps.conferences"
+Use "tps.timetables"
+Use "tps.correspondence"
+Use "tps.acts"
+Use "tps.obligations"
+Use "tps.recruitment"
+Use "tps.building"
+Use "tps.projects"
+Use "tps.projects20"
+Use "tps.tenders"
+Use "tps.finance"
+Use "tps.legal"
+Use "tps.storage"
+Use "tps.core.directory"
+Use "tps.gateway"
+Use "tps.docflow"
+Use "tps.links"
+Use "tps.workflow"
+
+'++LotusScript Development Environment:2:5:(Forward):0:1
+Declare Class TPSService As FBase_Abstract_Service
+Declare Public Function getTPSService( in_sm As Variant ) As Variant
+
+'++LotusScript Development Environment:2:5:(Declarations):0:10
+'======================================================================================================================================
+'	CLASS TPSService
+'======================================================================================================================================
+Class TPSService As FBase_Abstract_Service
+	Private m_payments As Variant
+	Private m_hr As Variant
+	Private m_contragents As Variant
+	Private m_contracts As Variant
+	Private m_trc As Variant
+	Private m_payterms As Variant
+	Private m_bankguarantees As Variant
+	Private m_conferences As Variant
+	Private m_timetables As Variant
+	Private m_correspondence As Variant
+	Private m_acts As Variant
+	Private m_obligations As Variant
+	Private m_recruitments As Variant
+	Private m_building As Variant
+	Private m_projects As Variant
+	Private m_projects20 As Variant
+	Private m_tenders As Variant
+	Private m_finance As Variant
+	Private m_legal As Variant
+	Private m_storage As Variant
+	Private m_directory As Variant
+	Private m_gateway As Variant
+	Private m_docflow As Variant
+	Private m_links As Variant
+	Private m_workflow As Variant
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	'	PUBLIC:
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Sub New( in_ps As Variant )
+	End Sub
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Function getObject( in_link As Variant ) As Variant
+		On Error Goto error_point
+		
+		Set getObject = Nothing
+		If ( in_link.domain Like "tps.payments.*" ) Then
+			Set getObject = Me.payments.getObject( in_link )
+		ElseIf ( in_link.domain Like "tps.hr.*" ) Then
+			Set getObject = Me.hr.getObject( in_link )
+		ElseIf ( in_link.domain Like "tps.catalogs.contragents.*" ) Then
+			Set getObject = Me.contragents.getObject( in_link )
+		ElseIf ( in_link.domain Like "tps.contracts.*" ) Then
+			Set getObject = Me.contracts.getObject( in_link )
+		ElseIf ( in_link.domain Like "tps.payterms.*" ) Then
+			Set getObject = Me.payterms.getObject( in_link )
+		ElseIf ( in_link.domain Like "tps.bankguarantees.*" ) Then
+			Set getObject = Me.bankguarantees.getObject( in_link )
+		ElseIf ( in_link.domain Like "tps.conferences.*" ) Then
+			Set getObject = Me.conferences.getObject( in_link )
+		ElseIf ( in_link.domain Like "tps.timetables.*" ) Then
+			Set getObject = Me.timetables.getObject( in_link )
+		ElseIf ( in_link.domain Like "tps.corresp.*" ) Then
+			Set getObject = Me.correspondence.getObject( in_link )
+		ElseIf ( in_link.domain Like "tps.acts.*" ) Then
+			Set getObject = Me.acts.getObject( in_link )	
+		ElseIf ( in_link.domain Like "tps.obligations.*" ) Then
+			Set getObject = Me.obligations.getObject( in_link )
+		ElseIf ( in_link.domain Like "tps.building.*" ) Then
+			Set getObject = Me.building.getObject( in_link )
+		ElseIf ( in_link.domain Like "tps.projects.*" ) Then
+			Set getObject = Me.projects.getObject( in_link )
+		ElseIf ( in_link.domain Like "tps.tenders.*" ) Then
+			Set getObject = Me.tenders.getObject( in_link )
+		ElseIf ( in_link.domain Like "tps.finance.*" ) Then
+			Set getObject = Me.finance.getObject( in_link )
+		ElseIf ( in_link.domain Like "tps.recruitment.*" ) Then
+			Set getObject = Me.recruitment.getObject( in_link )
+		ElseIf ( in_link.domain Like "tps.trc.*" ) Then
+			Set getObject = Me.trc.getObject( in_link )			
+		ElseIf ( in_link.domain Like "tps.legal.*" ) Then
+			Set getObject = Me.legal.getObject( in_link )			
+		ElseIf ( in_link.domain Like "tps.storage.*" ) Then
+			Set getObject = Me.storage.getObject( in_link )	
+		ElseIf ( in_link.domain Like "tps.core.directory.*" ) Then
+			Set getObject = Me.storage.getObject( in_link )	
+		ElseIf ( in_link.domain Like "tps.workflow.*" ) Then
+			Set getObject = Me.workflow.getObject( in_link )	
+		Else
+			Error 1001, "The package for object '" & in_link.domain & "' from parameter 'in_link.domain' is not registered"
+		End If
+		Exit Function
+		
+error_point:
+		On Error Goto 0
+		Error Err, Typename( Me ) & "." & Getthreadinfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Function	
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Property Get payments As Variant
+		On Error Goto error_point
+		
+		If Isempty(m_payments)Then
+			Set m_payments = New TPS_PaymentsService(Me.Me_Variant)
+		End If
+		Set payments = m_payments
+		Exit Property
+		
+error_point:
+		On Error Goto 0
+		Error Err, Typename( Me ) & "." & Getthreadinfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Property
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Property Get hr As Variant
+		On Error GoTo error_point
+		
+		If IsEmpty(m_hr)Then
+			Set m_hr = New TPS_HRService(Me.Me_Variant)
+		End If
+		Set hr = m_hr
+		Exit Property
+		
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Property
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Property Get contragents As Variant
+		On Error GoTo error_point
+		
+		If IsEmpty(m_contragents)Then
+			Set m_contragents = New TPS_ContragentsService(Me.Me_Variant)
+		End If
+		Set contragents = m_contragents
+		Exit Property
+		
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Property
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Property Get contracts As Variant
+		On Error GoTo error_point
+		
+		If IsEmpty(m_contracts)Then
+			Set m_contracts = New TPS_ContractsService(Me.Me_Variant)
+		End If
+		Set contracts = m_contracts
+		Exit Property
+		
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Property
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Property Get trc As Variant
+		On Error GoTo error_point
+		
+		If IsEmpty(m_trc)Then
+			Set m_trc = New TPS_TRCService( Me.Me_Variant )
+		End If
+		Set trc = m_trc
+		Exit Property
+		
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Property
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Property Get payterms As Variant
+		On Error GoTo error_point
+		
+		If IsEmpty(m_payterms)Then
+			Set m_payterms = New TPS_PaytermsService( Me.Me_Variant )
+		End If
+		Set payterms = m_payterms
+		Exit Property
+		
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Property
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Property Get bankguarantees As Variant
+		On Error GoTo error_point
+		
+		If IsEmpty(m_bankguarantees)Then
+			Set m_bankguarantees = New TPS_BG_Service( Me.Me_Variant )
+		End If
+		Set bankguarantees = m_bankguarantees
+		Exit Property
+		
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Property
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Property Get conferences As Variant
+		On Error GoTo error_point
+		
+		If IsEmpty(m_conferences)Then
+			Set m_conferences = New TPS_ConferencesService( Me.Me_Variant )
+		End If
+		Set conferences = m_conferences
+		Exit Property
+		
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Property
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Property Get timetables As Variant
+		On Error GoTo error_point
+		
+		If IsEmpty(m_conferences)Then
+			Set m_timetables = New TPS_TimetablesService( Me.Me_Variant )
+		End If
+		Set timetables = m_timetables
+		Exit Property
+		
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Property
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Property Get correspondence As Variant
+		On Error GoTo error_point
+		
+		If IsEmpty(m_correspondence)Then
+			Set m_correspondence = New TPS_CorrespService( Me.Me_Variant )
+		End If
+		Set correspondence = m_correspondence
+		Exit Property
+		
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Property
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Property Get acts As Variant
+		On Error GoTo error_point
+		
+		If IsEmpty(m_acts)Then
+			Set m_acts = New TPS_ActService( Me.Me_Variant )
+		End If
+		Set acts = m_acts
+		Exit Property
+		
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Property
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Property Get obligations As Variant
+		On Error GoTo error_point
+		
+		If IsEmpty(m_obligations)Then
+			Set m_obligations = New TPS_ObligationsService( Me.Me_Variant )
+		End If
+		Set obligations = m_obligations
+		Exit Property
+		
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Property
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Property Get recruitment As Variant
+		On Error GoTo error_point
+		
+		If IsEmpty(m_recruitments)Then
+			Set m_recruitments = New TPS_RecruitmentService( Me.Me_Variant )
+		End If
+		Set recruitment = m_recruitments
+		Exit Property
+		
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Property
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Property Get building As Variant
+		On Error GoTo error_point
+		
+		If IsEmpty(m_building)Then
+			Set m_building = New TPS_BuildingService( Me.Me_Variant )
+		End If
+		Set building = m_building
+		Exit Property
+		
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Property
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Property Get projects As Variant
+		On Error GoTo error_point
+		
+		If IsEmpty(m_projects)Then
+			Set m_projects = New TPS_ProjectsService( Me.Me_Variant )
+		End If
+		Set projects = m_projects
+		Exit Property
+		
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Property
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Property Get projects20 As Variant
+		On Error GoTo error_point
+		
+		If IsEmpty(m_projects20)Then
+			Set m_projects20 = New TPS_Projects20Service( Me.Me_Variant )
+		End If
+		Set projects20 = m_projects20
+		Exit Property
+		
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Property
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Property Get tenders As Variant
+		On Error GoTo error_point
+		
+		If IsEmpty(m_tenders)Then
+			Set m_tenders = New TPS_TendersService( Me.Me_Variant )
+		End If
+		Set tenders = m_tenders
+		Exit Property
+		
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Property
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Property Get finance As Variant
+		On Error GoTo error_point
+		
+		If IsEmpty(m_finance)Then
+			Set m_finance = New TPS_FinanceService( Me.Me_Variant )
+		End If
+		Set finance = m_finance
+		Exit Property
+		
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Property
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Property Get legal As Variant
+		On Error GoTo error_point
+		
+		If IsEmpty(m_legal)Then
+			Set m_legal = New TPS_LegalService( Me.Me_Variant )
+		End If
+		Set legal = m_legal
+		Exit Property
+		
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Property
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Property Get storage As Variant
+		On Error GoTo error_point
+		
+		If IsEmpty(m_storage)Then
+			Set m_storage = New TPS_StorageService( Me.Me_Variant )
+		End If
+		Set storage = m_storage
+		Exit Property
+		
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Property
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Property Get directory As Variant
+		On Error GoTo error_point
+		
+		If IsEmpty(m_directory)Then
+			Set m_directory = New TPS_DirectoryService( Me.Me_Variant )
+		End If
+		Set directory = m_directory
+		Exit Property
+		
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Property	
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Property Get gateway As Variant
+		On Error GoTo error_point
+		
+		If IsEmpty(m_gateway)Then
+			Set m_gateway = New TPS_Gateway_Service(Me.Me_Variant)
+		End If
+		Set gateway = m_gateway
+		Exit Property
+		
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Property
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Property Get docflow As Variant
+		On Error GoTo error_point
+		
+		If IsEmpty(m_docflow)Then
+			Set m_docflow = New TPS_Docflow_Service(Me.Me_Variant)
+		End If
+		
+		Set docflow = m_docflow
+		Exit Property
+		
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Property
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Property Get links As Variant
+		On Error GoTo error_point
+		
+		If IsEmpty( m_links )Then
+			Set m_links = New TPS_Links_Service(Me.Me_Variant)
+		End If
+		
+		Set links = m_links
+		Exit Property
+		
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Property
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Property Get workflow As Variant
+		On Error GoTo error_point
+		
+		If IsEmpty( m_workflow )Then
+			Set m_workflow = New TPS_Workflow_Service(Me.Me_Variant)
+		End If
+		
+		Set workflow = m_workflow
+		Exit Property
+		
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Property
+	
+End Class
+'++LotusScript Development Environment:2:1:getTPSService:1:8
+Public Function getTPSService( in_sm As Variant ) As Variant
+	On Error Goto error_point
+	
+	'//	получаем сервис fbyte.base.log
+	'Dim fBase As FBaseService, fBaseLog As FBase_LogService
+	'Set fBase = in_sm.base
+	'Set fBaseLog = fBase.Log
+	'---
+	
+	'//	конфигурируем параметры журналирвоания
+	'Dim fBaseLogConfig As FBase_LogConfig
+	'Set fBaseLogConfig = fBaseLog.Config
+	'fBaseLogConfig.isError = True
+	'fBaseLogConfig.isWarn = True
+	'---
+	
+	Set getTPSService = New TPSService( in_sm )
+	Exit Function
+	
+error_point:
+	On Error Goto 0
+	Error Err, Getthreadinfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+End Function
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

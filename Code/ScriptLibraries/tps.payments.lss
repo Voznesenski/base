@@ -1,0 +1,3429 @@
+'++LotusScript Development Environment:2:5:(Options):0:74
+Option Public
+Option Declare
+
+Use "fbyte"
+Use "tps.common"
+
+'++LotusScript Development Environment:2:5:(Forward):0:1
+Declare Public Class TPS_PaymentsService As FBase_Abstract_Service
+Declare Public Class TPS_Payments_Company As FBase_Abstract_Object_Doc
+Declare Public Class TPS_Payments_Company_ExportSettings
+Declare Public Class TPS_Payments_Company_ImportSettings
+Declare Public Class TPS_Payments_Department As FBase_Abstract_Object_Doc
+Declare Public Class TPS_Payments_BudgetItem As FBase_Abstract_Object_Doc
+Declare Public Class TPS_Payments_AccountType_OLD As FBase_Abstract_Object_Doc
+Declare Public Class TPS_Payments_AccountType As TPS_Payments_AccountType_OLD
+Declare Public Class TPS_Payments_AccountType_StageOwners
+Declare Public Class TPS_Payments_Account As FBase_Abstract_Object_Doc
+Declare Public Class TPS_Payments_Account_Specification As FBase_Abstract_Object_Doc
+Declare Public Class TPS_Payments_Specification_Sum As FBase_Abstract_Object_Doc
+Declare Public Class TPS_Payments_Specification_Sum_Details
+Declare Public Class TPS_Payments_Project As FBase_Abstract_Object_Doc
+Declare Public Class TPS_Payments_TaxTemplate As FBase_Abstract_Object_Doc
+Declare Public Class TPS_Payments_BudgetType As FBase_Abstract_Object_Doc
+Declare Public Class TPS_Payments_PayForCompany As FBase_Abstract_Object_Doc
+
+'++LotusScript Development Environment:2:5:(Declarations):0:10
+Private Const DATABASE_KEY = "tps.finance.payments"
+
+Const DOMAIN_TYPE_TPS_PAYMENTS_COMPANY = "tps.payments.company"
+Const DOMAIN_TYPE_TPS_PAYMENTS_DEPARTMENT = "tps.payments.department"
+Const DOMAIN_TYPE_TPS_PAYMENTS_BUDGET_ITEM = "tps.payments.budget_item"
+Const DOMAIN_TYPE_TPS_PAYMENTS_PROJECT = "tps.payments.project"
+Const DOMAIN_TYPE_TPS_PAYMENTS_TAXTEMPL = "tps.payments.taxtemplate"
+Const DOMAIN_TYPE_TPS_PAYMENTS_ACCOUNT_TYPE = "tps.payments.account_type"
+Const DOMAIN_TYPE_TPS_PAYMENTS_ACCOUNT = "tps.payments.account"
+Const DOMAIN_TYPE_TPS_PAYMENTS_ACCOUNT_SPEC = "tps.payments.account_specification"
+Const DOMAIN_TYPE_TPS_PAYMENTS_BUDGET_TYPE = "tps.payments.budget_type"
+Const DOMAIN_TYPE_TPS_PAYMENTS_PAYFOR_COMPANY = "tps.payments.pay_for_company"
+
+
+Const VALUTA_USD = "USD"
+Const VALUTA_EUR = "EUR"
+Const VALUTA_RUR = "RUR"
+Const VALUTA_GBP = "GBP"
+Const VALUTA_HKD = "HKD"
+Const VALUTA_UAH = "UAH"
+
+Const CONTRAGENT_TYPE_EXT = "1"
+Const CONTRAGENT_TYPE_INT = "2"
+
+
+
+
+
+
+
+
+'======================================================================================================================================
+'	CLASS TPS_PaymentsService
+'======================================================================================================================================
+Public Class TPS_PaymentsService As FBase_Abstract_Service
+	Private m_db As NotesDatabase
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Private Function getId( in_key As Variant ) As String
+		On Error Goto error_point
+		Call Me.log.enter( Typename( Me ) & "." & Getthreadinfo(1))
+		
+		Dim key As String
+		If ( Lcase( Typename( in_key )) = "objectlink" ) Then
+			key = in_key.id 
+		Elseif Isscalar( in_key ) Then 
+			key = in_key
+		Else
+			Error 1001, "The type of data of parameter 'in_key' is '" & Typename( in_key ) & "'. It is not supported"
+		End If
+		
+		getId = key
+		
+		Call Me.log.trace( "result: " & getId )
+		Call Me.log.exit( Typename( Me ) & "." & Getthreadinfo(1))
+		Exit Function
+		
+error_point:
+		On Error Goto 0
+		Error Err, Typename( Me ) & "." & Getthreadinfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Function
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	'	PUBLIC:
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Sub New( in_ps As Variant )
+	End Sub
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Property Get db As NotesDatabase
+		On Error Goto error_point
+		Call Me.log.enter( Typename( Me ) & "." & Getthreadinfo(1))
+		
+		If( m_db Is Nothing )Then
+			Set m_db = Me.sm.base.databases.get( DATABASE_KEY )
+		End If
+		Set db = m_db
+		
+		Call Me.log.traceObject( "result", db )		
+		Call Me.log.exit( Typename( Me ) & "." & Getthreadinfo(1))
+		Exit Property
+		
+error_point:
+		On Error Goto 0
+		Error Err, Typename( Me ) & "." & Getthreadinfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Property
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Function getObject( in_link As Variant ) As Variant
+		On Error Goto error_point
+		Call Me.log.enter( Typename( Me ) & "." & Getthreadinfo(1))
+		
+		Select Case in_link.domain
+		Case DOMAIN_TYPE_TPS_PAYMENTS_COMPANY, DOMAIN_TYPE_TPS_PAYMENTS_PAYFOR_COMPANY:
+			Set getObject = Me.getCompany( in_link )
+		Case DOMAIN_TYPE_TPS_PAYMENTS_DEPARTMENT:
+			Set getObject = Me.getDepartment( in_link )
+		Case DOMAIN_TYPE_TPS_PAYMENTS_BUDGET_ITEM:
+			Set getObject = Me.getBudgetItem( in_link )
+		Case DOMAIN_TYPE_TPS_PAYMENTS_ACCOUNT_TYPE:
+			Set getObject = Me.getAccountType( in_link )
+		Case DOMAIN_TYPE_TPS_PAYMENTS_ACCOUNT:
+			Set getObject = Me.getAccount( in_link )			
+		Case DOMAIN_TYPE_TPS_PAYMENTS_ACCOUNT_SPEC:
+			Set getObject = Me.getSpecification( in_link )
+		Case DOMAIN_TYPE_TPS_PAYMENTS_PROJECT:
+			Set getObject = Me.getProject( in_link )
+		Case DOMAIN_TYPE_TPS_PAYMENTS_TAXTEMPL
+			Set getObject = Me.getTaxTempl( in_link )
+		Case DOMAIN_TYPE_TPS_PAYMENTS_BUDGET_TYPE
+			Set getObject = Me.getBudgetType( in_link )
+		Case Else
+			Error 1001, "The data of type '" & in_link.domain & "' of parameter 'in_link.domain' is not supported"
+		End Select
+		
+		Call Me.log.traceObject( "result", getObject )
+		Call Me.log.exit( Typename( Me ) & "." & Getthreadinfo(1))
+		Exit Function
+		
+error_point:
+		On Error Goto 0
+		Error Err, Typename( Me ) & "." & Getthreadinfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Function
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------	
+	Function getDocObject( in_doc As NotesDocument ) As Variant
+		On Error Goto error_point
+		Call Me.log.enter( Typename( Me ) & "." & Getthreadinfo(1))
+		
+		Select Case in_doc.form(0)
+		Case "tps.payments.company":
+			Set getDocObject =  New TPS_Payments_Company( in_doc, Me.Me_variant )
+		Case "tps.payments.payForCompany":
+			Set getDocObject =  New TPS_Payments_PayForCompany( in_doc, Me.Me_variant )
+		Case "tps.payments.department", "tps.payments.department.resp":
+			Set getDocObject =  New TPS_Payments_Department( in_doc, Me.Me_variant )
+		Case "tps.payments.budget_item", "tps.payments.budget_item.resp":
+			Set getDocObject =  New TPS_Payments_BudgetItem( in_doc, Me.Me_variant )
+		Case "tps.payments.account_type":			
+			Set getDocObject =  New TPS_Payments_AccountType( in_doc, Me.Me_variant )
+		Case "tps.payments.account":
+			Set getDocObject =  New TPS_Payments_Account( in_doc, Me.Me_variant )
+		Case "tps.payments.account_specification":
+			Set getDocObject =  New TPS_Payments_Account_Specification( in_doc, Me.Me_variant )
+		Case "tps.payments.project", "tps.payments.project.resp":
+			Set getDocObject =  New TPS_Payments_Project( in_doc, Me.Me_variant )
+		Case "tps.payments.taxtemplate"
+			Set getDocObject =  New TPS_Payments_TaxTemplate( in_doc, Me.Me_variant )
+		Case "tps.payments.budget_type"	
+				Set getDocObject =  New TPS_Payments_BudgetType( in_doc, Me.Me_variant )
+		Case Else:
+			Error 1001, "Форма '" & in_doc.form(0) & "' не поддерживается"
+		End Select
+		
+		'Call Me.log.traceObject( "result", getDocObject )
+		Call Me.log.exit( Typename( Me ) & "." & Getthreadinfo(1))
+		Exit Function
+		
+error_point:
+		On Error Goto 0
+		Error Err, Typename( Me ) & "." & Getthreadinfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Function
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Function getCompany( in_key As Variant ) As Variant
+		On Error Goto error_point
+		Call Me.log.enter( Typename( Me ) & "." & Getthreadinfo(1))
+		
+		Dim key As String, vw As NotesView, dc As NotesDocumentCollection
+		key = Me.getId( in_key )
+		'Set vw = Me.sm.core.cache.getView( "tps.payments.companies.loolup", Me.db )
+		Set vw = Me.db.Getview("tps.payments.companies.loolup")
+		Set dc = vw.GetAllDocumentsByKey( key, True )
+		If ( dc.Count = 0 ) Then
+			Set Me.getCompany = Nothing
+		Elseif ( dc.Count > 1 ) Then
+			Error 1001, "In database '" & Me.db.Title & "' ( path: " & Me.db.FilePath & " ) founded more than one company by key '" & key & "' ( count: " & Cstr( dc.Count ) & " )"
+		Else
+			Set Me.getCompany = Me.getDocObject( dc.GetFirstDocument )
+		End If
+		
+		Call Me.log.traceObject( "result", getCompany )
+		Call Me.log.exit( Typename( Me ) & "." & Getthreadinfo(1))
+		Exit Function
+		
+error_point:
+		On Error Goto 0
+		Error Err, Typename( Me ) & "." & Getthreadinfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$ 
+	End Function
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Function getDepartment( in_key As Variant ) As Variant
+		On Error Goto error_point
+		Call Me.log.enter( Typename( Me ) & "." & Getthreadinfo(1))
+		
+		Dim key As String, vw As NotesView, dc As NotesDocumentCollection
+		key = Me.getId( in_key )
+		'Set vw = Me.sm.core.cache.getView( "tps.payments.departments.loolup", Me.db )
+		Set vw = Me.db.Getview("tps.payments.departments.loolup")
+		Set dc = vw.GetAllDocumentsByKey( key, True )
+		If ( dc.Count = 0 ) Then
+			Set Me.getDepartment = Nothing
+		Elseif ( dc.Count > 1 ) Then
+			Error 1001, "In database '" & Me.db.Title & "' ( path: " & Me.db.FilePath & " ) founded more than one department by key '" & key & "' ( count: " & Cstr( dc.Count ) & " )"
+		Else
+			Set Me.getDepartment = Me.getDocObject( dc.GetFirstDocument )
+		End If
+		
+		Call Me.log.traceObject( "result", getDepartment )
+		Call Me.log.exit( Typename( Me ) & "." & Getthreadinfo(1))
+		Exit Function
+		
+error_point:
+		On Error Goto 0
+		Error Err, Typename( Me ) & "." & Getthreadinfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$ 
+	End Function
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Function getBudgetItem( in_key As Variant ) As Variant
+		On Error Goto error_point
+		Call Me.log.enter( Typename( Me ) & "." & Getthreadinfo(1))
+		
+		Dim key As String, vw As NotesView, dc As NotesDocumentCollection
+		key = Me.getId( in_key )
+		'Set vw = Me.sm.core.cache.getView( "tps.payments.budget_items.loolup", Me.db )
+		Set vw = Me.db.Getview("tps.payments.budget_items.loolup")
+		Set dc = vw.GetAllDocumentsByKey( key, True )
+		If ( dc.Count = 0 ) Then
+			Set Me.getBudgetItem = Nothing
+		Elseif ( dc.Count > 1 ) Then
+			Error 1001, "In database '" & Me.db.Title & "' ( path: " & Me.db.FilePath & " ) founded more than one department by key '" & key & "' ( count: " & Cstr( dc.Count ) & " )"
+		Else
+			Set Me.getBudgetItem = Me.getDocObject( dc.GetFirstDocument )
+		End If
+		
+		Call Me.log.traceObject( "result", getBudgetItem )
+		Call Me.log.exit( Typename( Me ) & "." & Getthreadinfo(1))
+		Exit Function
+		
+error_point:
+		On Error Goto 0
+		Error Err, Typename( Me ) & "." & Getthreadinfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$ 
+	End Function
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Function getAccountType( in_key As Variant ) As Variant
+		On Error Goto error_point
+		Call Me.log.enter( Typename( Me ) & "." & Getthreadinfo(1))
+		
+		Dim key As String, vw As NotesView, dc As NotesDocumentCollection
+		key = Me.getId( in_key )
+		'Set vw = Me.sm.core.cache.getView( "tps.payments.account_types.loolup", Me.db )
+		Set vw = Me.db.Getview("tps.payments.account_types.loolup")
+		Set dc = vw.GetAllDocumentsByKey( key, True )
+		If ( dc.Count = 0 ) Then
+			Set Me.getAccountType = Nothing
+		Elseif ( dc.Count > 1 ) Then
+			Error 1001, "In database '" & Me.db.Title & "' ( path: " & Me.db.FilePath & " ) founded more than one account by key '" & key & "' ( count: " & Cstr( dc.Count ) & " )"
+		Else
+			Set Me.getAccountType = Me.getDocObject( dc.GetFirstDocument )
+		End If
+		
+		Call Me.log.traceObject( "result", getAccountType )
+		Call Me.log.exit( Typename( Me ) & "." & Getthreadinfo(1))
+		Exit Function
+		
+error_point:
+		On Error Goto 0
+		Error Err, Typename( Me ) & "." & Getthreadinfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$ 
+	End Function
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Function getAccount( in_key As Variant ) As Variant
+		On Error Goto error_point
+		Call Me.log.enter( Typename( Me ) & "." & Getthreadinfo(1))
+		
+		Dim key As String, vw As NotesView, dc As NotesDocumentCollection
+		key = Me.getId( in_key )
+		'Set vw = Me.sm.core.cache.getView( "tps.payments.accounts.lookup", Me.db )
+		Set vw = Me.db.Getview("tps.payments.accounts.lookup")
+		Set dc = vw.GetAllDocumentsByKey( key, True )
+		If ( dc.Count = 0 ) Then
+			Set Me.getAccount = Nothing
+		Elseif ( dc.Count > 1 ) Then
+			Error 1001, "In database '" & Me.db.Title & "' ( path: " & Me.db.FilePath & " ) founded more than one account by key '" & key & "' ( count: " & Cstr( dc.Count ) & " )"
+		Else
+			Set Me.getAccount = Me.getDocObject( dc.GetFirstDocument )
+		End If
+		
+		Call Me.log.traceObject( "result", getAccount )
+		Call Me.log.exit( Typename( Me ) & "." & Getthreadinfo(1))
+		Exit Function
+		
+error_point:
+		On Error Goto 0
+		Error Err, Typename( Me ) & "." & Getthreadinfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$ 
+	End Function
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Function addSpecification( in_account As Variant ) As Variant
+		On Error Goto error_point
+		Call Me.log.enter( Typename( Me ) & "." & Getthreadinfo(1))
+		
+		Dim doc As NotesDocument
+		Set doc = Me.db.CreateDocument
+		doc.form = "tps.payments.account_specification"
+		doc.domain = "tps.payments.account_specification"
+		doc.account_id = in_account.id
+		
+		doc.sum_total = 0
+		doc.sum_fact_month = 0
+		doc.sum_rest_month = 0
+		doc.sum_fact_period = 0
+		doc.sum_rest_period = 0
+		doc.sum_fact_year = 0
+		doc.sum_rest_year = 0
+		doc.ReplaceItemValue("DWF$Authors", in_account.nd.GetFirstItem("DWF$Authors").Values).IsAuthors = True
+		
+		Set addSpecification = Me.getDocObject( doc )
+		
+		Call Me.log.traceObject( "result", addSpecification )
+		Call Me.log.exit( Typename( Me ) & "." & Getthreadinfo(1))
+		Exit Function
+		
+error_point:
+		On Error Goto 0
+		Error Err, Typename( Me ) & "." & Getthreadinfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$ 
+	End Function
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Function getSpecifications( in_account As Variant ) As MixCollection
+		On Error Goto error_point
+		Call Me.log.enter( Typename( Me ) & "." & Getthreadinfo(1))
+		
+		Dim result As New MixCollection
+		Set getSpecifications = result
+		
+		Dim s As New NotesSession, cdb As NotesDatabase, vw As NotesView, dc As NotesDocumentCollection
+		Set cdb = s.CurrentDatabase
+		'Set vw = Me.ps.ps.core.cache.getView( "account.specifiactions.emb", cdb )
+		Set vw = Me.db.Getview("account.specifiactions.emb")
+		Call vw.Refresh
+		Set dc = vw.GetAllDocumentsByKey( in_account.id, True )
+		If ( dc.Count > 0 ) Then
+			Dim doc As NotesDocument
+			Set doc = dc.GetFirstDocument
+			Do While Not ( doc Is Nothing )
+				Dim spec As Variant
+				Set spec = Me.getDocObject( doc )
+				Call result.Append( spec )
+				Set doc = dc.GetNextDocument( doc )
+			Loop
+		End If
+		
+		Call Me.log.traceObject( "result", getSpecifications )
+		Call Me.log.exit( Typename( Me ) & "." & Getthreadinfo(1))
+		Exit Function
+		
+error_point:
+		On Error Goto 0
+		Error Err, Typename( Me ) & "." & Getthreadinfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Function
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Function getSpecification( in_key As Variant ) As Variant
+		On Error Goto error_point
+		Call Me.log.enter( Typename( Me ) & "." & Getthreadinfo(1))
+		
+		Dim key As String, vw As NotesView, dc As NotesDocumentCollection
+		key = Me.getId( in_key )
+		'Set vw = Me.sm.core.cache.getView( "tps.payments.specifications.loolup", Me.db )
+		Set vw = Me.db.Getview("tps.payments.specifications.loolup")
+		Set dc = vw.GetAllDocumentsByKey( key, True )
+		If ( dc.Count = 0 ) Then
+			Set Me.getSpecification = Nothing
+		Elseif ( dc.Count > 1 ) Then
+			Error 1001, "In database '" & Me.db.Title & "' ( path: " & Me.db.FilePath & " ) founded more than one specification by key '" & in_key & "' ( count: " & Cstr( dc.Count ) & " )"
+		Else
+			Set Me.getSpecification = Me.getDocObject( dc.GetFirstDocument )
+		End If
+		
+		Call Me.log.traceObject( "result", getSpecification )
+		Call Me.log.exit( Typename( Me ) & "." & Getthreadinfo(1))
+		Exit Function
+		
+error_point:
+		On Error Goto 0
+		Error Err, Typename( Me ) & "." & Getthreadinfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$ 
+	End Function
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Function getProject( in_key As Variant ) As Variant
+		On Error Goto error_point
+		Call Me.log.enter( Typename( Me ) & "." & Getthreadinfo(1))
+		
+		Dim key As String, vw As NotesView, dc As NotesDocumentCollection
+		key = Me.getId( in_key )
+		'Set vw = Me.sm.core.cache.getView( "tps.payments.projects.loolup", Me.db )
+		Set vw = Me.db.Getview("tps.payments.projects.loolup")
+		Set dc = vw.GetAllDocumentsByKey( key, True )
+		If ( dc.Count = 0 ) Then
+			Set Me.getProject = Nothing
+		Elseif ( dc.Count > 1 ) Then
+			Error 1001, "In database '" & Me.db.Title & "' ( path: " & Me.db.FilePath & " ) founded more than one specification by key '" & in_key & "' ( count: " & Cstr( dc.Count ) & " )"
+		Else
+			Set Me.getProject = Me.getDocObject( dc.GetFirstDocument )
+		End If
+		
+		Call Me.log.traceObject( "result", getProject )
+		Call Me.log.exit( Typename( Me ) & "." & Getthreadinfo(1))
+		Exit Function
+		
+error_point:
+		On Error Goto 0
+		Error Err, Typename( Me ) & "." & Getthreadinfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$ 
+	End Function
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Function getTaxTempl( in_key As Variant ) As Variant
+		On Error GoTo error_point
+		Call Me.log.enter( TypeName( Me ) & "." & GetThreadInfo(1))
+		
+		Dim key As String, vw As NotesView, dc As NotesDocumentCollection
+		key = Me.getId( in_key )
+		'Set vw = Me.sm.core.cache.getView( "tps.payments.taxtemplates.loolup", Me.db )
+		Set vw = Me.db.Getview("tps.payments.taxtemplates.loolup")
+		Set dc = vw.GetAllDocumentsByKey( key, True )
+		If ( dc.Count = 0 ) Then
+			Set Me.getTaxTempl = Nothing
+		ElseIf ( dc.Count > 1 ) Then
+			Error 1001, "In database '" & Me.db.Title & "' ( path: " & Me.db.FilePath & " ) founded more than one specification by key '" & in_key & "' ( count: " & CStr( dc.Count ) & " )"
+		Else
+			Set Me.getTaxTempl = Me.getDocObject( dc.GetFirstDocument )
+		End If
+		
+		Call Me.log.traceObject( "result", getTaxTempl )
+		Call Me.log.exit( TypeName( Me ) & "." & GetThreadInfo(1))
+		Exit Function
+		
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$ 
+	End Function
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Function getBudgetType( in_key As Variant ) As Variant
+		On Error GoTo error_point
+		Call Me.log.enter( TypeName( Me ) & "." & GetThreadInfo(1))
+		
+		Dim key As String, vw As NotesView, dc As NotesDocumentCollection, viewname As String
+		key = Me.getId( in_key )
+		'Set vw = Me.sm.core.cache.getView( "tps.payments.budget_types.loolup", Me.db )
+		viewname = "tps.payments.budget_types.loolup"
+		Set vw = Me.db.Getview( viewname )
+		If  Not ( vw Is Nothing ) Then
+			Set dc = vw.GetAllDocumentsByKey( key, True )
+			If ( dc.Count = 0 ) Then
+				Set Me.getBudgetType = Nothing
+			ElseIf ( dc.Count > 1 ) Then
+				Error 1001, "In database '" & Me.db.Title & "' ( path: " & Me.db.FilePath & " ) founded more than one specification by key '" & key & "' ( count: " & CStr( dc.Count ) & " )"
+			Else
+				Set Me.getBudgetType = Me.getDocObject( dc.GetFirstDocument )
+			End If	
+		Else
+			Error 1001, "In database '" & Me.db.Title & "' ( path: " & Me.db.FilePath & " ) empty view '" & viewname & "'"
+		End If 
+		
+		
+		Call Me.log.traceObject( "result", getBudgetType )
+		Call Me.log.exit( TypeName( Me ) & "." & GetThreadInfo(1))
+		Exit Function
+		
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$ 
+	End Function
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Function dialogSelectAccounts( in_isMult As Boolean ) As MixCollection
+		On Error Goto error_point
+		Call Me.log.enter( Typename( Me ) & "." & Getthreadinfo(1))
+		
+		Dim mxResult As New MixCollection
+		Set dialogSelectAccounts = mxResult
+		
+		Dim ws As New NotesUIWorkspace, ndc As NotesDocumentCollection
+		Set ndc = ws.PickListCollection( 3, in_isMult, Me.db.Server, Me.db.FilePath, "accounts.by_status", "Окно выбора задания на платеж", "Выделите необходимые документы и нажмите OK" )
+		
+		Dim doc As NotesDocument
+		Set doc = ndc.GetFirstDocument
+		Do While Not ( doc Is Nothing )
+			Dim account As Variant
+			Set account = Me.getDocObject( doc )
+			Call mxResult.Append( account )
+			Set doc = ndc.GetNextDocument( doc )
+		Loop
+		
+		Call Me.log.traceObject( "result", mxResult )
+		Call Me.log.exit( Typename( Me ) & "." & Getthreadinfo(1))
+		Exit Function
+		
+error_point:
+		On Error Goto 0
+		Error Err, Typename( Me ) & "." & Getthreadinfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$ 
+	End Function
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Function dialogSelectCompanies( in_isMult As Boolean ) As MixCollection
+		On Error Goto error_point
+		Call Me.log.enter( Typename( Me ) & "." & Getthreadinfo(1))
+		
+		Dim mxResult As New MixCollection
+		Set dialogSelectCompanies = mxResult
+		
+		Dim ws As New NotesUIWorkspace, ndc As NotesDocumentCollection
+		Set ndc = ws.PickListCollection( 3, in_isMult, Me.db.Server, Me.db.FilePath, "ui.companies.active", "Окно выбора компании", "Выделите необходимые документы и нажмите OK" )
+		
+		Dim doc As NotesDocument
+		Set doc = ndc.GetFirstDocument
+		Do While Not ( doc Is Nothing )
+			Dim account As Variant
+			Set account = Me.getDocObject( doc )
+			Call mxResult.Append( account )
+			Set doc = ndc.GetNextDocument( doc )
+		Loop
+		
+		Call Me.log.traceObject( "result", mxResult )
+		Call Me.log.exit( Typename( Me ) & "." & Getthreadinfo(1))
+		Exit Function
+		
+error_point:
+		On Error Goto 0
+		Error Err, Typename( Me ) & "." & Getthreadinfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$ 
+	End Function
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Function dialogSelectProject( in_isMult As Boolean, in_company As Variant ) As MixCollection
+		On Error Goto error_point
+		Call Me.log.enter( Typename( Me ) & "." & Getthreadinfo(1))
+		
+		Dim mxResult As New MixCollection
+		Set dialogSelectProject = mxResult
+		
+		Dim key As String
+		If Isscalar( in_company ) Then
+			key = in_company
+		Else
+			key = in_company.id 'in_company.title
+		End If
+		
+		Dim ws As New NotesUIWorkspace, ndc As NotesDocumentCollection, doc As NotesDocument
+		Dim viewname As String
+		viewname = "ui.projects.activeBycompany_id" '"ui.projects.active"
+		Set ndc = ws.PickListCollection( 3, in_isMult, Me.db.Server, Me.db.FilePath, viewname, "Окно выбора проекта", "Выделите необходимые документы и нажмите OK", key )
+		Set doc = ndc.GetFirstDocument
+		Do While Not ( doc Is Nothing )
+			Dim p As Variant
+			Set p = Me.getDocObject( doc )
+			If(p.isSelectable)Then
+				Call mxResult.Append( p )
+			Else
+				Msgbox "Проект '" & p.title & "' не предназначен для выбора", 48, "Application notice"
+			End If
+			
+			Set doc = ndc.GetNextDocument( doc )
+		Loop
+		
+		Call Me.log.traceObject( "result", mxResult )
+		Call Me.log.exit( Typename( Me ) & "." & Getthreadinfo(1))
+		Exit Function
+		
+error_point:
+		On Error Goto 0
+		Error Err, Typename( Me ) & "." & Getthreadinfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$ 
+	End Function
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Function getAccountTypeSub( in_key As Variant ) As Mixcollection
+		On Error GoTo error_point
+		Call Me.log.enter( TypeName( Me ) & "." & GetThreadInfo(1))
+		
+		Dim mxResult As New MixCollection
+		Set getAccountTypeSub = mxResult
+		
+		Dim key As String, vw As NotesView, dc As NotesDocumentCollection
+		key = Me.getId( in_key )
+		'Set vw = Me.sm.core.cache.getView( "(App.AccountType.SubByParentRef.lookup)", Me.db )
+		Set vw = Me.db.Getview("(App.AccountType.SubByParentRef.lookup)")
+		If ( vw Is Nothing ) Then
+			Error 4001, {Не найдено представление "(App.AccountType.SubByParentRef.lookup)"}
+		End If
+		Set dc = vw.GetAllDocumentsByKey( key, True )
+		If ( dc.Count > 0 ) Then
+			Dim doc As NotesDocument
+			Set doc = dc.GetFirstDocument
+			Do While Not ( doc Is Nothing )
+				Dim accountTypeSub As Variant
+				Set accountTypeSub = Me.getDocObject( doc )
+				If ( accountTypeSub.isActive ) Then
+					Call mxResult.Append( accountTypeSub )	
+				End If
+				Set doc = dc.GetNextDocument( doc )
+			Loop
+		End If
+		
+		Call Me.log.traceObject( "result", getAccountTypeSub )
+		Call Me.log.exit( TypeName( Me ) & "." & GetThreadInfo(1))
+		Exit Function
+		
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$ 
+	End Function
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------	
+	Function dialogSelectBudgetItems( in_isMulty As Boolean ) As MixCollection
+		On Error GoTo error_point
+		
+		Dim mxResult As New MixCollection
+		Set dialogSelectBudgetItems = mxResult
+		
+		Dim s As New NotesSession, cdb As NotesDatabase, ws As New NotesUIWorkspace, dc As NotesDocumentCollection
+		Set cdb = s.CurrentDatabase
+		Set dc = ws.PickListCollection( 3, in_isMulty, Me.db.Server, Me.db.FilePath, "ui.budget.items.active", "Выберите статью затрат", " " )
+		If ( dc.Count > 0 ) Then
+			Dim doc As NotesDocument
+			Set doc = dc.GetFirstDocument
+			Do While Not ( doc Is Nothing )
+				Dim item As Variant
+				Set item = Me.getDocObject( doc )
+				If ( item.isSelectable ) Then
+					Call mxResult.Append( item )
+				Else					
+					MsgBox "Статья бюджета '" & item.title & "'не предназначена для выбора.", 48, "Системное уведомление"
+				End If
+				Set doc = dc.GetNextDocument( doc )
+			Loop
+		End If
+		Exit Function
+		
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$			
+	End Function
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------	
+	Function dialogSelectBudgetItemsByBudgetType( in_key As String, in_isMulty As Boolean ) As MixCollection
+		On Error GoTo error_point
+		
+		Dim mxResult As New MixCollection
+		Set dialogSelectBudgetItemsByBudgetType = mxResult
+		
+		Dim s As New NotesSession, cdb As NotesDatabase, ws As New NotesUIWorkspace, dc As NotesDocumentCollection
+		'Set cdb = s.CurrentDatabase
+		Set dc = ws.PickListCollection( 3, in_isMulty, Me.db.Server, Me.db.FilePath, "ui.budgetItems.activeByBudgetType", "Выберите статью затрат", " ", in_key )
+		If ( dc.Count > 0 ) Then
+			Dim doc As NotesDocument
+			Set doc = dc.GetFirstDocument
+			Do While Not ( doc Is Nothing )
+				Dim item As Variant
+				Set item = Me.getDocObject( doc )
+				If ( item.isSelectable ) Then
+					Call mxResult.Append( item )
+				Else					
+					MsgBox "Статья бюджета '" & item.title & "'не предназначена для выбора.", 48, "Системное уведомление"
+				End If
+				Set doc = dc.GetNextDocument( doc )
+			Loop
+		End If
+		Exit Function
+		
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$			
+	End Function
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------	
+	Function dialogSelectBudgetType( in_isMulty As Boolean ) As MixCollection
+		On Error GoTo error_point
+		
+		Dim mxResult As New MixCollection
+		Set dialogSelectBudgetType = mxResult
+		
+		Dim s As New NotesSession, cdb As NotesDatabase, ws As New NotesUIWorkspace, dc As NotesDocumentCollection
+		'Set cdb = s.CurrentDatabase
+		Set dc = ws.PickListCollection( 3, in_isMulty, Me.db.Server, Me.db.FilePath, "ui.budget.types.active", "Выберите тип(ы) бюджета", " ")
+		If ( dc.Count > 0 ) Then
+			Dim doc As NotesDocument
+			Set doc = dc.GetFirstDocument
+			Do While Not ( doc Is Nothing )
+				Dim item As Variant
+				Set item = Me.getDocObject( doc )
+				
+				Call mxResult.Append( item )
+				
+				Set doc = dc.GetNextDocument( doc )
+			Loop
+		End If
+		Exit Function
+		
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$			
+	End Function
+	
+	
+End Class
+
+
+
+'======================================================================================================================================
+'	CLASS TPS_Payments_Company
+'======================================================================================================================================
+Public Class TPS_Payments_Company As FBase_Abstract_Object_Doc
+	Private m_docSettings As NotesDocument
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------	
+	' PUBLIC
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------	
+	Sub New( in_doc As NotesDocument, in_ps As Variant )
+	End Sub
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------	
+	Property Get filePath As String
+		On Error Goto error_point
+		Call Me.log.enter( Typename( Me ) & "." & Getthreadinfo(1))
+		
+		filePath = Me.getSettingsDocument().excel_file_path(0)
+		If ( filePath = "" ) Then 
+			Call Me.log.warn( "Путь к файлу пуст " )
+		End If
+		
+		Call Me.log.trace( "result: " & filePath )
+		Call Me.log.exit( Typename( Me ) & "." & Getthreadinfo(1))
+		Exit Property
+		
+error_point:
+		On Error Goto 0
+		Error Err, Typename( Me ) & "." & Getthreadinfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$		
+	End Property
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------	
+	Property Get export As Variant
+		On Error Goto error_point
+		Call Me.log.enter( Typename( Me ) & "." & Getthreadinfo(1))
+		
+		Set export = New TPS_Payments_Company_ExportSettings( Me.getSettingsDocument(), Me.Me_Variant )
+		
+		Call Me.log.exit( Typename( Me ) & "." & Getthreadinfo(1))
+		Exit Property
+		
+error_point:
+		On Error Goto 0
+		Error Err, Typename( Me ) & "." & Getthreadinfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$		
+	End Property
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------	
+	Property Get import As Variant
+		On Error Goto error_point
+		Call Me.log.enter( Typename( Me ) & "." & Getthreadinfo(1))
+		
+		Set import = New TPS_Payments_Company_ImportSettings( Me.getSettingsDocument(), Me.Me_Variant )
+		
+		Call Me.log.exit( Typename( Me ) & "." & Getthreadinfo(1))
+		Exit Property
+		
+error_point:
+		On Error Goto 0
+		Error Err, Typename( Me ) & "." & Getthreadinfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$		
+	End Property
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------	
+	Property Get code1c As String
+		On Error Goto error_point
+		Call Me.log.enter( Typename( Me ) & "." & Getthreadinfo(1))
+		
+		code1c = Cstr(Me.nd.code_1c(0))
+		If ( code1c = "" ) Then 
+			Call Me.log.warn( "Код 1С пуст " )	
+		End If
+		
+		Call Me.log.trace( "result: " & code1c )
+		Call Me.log.exit( Typename( Me ) & "." & Getthreadinfo(1))
+		Exit Property
+		
+error_point:
+		On Error Goto 0
+		Error Err, Typename( Me ) & "." & Getthreadinfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$		
+	End Property
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------	
+	Function getSettingsDocument As NotesDocument
+		On Error Goto error_point
+		Call Me.log.enter( Typename( Me ) & "." & Getthreadinfo(1))
+		
+		If ( m_docSettings Is Nothing ) Then
+			If ( Me.nd.GetItemValue( "$excel_options" )(0) = "private" ) Then
+				Set m_docSettings = Me.nd
+			Else
+				Dim companyExt As Variant
+				Set companyExt = Me.ps.getCompany( Me.nd.company_id(0))
+				If ( companyExt Is Nothing ) Then
+					Error 1001, "По ключу '" & Me.nd.company_id(0) & "' компания '" & Me.nd.company_title(0) & "' не найдена"
+				Else
+					Set m_docSettings = companyExt.nd
+				End If
+			End If
+		End If
+		Set getSettingsDocument = m_docSettings
+		
+		Call Me.log.traceObject( "result", m_docSettings )
+		Call Me.log.exit( Typename( Me ) & "." & Getthreadinfo(1))
+		Exit Function
+		
+error_point:
+		On Error Goto 0
+		Error Err, Typename( Me ) & "." & Getthreadinfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$		
+	End Function
+End Class
+
+
+'======================================================================================================================================
+'	CLASS TPS_Payments_Company_ExportSettings
+'======================================================================================================================================
+Public Class TPS_Payments_Company_ExportSettings
+	Private m_doc As NotesDocument
+	Private m_sm As Variant
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------	
+	Sub New( in_doc As NotesDocument, in_company As Variant )
+		On Error GoTo error_point
+		Call in_company.sm.base.log.enter( TypeName( Me ) & "." & GetThreadInfo(1))
+		
+		Set m_doc = in_doc
+		Set m_sm = in_company.sm
+		
+		Call in_company.sm.base.log.exit( TypeName( Me ) & "." & GetThreadInfo(1))
+		Exit Sub
+		
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$		
+	End Sub
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------	
+	Property Get sheetName As String
+		On Error GoTo error_point
+		Call m_sm.base.log.enter( TypeName( Me ) & "." & GetThreadInfo(1))
+		
+		sheetName = m_doc.export_sheet_name(0)
+		If ( sheetName = "" ) Then
+			sheetName = "реестр"
+		End If
+		
+		Call m_sm.base.log.trace( "result: " & sheetName )
+		Call m_sm.base.log.exit( TypeName( Me ) & "." & GetThreadInfo(1))
+		Exit Property
+		
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$		
+	End Property
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------	
+	Property Get lastRow As Integer
+		On Error GoTo error_point
+		Call m_sm.base.log.enter( TypeName( Me ) & "." & GetThreadInfo(1))
+		
+		lastRow = m_doc.excel_last_row(0)
+		
+		Call m_sm.base.log.trace( "result: " & lastRow )
+		Call m_sm.base.log.exit( TypeName( Me ) & "." & GetThreadInfo(1))
+		Exit Property
+		
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$		
+	End Property
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------	
+	Property Set lastRow As Integer
+		On Error GoTo error_point
+		Call m_sm.base.log.enter( TypeName( Me ) & "." & GetThreadInfo(1))
+		
+		m_doc.excel_last_row = lastRow
+		
+		Call m_sm.base.log.exit( TypeName( Me ) & "." & GetThreadInfo(1))
+		Exit Property
+		
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$		
+	End Property
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------	
+	Property Get isColumnExportDate As Boolean
+		On Error GoTo error_point
+		Call m_sm.base.log.enter( TypeName( Me ) & "." & GetThreadInfo(1))
+		
+		isColumnExportDate = ( m_doc.is_export_date(0) = "1" )
+		
+		Call m_sm.base.log.trace( "result: " & isColumnExportDate )
+		Call m_sm.base.log.exit( TypeName( Me ) & "." & GetThreadInfo(1))
+		Exit Property
+		
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$		
+	End Property
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------	
+	Property Get isColumnPayDate As Boolean
+		On Error GoTo error_point
+		Call m_sm.base.log.enter( TypeName( Me ) & "." & GetThreadInfo(1))
+		
+		isColumnPayDate = ( m_doc.is_pay_date(0) = "1" )
+		
+		Call m_sm.base.log.trace( "result: " & isColumnPayDate )
+		Call m_sm.base.log.exit( TypeName( Me ) & "." & GetThreadInfo(1))
+		Exit Property
+		
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$		
+	End Property
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------	
+	Property Get isColumnNumber As Boolean
+		On Error GoTo error_point
+		Call m_sm.base.log.enter( TypeName( Me ) & "." & GetThreadInfo(1))
+		
+		isColumnNumber = ( m_doc.is_number(0) = "1" )
+		
+		Call m_sm.base.log.trace( "result: " & isColumnNumber )
+		Call m_sm.base.log.exit( TypeName( Me ) & "." & GetThreadInfo(1))
+		Exit Property
+		
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$		
+	End Property
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------	
+	Property Get isColumnContragent As Boolean
+		On Error GoTo error_point
+		Call m_sm.base.log.enter( TypeName( Me ) & "." & GetThreadInfo(1))
+		
+		isColumnContragent = ( m_doc.is_contragent(0) = "1" )
+		
+		Call m_sm.base.log.trace( "result: " & isColumnContragent )
+		Call m_sm.base.log.exit( TypeName( Me ) & "." & GetThreadInfo(1))
+		Exit Property
+		
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$		
+	End Property
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------	
+	Property Get isColumnPayType As Boolean
+		On Error GoTo error_point
+		Call m_sm.base.log.enter( TypeName( Me ) & "." & GetThreadInfo(1))
+		
+		isColumnPayType = ( m_doc.is_pay_type(0) = "1" )
+		
+		Call m_sm.base.log.trace( "result: " & isColumnPayType )
+		Call m_sm.base.log.exit( TypeName( Me ) & "." & GetThreadInfo(1))
+		Exit Property
+		
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$		
+	End Property
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------	
+	Property Get isColumnSumUSD As Boolean
+		On Error GoTo error_point
+		Call m_sm.base.log.enter( TypeName( Me ) & "." & GetThreadInfo(1))
+		
+		isColumnSumUSD = ( m_doc.is_sum_usd(0) = "1" )
+		
+		Call m_sm.base.log.trace( "result: " & isColumnSumUSD )
+		Call m_sm.base.log.exit( TypeName( Me ) & "." & GetThreadInfo(1))
+		Exit Property
+		
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$		
+	End Property
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------	
+	Property Get isColumnSumEUR As Boolean
+		On Error GoTo error_point
+		Call m_sm.base.log.enter( TypeName( Me ) & "." & GetThreadInfo(1))
+		
+		isColumnSumEUR = ( m_doc.is_sum_eur(0) = "1" )
+		
+		Call m_sm.base.log.trace( "result: " & isColumnSumEUR )
+		Call m_sm.base.log.exit( TypeName( Me ) & "." & GetThreadInfo(1))
+		Exit Property
+		
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$		
+	End Property
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------	
+	Property Get isColumnSumRUR As Boolean
+		On Error GoTo error_point
+		Call m_sm.base.log.enter( TypeName( Me ) & "." & GetThreadInfo(1))
+		
+		isColumnSumRUR = ( m_doc.is_sum_rur(0) = "1" )
+		
+		Call m_sm.base.log.trace( "result: " & isColumnSumRUR )
+		Call m_sm.base.log.exit( TypeName( Me ) & "." & GetThreadInfo(1))
+		Exit Property
+		
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$		
+	End Property
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------	
+	Property Get isColumnSumGBP As Boolean
+		On Error GoTo error_point
+		Call m_sm.base.log.enter( TypeName( Me ) & "." & GetThreadInfo(1))
+		
+		isColumnSumGBP = ( m_doc.is_sum_gbp(0) = "1" )
+		
+		Call m_sm.base.log.trace( "result: " & isColumnSumGBP )
+		Call m_sm.base.log.exit( TypeName( Me ) & "." & GetThreadInfo(1))
+		Exit Property
+		
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$		
+	End Property
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------	
+	Property Get isColumnSumHKD As Boolean
+		On Error GoTo error_point
+		Call m_sm.base.log.enter( TypeName( Me ) & "." & GetThreadInfo(1))
+		
+		isColumnSumHKD = ( m_doc.is_sum_hkd(0) = "1" )
+		
+		Call m_sm.base.log.trace( "result: " & isColumnSumHKD )
+		Call m_sm.base.log.exit( TypeName( Me ) & "." & GetThreadInfo(1))
+		Exit Property
+		
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$		
+	End Property
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------	
+	Property Get isColumnSumUAH As Boolean
+		On Error GoTo error_point
+		Call m_sm.base.log.enter( TypeName( Me ) & "." & GetThreadInfo(1))
+		
+		isColumnSumUAH = ( m_doc.is_sum_uah(0) = "1" )
+		
+		Call m_sm.base.log.trace( "result: " & isColumnSumUAH )
+		Call m_sm.base.log.exit( TypeName( Me ) & "." & GetThreadInfo(1))
+		Exit Property
+		
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$		
+	End Property
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------	
+	Property Get isColumnNDS As Boolean
+		On Error GoTo error_point
+		Call m_sm.base.log.enter( TypeName( Me ) & "." & GetThreadInfo(1))
+		
+		isColumnNDS = ( m_doc.is_nds(0) = "1" )
+		
+		Call m_sm.base.log.trace( "result: " & isColumnNDS )
+		Call m_sm.base.log.exit( TypeName( Me ) & "." & GetThreadInfo(1))
+		Exit Property
+		
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$		
+	End Property
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------	
+	Property Get isColumnSubject As Boolean
+		On Error GoTo error_point
+		Call m_sm.base.log.enter( TypeName( Me ) & "." & GetThreadInfo(1))
+		
+		isColumnSubject = ( m_doc.is_subject(0) = "1" )
+		
+		Call m_sm.base.log.trace( "result: " & isColumnSubject )
+		Call m_sm.base.log.exit( TypeName( Me ) & "." & GetThreadInfo(1))
+		Exit Property
+		
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$		
+	End Property
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------	
+	Property Get isColumnCostItemCode As Boolean
+		On Error GoTo error_point
+		Call m_sm.base.log.enter( TypeName( Me ) & "." & GetThreadInfo(1))
+		
+		isColumnCostItemCode = ( m_doc.is_cost_item_code(0) = "1" )
+		
+		Call m_sm.base.log.trace( "result: " & isColumnCostItemCode )
+		Call m_sm.base.log.exit( TypeName( Me ) & "." & GetThreadInfo(1))
+		Exit Property
+		
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$		
+	End Property
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------	
+	Property Get isColumnCostItem As Boolean
+		On Error GoTo error_point
+		Call m_sm.base.log.enter( TypeName( Me ) & "." & GetThreadInfo(1))
+		
+		isColumnCostItem = ( m_doc.is_cost_item(0) = "1" )
+		
+		Call m_sm.base.log.trace( "result: " & isColumnCostItem )
+		Call m_sm.base.log.exit( TypeName( Me ) & "." & GetThreadInfo(1))
+		Exit Property
+		
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$		
+	End Property
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------	
+	Property Get isColumnPayer As Boolean
+		On Error GoTo error_point
+		Call m_sm.base.log.enter( TypeName( Me ) & "." & GetThreadInfo(1))
+		
+		isColumnPayer = ( m_doc.is_payer(0) = "1" )
+		
+		Call m_sm.base.log.trace( "result: " & isColumnPayer )
+		Call m_sm.base.log.exit( TypeName( Me ) & "." & GetThreadInfo(1))
+		Exit Property
+		
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$		
+	End Property
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------	
+	Property Get isColumnDepartment As Boolean
+		On Error GoTo error_point
+		Call m_sm.base.log.enter( TypeName( Me ) & "." & GetThreadInfo(1))
+		
+		isColumnDepartment = ( m_doc.is_department(0) = "1" )
+		
+		Call m_sm.base.log.trace( "result: " & isColumnDepartment )
+		Call m_sm.base.log.exit( TypeName( Me ) & "." & GetThreadInfo(1))
+		Exit Property
+		
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$		
+	End Property
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------	
+	Property Get isColumnComment As Boolean
+		On Error GoTo error_point
+		Call m_sm.base.log.enter( TypeName( Me ) & "." & GetThreadInfo(1))
+		
+		isColumnComment = ( m_doc.is_comment(0) = "1" )
+		
+		Call m_sm.base.log.trace( "result: " & isColumnComment )
+		Call m_sm.base.log.exit( TypeName( Me ) & "." & GetThreadInfo(1))
+		Exit Property
+		
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$		
+	End Property
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------	
+	Property Get columnExportDate As Integer
+		On Error GoTo error_point
+		Call m_sm.base.log.enter( TypeName( Me ) & "." & GetThreadInfo(1))
+		
+		columnExportDate = m_doc.cnum_export_date(0)
+		
+		Call m_sm.base.log.trace( "result: " & columnExportDate )
+		Call m_sm.base.log.exit( TypeName( Me ) & "." & GetThreadInfo(1))
+		Exit Property
+		
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$		
+	End Property
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------	
+	Property Get columnPayDate As Integer
+		On Error GoTo error_point
+		Call m_sm.base.log.enter( TypeName( Me ) & "." & GetThreadInfo(1))
+		
+		columnPayDate = m_doc.cnum_pay_date(0)
+		
+		Call m_sm.base.log.trace( "result: " & columnPayDate )
+		Call m_sm.base.log.exit( TypeName( Me ) & "." & GetThreadInfo(1))
+		Exit Property
+		
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$		
+	End Property
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------	
+	Property Get columnNumber As Integer
+		On Error GoTo error_point
+		Call m_sm.base.log.enter( TypeName( Me ) & "." & GetThreadInfo(1))
+		
+		columnNumber = m_doc.cnum_number(0)
+		
+		Call m_sm.base.log.trace( "result: " & columnNumber )
+		Call m_sm.base.log.exit( TypeName( Me ) & "." & GetThreadInfo(1))
+		Exit Property
+		
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$		
+	End Property
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------	
+	Property Get columnContragent As Integer
+		On Error GoTo error_point
+		Call m_sm.base.log.enter( TypeName( Me ) & "." & GetThreadInfo(1))
+		
+		columnContragent = m_doc.cnum_contragent(0)
+		
+		Call m_sm.base.log.trace( "result: " & columnContragent )
+		Call m_sm.base.log.exit( TypeName( Me ) & "." & GetThreadInfo(1))
+		Exit Property
+		
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$		
+	End Property
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------	
+	Property Get columnPayType As Integer
+		On Error GoTo error_point
+		Call m_sm.base.log.enter( TypeName( Me ) & "." & GetThreadInfo(1))
+		
+		columnPayType = m_doc.cnum_pay_type(0)
+		
+		Call m_sm.base.log.trace( "result: " & columnPayType )
+		Call m_sm.base.log.exit( TypeName( Me ) & "." & GetThreadInfo(1))
+		Exit Property
+		
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$		
+	End Property
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------	
+	Property Get columnSumUSD As Integer
+		On Error GoTo error_point
+		Call m_sm.base.log.enter( TypeName( Me ) & "." & GetThreadInfo(1))
+		
+		columnSumUSD = m_doc.cnum_sum_usd(0)
+		
+		Call m_sm.base.log.trace( "result: " & columnSumUSD )
+		Call m_sm.base.log.exit( TypeName( Me ) & "." & GetThreadInfo(1))
+		Exit Property
+		
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$		
+	End Property
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------	
+	Property Get columnSumEUR As Integer
+		On Error GoTo error_point
+		Call m_sm.base.log.enter( TypeName( Me ) & "." & GetThreadInfo(1))
+		
+		columnSumEUR = m_doc.cnum_sum_eur(0)
+		
+		Call m_sm.base.log.trace( "result: " & columnSumEUR )
+		Call m_sm.base.log.exit( TypeName( Me ) & "." & GetThreadInfo(1))
+		Exit Property
+		
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$		
+	End Property
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------	
+	Property Get columnSumRUR As Integer
+		On Error GoTo error_point
+		Call m_sm.base.log.enter( TypeName( Me ) & "." & GetThreadInfo(1))
+		
+		columnSumRUR = m_doc.cnum_sum_rur(0)
+		
+		Call m_sm.base.log.trace( "result: " & columnSumRUR )
+		Call m_sm.base.log.exit( TypeName( Me ) & "." & GetThreadInfo(1))		
+		Exit Property
+		
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$		
+	End Property
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------	
+	Property Get columnSumGBP As Integer
+		On Error GoTo error_point
+		Call m_sm.base.log.enter( TypeName( Me ) & "." & GetThreadInfo(1))
+		
+		columnSumGBP = m_doc.cnum_sum_gbp(0)
+		
+		Call m_sm.base.log.trace( "result: " & columnSumGBP )
+		Call m_sm.base.log.exit( TypeName( Me ) & "." & GetThreadInfo(1))		
+		Exit Property
+		
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$		
+	End Property
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------	
+	Property Get columnSumHKD As Integer
+		On Error GoTo error_point
+		Call m_sm.base.log.enter( TypeName( Me ) & "." & GetThreadInfo(1))
+		
+		columnSumHKD = m_doc.cnum_sum_hkd(0)
+		
+		Call m_sm.base.log.trace( "result: " & columnSumHKD )
+		Call m_sm.base.log.exit( TypeName( Me ) & "." & GetThreadInfo(1))		
+		Exit Property
+		
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$		
+	End Property
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------	
+	Property Get columnSumUAH As Integer
+		On Error GoTo error_point
+		Call m_sm.base.log.enter( TypeName( Me ) & "." & GetThreadInfo(1))
+		
+		columnSumUAH = m_doc.cnum_sum_uah(0)
+		
+		Call m_sm.base.log.trace( "result: " & columnSumUAH )
+		Call m_sm.base.log.exit( TypeName( Me ) & "." & GetThreadInfo(1))		
+		Exit Property
+		
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$		
+	End Property
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------	
+	Property Get columnNDS As Integer
+		On Error GoTo error_point
+		Call m_sm.base.log.enter( TypeName( Me ) & "." & GetThreadInfo(1))
+		
+		columnNDS = m_doc.cnum_nds(0)
+		
+		Call m_sm.base.log.trace( "result: " & columnNDS )
+		Call m_sm.base.log.exit( TypeName( Me ) & "." & GetThreadInfo(1))		
+		Exit Property
+		
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$		
+	End Property
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------	
+	Property Get columnSubject As Integer
+		On Error GoTo error_point
+		Call m_sm.base.log.enter( TypeName( Me ) & "." & GetThreadInfo(1))
+		
+		columnSubject = m_doc.cnum_subject(0)
+		
+		Call m_sm.base.log.trace( "result: " & columnSubject )
+		Call m_sm.base.log.exit( TypeName( Me ) & "." & GetThreadInfo(1))		
+		Exit Property
+		
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$		
+	End Property
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------	
+	Property Get columnCostItemCode As Integer
+		On Error GoTo error_point
+		Call m_sm.base.log.enter( TypeName( Me ) & "." & GetThreadInfo(1))
+		
+		columnCostItemCode = m_doc.cnum_cost_item_code(0)
+		
+		Call m_sm.base.log.trace( "result: " & columnCostItemCode )
+		Call m_sm.base.log.exit( TypeName( Me ) & "." & GetThreadInfo(1))		
+		Exit Property
+		
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$		
+	End Property
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------	
+	Property Get columnCostItem As Integer
+		On Error GoTo error_point
+		Call m_sm.base.log.enter( TypeName( Me ) & "." & GetThreadInfo(1))
+		
+		columnCostItem = m_doc.cnum_cost_item(0)
+		
+		Call m_sm.base.log.trace( "result: " & columnCostItem )
+		Call m_sm.base.log.exit( TypeName( Me ) & "." & GetThreadInfo(1))		
+		Exit Property
+		
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$		
+	End Property
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------	
+	Property Get columnPayer As Integer
+		On Error GoTo error_point
+		Call m_sm.base.log.enter( TypeName( Me ) & "." & GetThreadInfo(1))
+		
+		columnPayer = m_doc.cnum_payer(0)
+		
+		Call m_sm.base.log.trace( "result: " & columnPayer )
+		Call m_sm.base.log.exit( TypeName( Me ) & "." & GetThreadInfo(1))		
+		Exit Property
+		
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$		
+	End Property
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------	
+	Property Get columnDepartment As Integer
+		On Error GoTo error_point
+		Call m_sm.base.log.enter( TypeName( Me ) & "." & GetThreadInfo(1))
+		
+		columnDepartment = m_doc.cnum_department(0)
+		
+		Call m_sm.base.log.trace( "result: " & columnDepartment )
+		Call m_sm.base.log.exit( TypeName( Me ) & "." & GetThreadInfo(1))		
+		Exit Property
+		
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$		
+	End Property
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------	
+	Property Get columnComment As Integer
+		On Error GoTo error_point
+		Call m_sm.base.log.enter( TypeName( Me ) & "." & GetThreadInfo(1))
+		
+		columnComment = m_doc.cnum_comment(0)
+		
+		Call m_sm.base.log.trace( "result: " & columnComment )
+		Call m_sm.base.log.exit( TypeName( Me ) & "." & GetThreadInfo(1))		
+		Exit Property
+		
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$		
+	End Property
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------	
+	' Addon by Eagorr 19/02/2015 - Export Project to OST file
+	Property Get isColumnProject As Boolean
+		On Error GoTo error_point
+		Call m_sm.base.log.enter( TypeName( Me ) & "." & GetThreadInfo(1))
+		
+		isColumnProject = ( m_doc.is_project(0) = "1" )
+		
+		Call m_sm.base.log.trace( "result: " & isColumnProject )
+		Call m_sm.base.log.exit( TypeName( Me ) & "." & GetThreadInfo(1))
+		Exit Property
+		
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$		
+	End Property
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------	
+	Property Get columnProject As Integer
+		On Error GoTo error_point
+		Call m_sm.base.log.enter( TypeName( Me ) & "." & GetThreadInfo(1))
+		
+		columnProject = m_doc.cnum_project(0)
+		
+		Call m_sm.base.log.trace( "result: " & columnProject )
+		Call m_sm.base.log.exit( TypeName( Me ) & "." & GetThreadInfo(1))		
+		Exit Property
+		
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$		
+	End Property
+	'END - Addon by Eagorr 19/02/2015
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------	
+	' <TLD-1851 20191113 - добавить экспорт ИНН и UNID контрагента, Номер договора, UNID договора в реестре, ссылки для договора и контрагента>	
+	Property Get isColumnContragentINN As Boolean
+		On Error GoTo error_point
+		Call m_sm.base.log.enter( TypeName( Me ) & "." & GetThreadInfo(1))
+		
+		isColumnContragentINN = ( m_doc.is_Contragent_INN(0) = "1" )
+		
+		Call m_sm.base.log.trace( "result: " & isColumnContragentINN )
+		Call m_sm.base.log.exit( TypeName( Me ) & "." & GetThreadInfo(1))
+		Exit Property
+		
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$		
+	End Property
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------	
+	Property Get columnContragentINN As Integer
+		On Error GoTo error_point
+		Call m_sm.base.log.enter( TypeName( Me ) & "." & GetThreadInfo(1))
+		
+		columnContragentINN = m_doc.cnum_contragent_inn(0)
+		
+		Call m_sm.base.log.trace( "result: " & columnContragentINN )
+		Call m_sm.base.log.exit( TypeName( Me ) & "." & GetThreadInfo(1))
+		Exit Property
+		
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$		
+	End Property
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	' <TLD-5228 Добавить атрибут "вид платежа" в excel файл "БДР">	
+	Property Get isColumnType As Boolean
+		On Error GoTo error_point
+		Call m_sm.base.log.enter( TypeName( Me ) & "." & GetThreadInfo(1))
+		
+		isColumnType = ( m_doc.is_Type(0) = "1" )
+		
+		Call m_sm.base.log.trace( "result: " & isColumnType )
+		Call m_sm.base.log.exit( TypeName( Me ) & "." & GetThreadInfo(1))
+		Exit Property
+		
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$		
+	End Property
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------	
+	Property Get columnType As Integer
+		On Error GoTo error_point
+		Call m_sm.base.log.enter( TypeName( Me ) & "." & GetThreadInfo(1))
+		
+		columnType = m_doc.cnum_type(0)
+		
+		Call m_sm.base.log.trace( "result: " & columnType )
+		Call m_sm.base.log.exit( TypeName( Me ) & "." & GetThreadInfo(1))
+		Exit Property
+		
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$		
+	End Property
+	' </TLD-5228> 
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------	
+	Property Get isColumnContragentID As Boolean
+		On Error GoTo error_point
+		Call m_sm.base.log.enter( TypeName( Me ) & "." & GetThreadInfo(1))
+		
+		isColumnContragentID = ( m_doc.is_Contragent_ID(0) = "1" )
+		
+		Call m_sm.base.log.trace( "result: " & isColumnContragentID )
+		Call m_sm.base.log.exit( TypeName( Me ) & "." & GetThreadInfo(1))
+		Exit Property
+		
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$		
+	End Property
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------	
+	Property Get columnContragentID As Integer
+		On Error GoTo error_point
+		Call m_sm.base.log.enter( TypeName( Me ) & "." & GetThreadInfo(1))
+		
+		columnContragentID = m_doc.cnum_contragent_id(0)
+		
+		Call m_sm.base.log.trace( "result: " & columnContragentID )
+		Call m_sm.base.log.exit( TypeName( Me ) & "." & GetThreadInfo(1))
+		Exit Property
+		
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$		
+	End Property
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------	
+	Property Get isColumContractNo As Boolean
+		On Error GoTo error_point
+		Call m_sm.base.log.enter( TypeName( Me ) & "." & GetThreadInfo(1))
+		
+		isColumContractNo = ( m_doc.is_Contract_No(0) = "1" )
+		
+		Call m_sm.base.log.trace( "result: " & isColumContractNo )
+		Call m_sm.base.log.exit( TypeName( Me ) & "." & GetThreadInfo(1))
+		Exit Property
+		
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$		
+	End Property
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------	
+	Property Get columnContractNo As Integer
+		On Error GoTo error_point
+		Call m_sm.base.log.enter( TypeName( Me ) & "." & GetThreadInfo(1))
+		
+		columnContractNo = m_doc.cnum_contract_no(0)
+		
+		Call m_sm.base.log.trace( "result: " & columnContractNo )
+		Call m_sm.base.log.exit( TypeName( Me ) & "." & GetThreadInfo(1))
+		Exit Property
+		
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$		
+	End Property
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------	
+	Property Get isColumnContractID As Boolean
+		On Error GoTo error_point
+		Call m_sm.base.log.enter( TypeName( Me ) & "." & GetThreadInfo(1))
+		
+		isColumnContractID = ( m_doc.is_Contract_ID(0) = "1" )
+		
+		Call m_sm.base.log.trace( "result: " & isColumnContractID )
+		Call m_sm.base.log.exit( TypeName( Me ) & "." & GetThreadInfo(1))
+		Exit Property
+		
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$		
+	End Property
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------	
+	Property Get columnContractID As Integer
+		On Error GoTo error_point
+		Call m_sm.base.log.enter( TypeName( Me ) & "." & GetThreadInfo(1))
+		
+		columnContractID = m_doc.cnum_contract_id(0)
+		
+		Call m_sm.base.log.trace( "result: " & columnContractID )
+		Call m_sm.base.log.exit( TypeName( Me ) & "." & GetThreadInfo(1))
+		Exit Property
+		
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$		
+	End Property
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------	
+	Property Get isColumnContractReq As Boolean
+		On Error GoTo error_point
+		Call m_sm.base.log.enter( TypeName( Me ) & "." & GetThreadInfo(1))
+		
+		isColumnContractReq = ( m_doc.is_Contract_Request(0) = "1" )
+		
+		Call m_sm.base.log.trace( "result: " & isColumnContractReq )
+		Call m_sm.base.log.exit( TypeName( Me ) & "." & GetThreadInfo(1))
+		Exit Property
+		
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$		
+	End Property
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------	
+	Property Get columnContractReq As Integer
+		On Error GoTo error_point
+		Call m_sm.base.log.enter( TypeName( Me ) & "." & GetThreadInfo(1))
+		
+		columnContractReq = m_doc.cnum_contract_request(0)
+		
+		Call m_sm.base.log.trace( "result: " & columnContractReq )
+		Call m_sm.base.log.exit( TypeName( Me ) & "." & GetThreadInfo(1))
+		Exit Property
+		
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$		
+	End Property
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------	
+	' </TLD-1851>
+End Class
+
+
+'======================================================================================================================================
+'	CLASS TPS_Payments_Company_ImportSettings
+'======================================================================================================================================
+Public Class TPS_Payments_Company_ImportSettings
+	Private m_doc As NotesDocument
+	Private m_sm As Variant
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------	
+	Sub New( in_doc As NotesDocument, in_company As Variant )
+		On Error Goto error_point
+		Call in_company.sm.base.log.enter( Typename( Me ) & "." & Getthreadinfo(1))
+		
+		Set m_doc = in_doc
+		Set m_sm = in_company.sm
+		
+		Call in_company.sm.base.log.exit( Typename( Me ) & "." & Getthreadinfo(1))
+		Exit Sub
+		
+error_point:
+		On Error Goto 0
+		Error Err, Typename( Me ) & "." & Getthreadinfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$		
+	End Sub
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------	
+	Property Get sheetName As String
+		On Error Goto error_point
+		Call m_sm.base.log.enter( Typename( Me ) & "." & Getthreadinfo(1))
+		
+		sheetName = m_doc.import_sheet_name(0)
+		If ( sheetName = "" ) Then
+			sheetName = "ост"
+		End If
+		
+		Call m_sm.base.log.trace( "result: " & sheetName )
+		Call m_sm.base.log.exit( Typename( Me ) & "." & Getthreadinfo(1))
+		Exit Property
+		
+error_point:
+		On Error Goto 0
+		Error Err, Typename( Me ) & "." & Getthreadinfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$		
+	End Property
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------	
+	Property Get columnPPNum As Integer
+		On Error Goto error_point
+		Call m_sm.base.log.enter( Typename( Me ) & "." & Getthreadinfo(1))
+		
+		columnPPNum = m_doc.pp_num(0)
+		
+		Call m_sm.base.log.trace( "result: " & columnPPNum )
+		Call m_sm.base.log.exit( Typename( Me ) & "." & Getthreadinfo(1))
+		Exit Property
+		
+error_point:
+		On Error Goto 0
+		Error Err, Typename( Me ) & "." & Getthreadinfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$		
+	End Property
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------	
+	Function getColumnMonthFact( in_num As Integer ) As Integer
+		On Error Goto error_point
+		Call m_sm.base.log.enter( Typename( Me ) & "." & Getthreadinfo(1))
+		
+		Dim iName As String
+		iName = "month_fact_" & Cstr( in_num )
+		getColumnMonthFact = m_doc.GetItemValue( iName )(0)
+		
+		Call m_sm.base.log.trace( "result: " & getColumnMonthFact )
+		Call m_sm.base.log.exit( Typename( Me ) & "." & Getthreadinfo(1))
+		Exit Function
+		
+error_point:
+		On Error Goto 0
+		Error Err, Typename( Me ) & "." & Getthreadinfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$		
+	End Function
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------	
+	Function getColumnMonthRest( in_num As Integer )  As Integer
+		On Error Goto error_point
+		Call m_sm.base.log.enter( Typename( Me ) & "." & Getthreadinfo(1))
+		
+		Dim iName As String
+		iName = "month_rest_" & Cstr( in_num )
+		getColumnMonthRest = m_doc.GetItemValue( iName )(0)
+		
+		Call m_sm.base.log.trace( "result: " & getColumnMonthRest )
+		Call m_sm.base.log.exit( Typename( Me ) & "." & Getthreadinfo(1))
+		Exit Function
+		
+error_point:
+		On Error Goto 0
+		Error Err, Typename( Me ) & "." & Getthreadinfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$		
+	End Function
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------	
+	Function getColumnPeriodFact( in_period As Integer ) As Integer
+		On Error Goto error_point
+		Call m_sm.base.log.enter( Typename( Me ) & "." & Getthreadinfo(1))
+		Call m_sm.base.log.parameter( "in_period", in_period )
+		
+		Dim value As Variant
+		value = m_doc.GetItemValue( "report_period_fact_" & Cstr( in_period ))(0)
+		If ( Cstr( value ) = "" ) Then
+			getColumnPeriodFact = m_doc.GetItemValue( "report_period_fact" )(0)
+		Else
+			getColumnPeriodFact = Cint( value )
+		End If
+		
+		Call m_sm.base.log.trace( "result: " & getColumnPeriodFact )
+		Call m_sm.base.log.exit( Typename( Me ) & "." & Getthreadinfo(1))
+		Exit Function
+		
+error_point:
+		On Error Goto 0
+		Error Err, Typename( Me ) & "." & Getthreadinfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$		
+	End Function
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------	
+	Function getColumnPeriodRest( in_period As Integer )  As Integer
+		On Error Goto error_point
+		Call m_sm.base.log.enter( Typename( Me ) & "." & Getthreadinfo(1))
+		Call m_sm.base.log.parameter( "in_period", in_period )
+		
+		Dim value As Variant
+		value = m_doc.GetItemValue( "report_period_rest_" & Cstr( in_period ))(0)
+		If ( Cstr( value ) = "" ) Then
+			getColumnPeriodRest = m_doc.GetItemValue( "report_period_rest" )(0)
+		Else
+			getColumnPeriodRest = Cint( value )
+		End If
+		
+		Call m_sm.base.log.trace( "result: " & getColumnPeriodRest )
+		Call m_sm.base.log.exit( Typename( Me ) & "." & Getthreadinfo(1))
+		Exit Function
+		
+error_point:
+		On Error Goto 0
+		Error Err, Typename( Me ) & "." & Getthreadinfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$		
+	End Function
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------	
+	Function getColumnYearFact As Integer
+		On Error Goto error_point
+		Call m_sm.base.log.enter( Typename( Me ) & "." & Getthreadinfo(1))
+		
+		getColumnYearFact = m_doc.year_fact(0)
+		
+		Call m_sm.base.log.trace( "result: " & getColumnYearFact )
+		Call m_sm.base.log.exit( Typename( Me ) & "." & Getthreadinfo(1))
+		Exit Function
+		
+error_point:
+		On Error Goto 0
+		Error Err, Typename( Me ) & "." & Getthreadinfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$		
+	End Function
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------	
+	Function getColumnYearRest As Integer
+		On Error Goto error_point
+		Call m_sm.base.log.enter( Typename( Me ) & "." & Getthreadinfo(1))
+		
+		getColumnYearRest = m_doc.year_rest(0)
+		
+		Call m_sm.base.log.trace( "result: " & getColumnYearRest )
+		Call m_sm.base.log.exit( Typename( Me ) & "." & Getthreadinfo(1))
+		Exit Function
+		
+error_point:
+		On Error Goto 0
+		Error Err, Typename( Me ) & "." & Getthreadinfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$		
+	End Function
+	
+End Class
+
+
+
+
+'======================================================================================================================================
+'	CLASS TPS_Payments_Department
+'======================================================================================================================================
+Public Class TPS_Payments_Department As FBase_Abstract_Object_Doc
+	Private m_docSettings As NotesDocument
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------	
+	' PUBLIC
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------	
+	Sub New( in_doc As NotesDocument, in_ps As Variant )
+	End Sub
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------	
+	Property Get isActive As Boolean
+		On Error Goto error_point
+		Call Me.log.enter( Typename( Me ) & "." & Getthreadinfo(1))
+		
+		isActive = ( Me.nd.status(0) = "active" )
+		
+		Call Me.log.trace( "result: " & isActive )
+		Call Me.log.exit( Typename( Me ) & "." & Getthreadinfo(1))
+		Exit Property
+		
+error_point:
+		On Error Goto 0
+		Error Err, Typename( Me ) & "." & Getthreadinfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$		
+	End Property
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------	
+	Property Get isSelectable As Boolean
+		On Error Goto error_point
+		Call Me.log.enter( Typename( Me ) & "." & Getthreadinfo(1))
+		
+		isSelectable = ( Me.nd.is_selected(0) = "1" )
+		
+		Call Me.log.trace( "result: " & isSelectable )
+		Call Me.log.exit( Typename( Me ) & "." & Getthreadinfo(1))		
+		Exit Property
+		
+error_point:
+		On Error Goto 0
+		Error Err, Typename( Me ) & "." & Getthreadinfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$		
+	End Property
+End Class
+
+
+'======================================================================================================================================
+'	CLASS TPS_Payments_BudgetItem
+'======================================================================================================================================
+Public Class TPS_Payments_BudgetItem As FBase_Abstract_Object_Doc
+	Private Function getFullPathDocuments( in_doc As NotesDocument ) As MixCollection
+		On Error Goto error_point
+		Call Me.log.enter( Typename( Me ) & "." & Getthreadinfo(1))
+		
+		Dim mxResult As MixCollection
+		If ( in_doc.isResponse ) Then
+			Dim s As New NotesSession, cdb As NotesDatabase, docParent As NotesDocument
+			Set cdb = in_doc.Parentdatabase 's.Currentdatabase
+			Set docParent = cdb.GetDocumentByUNID( in_doc.ParentDocumentUNID )
+			Set mxResult = getFullPathDocuments( docParent )
+		Else
+			If in_doc.Hasitem("ParentRef") Then
+				Set docParent = cdb.GetDocumentByUNID( in_doc.ParentRef(0) )
+				Set mxResult = getFullPathDocuments( docParent )
+			Else
+				Set mxResult = New MixCollection	
+			End If
+		End If
+		Call mxResult.Append( in_doc )
+		
+		Set getFullPathDocuments = mxResult
+		Call Me.log.traceObject( "result", mxResult )
+		Call Me.log.exit( Typename( Me ) & "." & Getthreadinfo(1))		
+		Exit Function
+		
+error_point:
+		On Error Goto 0
+		Error Err, Typename( Me ) & "." & Getthreadinfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$		
+	End Function
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------	
+	' PUBLIC
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------	
+	Sub New( in_doc As NotesDocument, in_ps As Variant )
+	End Sub
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------	
+	Property Get title As String
+		On Error Goto error_point
+		Call Me.log.enter( Typename( Me ) & "." & Getthreadinfo(1))
+		
+		Dim mx As MixCollection, setting As Variant, sPos As Integer
+		Set mx = Me.getFullPathDocuments( Me.nd )
+		Set setting = Me.sm.core.settings( Me.nd.ParentDatabase ).get( "app.budget_item_path_level" )
+		If ( setting Is Nothing ) Then 
+			sPos = 1
+		Else
+			sPos = setting.value()
+		End If
+		
+		If ( sPos > mx.Count ) Then
+			sPos = mx.Count
+		End If
+		
+		Dim i As Integer, path As String
+		For i=sPos To mx.Count
+			Dim doc As NotesDocument
+			Set doc = mx.Element(i)
+			path = path & doc.title(0)
+			If ( i < mx.Count ) Then
+				path = path & "\"
+			End If
+		Next
+		title = Me.code & " " & path
+		
+		Call Me.log.trace( "result: " & title )
+		Call Me.log.exit( Typename( Me ) & "." & Getthreadinfo(1))		
+		Exit Property
+		
+error_point:
+		On Error Goto 0
+		Error Err, Typename( Me ) & "." & Getthreadinfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$		
+	End Property
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------	
+	Property Get code As String
+		On Error Goto error_point
+		Call Me.log.enter( Typename( Me ) & "." & Getthreadinfo(1))
+		
+		code = Me.nd.code(0)
+		
+		Call Me.log.trace( "result: " & code )
+		Call Me.log.exit( Typename( Me ) & "." & Getthreadinfo(1))		
+		Exit Property
+		
+error_point:
+		On Error Goto 0
+		Error Err, Typename( Me ) & "." & Getthreadinfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$		
+	End Property
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------	
+	Property Get isSelectable As Boolean
+		On Error Goto error_point
+		Call Me.log.enter( Typename( Me ) & "." & Getthreadinfo(1))
+		
+		isSelectable = ( Me.nd.is_selected(0) = "1" )
+		
+		Call Me.log.trace( "result: " & isSelectable )
+		Call Me.log.exit( Typename( Me ) & "." & Getthreadinfo(1))		
+		Exit Property
+		
+error_point:
+		On Error Goto 0
+		Error Err, Typename( Me ) & "." & Getthreadinfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$		
+	End Property
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------	
+	Property Get isActive As Boolean
+		On Error Goto error_point
+		Call Me.log.enter( Typename( Me ) & "." & Getthreadinfo(1))
+		
+		isActive = ( Me.nd.status(0) = "active" )		
+		
+		Call Me.log.trace( "result: " & isActive )
+		Call Me.log.exit( Typename( Me ) & "." & Getthreadinfo(1))		
+		Exit Property
+		
+error_point:
+		On Error Goto 0
+		Error Err, Typename( Me ) & "." & Getthreadinfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$		
+	End Property
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------	
+	Property Get experts As Variant
+		On Error GoTo error_point
+		Call Me.log.enter( TypeName( Me ) & "." & GetThreadInfo(1))
+		
+		Dim result As New Mixcollection
+		Set experts = result
+		
+		If Me.nd.Hasitem("ExpertsObjAccess") Then
+			Dim v As Variant
+			v = Me.nd.Getfirstitem("ExpertsObjAccess").Values
+			If (  v(0) <> "" ) Then
+				Dim i As Integer
+				For i=LBound(v) To UBound(v)
+					Dim ODField As New ODFields( i, "Experts", Me.nd )
+					Call result.Append( ODField )
+				Next
+			End If
+		End If
+		
+		Call Me.log.exit( TypeName( Me ) & "." & GetThreadInfo(1))		
+		Exit Property
+		
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Property
+	
+	
+End Class
+
+
+
+Public Class TPS_Payments_AccountType_OLD As FBase_Abstract_Object_Doc
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------	
+	' PUBLIC
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------	
+	Sub New( in_doc As NotesDocument, in_ps As Variant )
+	End Sub
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Property Get chief As Variant
+		On Error Goto error_point
+		Call Me.log.enter( Typename( Me ) & "." & Getthreadinfo(1))
+		
+		Set chief = New TPS_Payments_AccountType_StageOwners( "chief", Me.nd, Me.sm )
+		
+		Call Me.log.exit( Typename( Me ) & "." & Getthreadinfo(1))
+		Exit Property
+		
+error_point:
+		On Error Goto 0
+		Error Err, Typename( Me ) & "." & Getthreadinfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Property
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Property Get pbu As Variant
+		On Error Goto error_point
+		Call Me.log.enter( Typename( Me ) & "." & Getthreadinfo(1))
+		
+		Set pbu = New TPS_Payments_AccountType_StageOwners( "pbu", Me.nd, Me.sm )
+		
+		Call Me.log.exit( Typename( Me ) & "." & Getthreadinfo(1))
+		Exit Property
+		
+error_point:
+		On Error Goto 0
+		Error Err, Typename( Me ) & "." & Getthreadinfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Property
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Property Get pbuChief As Variant
+		On Error Goto error_point
+		Call Me.log.enter( Typename( Me ) & "." & Getthreadinfo(1))
+		
+		Set pbuChief = New TPS_Payments_AccountType_StageOwners( "pbu_chief", Me.nd, Me.sm )
+		
+		Call Me.log.exit( Typename( Me ) & "." & Getthreadinfo(1))
+		Exit Property
+		
+error_point:
+		On Error Goto 0
+		Error Err, Typename( Me ) & "." & Getthreadinfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Property
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Property Get exchequer As Variant
+		On Error Goto error_point
+		Call Me.log.enter( Typename( Me ) & "." & Getthreadinfo(1))
+		
+		Set exchequer = New TPS_Payments_AccountType_StageOwners( "exchequer", Me.nd, Me.sm )
+		
+		Call Me.log.exit( Typename( Me ) & "." & Getthreadinfo(1))
+		Exit Property
+		
+error_point:
+		On Error Goto 0
+		Error Err, Typename( Me ) & "." & Getthreadinfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Property
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Property Get accounting As Variant
+		On Error Goto error_point
+		Call Me.log.enter( Typename( Me ) & "." & Getthreadinfo(1))
+		
+		Set accounting = New TPS_Payments_AccountType_StageOwners( "accounting", Me.nd, Me.sm )
+		
+		Call Me.log.exit( Typename( Me ) & "." & Getthreadinfo(1))
+		Exit Property
+		
+error_point:
+		On Error Goto 0
+		Error Err, Typename( Me ) & "." & Getthreadinfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Property
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Property Get managmentBranch As Variant
+		On Error Goto error_point
+		Call Me.log.enter( Typename( Me ) & "." & Getthreadinfo(1))
+		
+		Set managmentBranch = New TPS_Payments_AccountType_StageOwners( "mng_branch", Me.nd, Me.sm )
+		
+		Call Me.log.exit( Typename( Me ) & "." & Getthreadinfo(1))
+		Exit Property
+		
+error_point:
+		On Error Goto 0
+		Error Err, Typename( Me ) & "." & Getthreadinfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Property
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Property Get finDirector As Variant
+		On Error Goto error_point
+		Call Me.log.enter( Typename( Me ) & "." & Getthreadinfo(1))
+		
+		Set finDirector = New TPS_Payments_AccountType_StageOwners( "fin_director", Me.nd, Me.sm )
+		
+		Call Me.log.exit( Typename( Me ) & "." & Getthreadinfo(1))
+		Exit Property
+		
+error_point:
+		On Error Goto 0
+		Error Err, Typename( Me ) & "." & Getthreadinfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Property
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Property Get managmentTop As Variant
+		On Error Goto error_point
+		Call Me.log.enter( Typename( Me ) & "." & Getthreadinfo(1))
+		
+		Set managmentTop = New TPS_Payments_AccountType_StageOwners( "managment_top", Me.nd, Me.sm )
+		
+		Call Me.log.exit( Typename( Me ) & "." & Getthreadinfo(1))
+		Exit Property
+		
+error_point:
+		On Error Goto 0
+		Error Err, Typename( Me ) & "." & Getthreadinfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Property
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Property Get executorsAccounting As Variant
+		On Error Goto error_point
+		Call Me.log.enter( Typename( Me ) & "." & Getthreadinfo(1))
+		
+		Set executorsAccounting = New TPS_Payments_AccountType_StageOwners( "exec_accounting", Me.nd, Me.sm )
+		
+		Call Me.log.exit( Typename( Me ) & "." & Getthreadinfo(1))
+		Exit Property
+		
+error_point:
+		On Error Goto 0
+		Error Err, Typename( Me ) & "." & Getthreadinfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Property
+End Class
+
+
+'======================================================================================================================================
+'	CLASS TPS_Payments_AccountType
+'======================================================================================================================================
+Public Class TPS_Payments_AccountType As TPS_Payments_AccountType_OLD
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------	
+	' PUBLIC
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------	
+	Sub New( in_doc As NotesDocument, in_ps As Variant )
+	End Sub
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------	
+	Property Get isActive As Boolean
+		On Error Goto error_point
+		Call Me.log.enter( Typename( Me ) & "." & Getthreadinfo(1))
+		
+		isActive = ( Me.nd.status(0) = "active" )		
+		
+		Call Me.log.trace( "result: " & isActive )
+		Call Me.log.exit( Typename( Me ) & "." & Getthreadinfo(1))		
+		Exit Property
+		
+error_point:
+		On Error Goto 0
+		Error Err, Typename( Me ) & "." & Getthreadinfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$		
+	End Property
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Property Get stageChief As Variant
+		On Error Goto error_point
+		Call Me.log.enter( Typename( Me ) & "." & Getthreadinfo(1))
+		
+		Set stageChief = New TPS_Payments_AccountType_StageOwners( "stage_chief", Me.nd, Me.sm )
+		
+		Call Me.log.exit( Typename( Me ) & "." & Getthreadinfo(1))
+		Exit Property
+		
+error_point:
+		On Error Goto 0
+		Error Err, Typename( Me ) & "." & Getthreadinfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Property
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Property Get stagePrev01 As Variant
+		On Error Goto error_point
+		Call Me.log.enter( Typename( Me ) & "." & Getthreadinfo(1))
+		
+		Set stagePrev01 = New TPS_Payments_AccountType_StageOwners( "stage_prev_1", Me.nd, Me.sm )
+		
+		Call Me.log.exit( Typename( Me ) & "." & Getthreadinfo(1))
+		Exit Property
+		
+error_point:
+		On Error Goto 0
+		Error Err, Typename( Me ) & "." & Getthreadinfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Property
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Property Get stagePrev02 As Variant
+		On Error Goto error_point
+		Call Me.log.enter( Typename( Me ) & "." & Getthreadinfo(1))
+		
+		Set stagePrev02 = New TPS_Payments_AccountType_StageOwners( "stage_prev_2", Me.nd, Me.sm )
+		
+		Call Me.log.exit( Typename( Me ) & "." & Getthreadinfo(1))
+		Exit Property
+		
+error_point:
+		On Error Goto 0
+		Error Err, Typename( Me ) & "." & Getthreadinfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Property
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Property Get stagePrev03 As Variant
+		On Error Goto error_point
+		Call Me.log.enter( Typename( Me ) & "." & Getthreadinfo(1))
+		
+		Set stagePrev03 = New TPS_Payments_AccountType_StageOwners( "stage_prev_3", Me.nd, Me.sm )
+		
+		Call Me.log.exit( Typename( Me ) & "." & Getthreadinfo(1))
+		Exit Property
+		
+error_point:
+		On Error Goto 0
+		Error Err, Typename( Me ) & "." & Getthreadinfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Property
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Property Get stagePrev04 As Variant
+		On Error Goto error_point
+		Call Me.log.enter( Typename( Me ) & "." & Getthreadinfo(1))
+		
+		Set stagePrev04 = New TPS_Payments_AccountType_StageOwners( "stage_prev_4", Me.nd, Me.sm )
+		
+		Call Me.log.exit( Typename( Me ) & "." & Getthreadinfo(1))
+		Exit Property
+		
+error_point:
+		On Error Goto 0
+		Error Err, Typename( Me ) & "." & Getthreadinfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Property
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Property Get stagePrev05 As Variant
+		On Error Goto error_point
+		Call Me.log.enter( Typename( Me ) & "." & Getthreadinfo(1))
+		
+		Set stagePrev05 = New TPS_Payments_AccountType_StageOwners( "stage_prev_5", Me.nd, Me.sm )
+		
+		Call Me.log.exit( Typename( Me ) & "." & Getthreadinfo(1))
+		Exit Property
+		
+error_point:
+		On Error Goto 0
+		Error Err, Typename( Me ) & "." & Getthreadinfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Property
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Property Get stagePrev06 As Variant
+		On Error Goto error_point
+		Call Me.log.enter( Typename( Me ) & "." & Getthreadinfo(1))
+		
+		Set stagePrev06 = New TPS_Payments_AccountType_StageOwners( "stage_prev_6", Me.nd, Me.sm )
+		
+		Call Me.log.exit( Typename( Me ) & "." & Getthreadinfo(1))
+		Exit Property
+		
+error_point:
+		On Error Goto 0
+		Error Err, Typename( Me ) & "." & Getthreadinfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Property
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Property Get stagePrev07 As Variant
+		On Error Goto error_point
+		Call Me.log.enter( Typename( Me ) & "." & Getthreadinfo(1))
+		
+		Set stagePrev07 = New TPS_Payments_AccountType_StageOwners( "stage_prev_7", Me.nd, Me.sm )
+		
+		Call Me.log.exit( Typename( Me ) & "." & Getthreadinfo(1))
+		Exit Property
+		
+error_point:
+		On Error Goto 0
+		Error Err, Typename( Me ) & "." & Getthreadinfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Property
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Property Get stagePrev08 As Variant
+		On Error Goto error_point
+		Call Me.log.enter( Typename( Me ) & "." & Getthreadinfo(1))
+		
+		Set stagePrev08 = New TPS_Payments_AccountType_StageOwners( "stage_prev_8", Me.nd, Me.sm )
+		
+		Call Me.log.exit( Typename( Me ) & "." & Getthreadinfo(1))
+		Exit Property
+		
+error_point:
+		On Error Goto 0
+		Error Err, Typename( Me ) & "." & Getthreadinfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Property
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Property Get stagePrev09 As Variant
+		On Error Goto error_point
+		Call Me.log.enter( Typename( Me ) & "." & Getthreadinfo(1))
+		
+		Set stagePrev09 = New TPS_Payments_AccountType_StageOwners( "stage_prev_9", Me.nd, Me.sm )
+		
+		Call Me.log.exit( Typename( Me ) & "." & Getthreadinfo(1))
+		Exit Property
+		
+error_point:
+		On Error Goto 0
+		Error Err, Typename( Me ) & "." & Getthreadinfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Property
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Property Get stagePrev10 As Variant
+		On Error Goto error_point
+		Call Me.log.enter( Typename( Me ) & "." & Getthreadinfo(1))
+		
+		Set stagePrev10 = New TPS_Payments_AccountType_StageOwners( "stage_prev_10", Me.nd, Me.sm )
+		
+		Call Me.log.exit( Typename( Me ) & "." & Getthreadinfo(1))
+		Exit Property
+		
+error_point:
+		On Error Goto 0
+		Error Err, Typename( Me ) & "." & Getthreadinfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Property
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Property Get stageExportImport As Variant
+		On Error Goto error_point
+		Call Me.log.enter( Typename( Me ) & "." & Getthreadinfo(1))
+		
+		Set stageExportImport = New TPS_Payments_AccountType_StageOwners( "stage_export_import", Me.nd, Me.sm )
+		
+		Call Me.log.exit( Typename( Me ) & "." & Getthreadinfo(1))
+		Exit Property
+		
+error_point:
+		On Error Goto 0
+		Error Err, Typename( Me ) & "." & Getthreadinfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Property
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Property Get stagePost01 As Variant
+		On Error Goto error_point
+		Call Me.log.enter( Typename( Me ) & "." & Getthreadinfo(1))
+		
+		Set stagePost01 = New TPS_Payments_AccountType_StageOwners( "stage_post_1", Me.nd, Me.sm )
+		
+		Call Me.log.exit( Typename( Me ) & "." & Getthreadinfo(1))
+		Exit Property
+		
+error_point:
+		On Error Goto 0
+		Error Err, Typename( Me ) & "." & Getthreadinfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Property
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Property Get stagePost02 As Variant
+		On Error Goto error_point
+		Call Me.log.enter( Typename( Me ) & "." & Getthreadinfo(1))
+		
+		Set stagePost02 = New TPS_Payments_AccountType_StageOwners( "stage_post_2", Me.nd, Me.sm )
+		
+		Call Me.log.exit( Typename( Me ) & "." & Getthreadinfo(1))
+		Exit Property
+		
+error_point:
+		On Error Goto 0
+		Error Err, Typename( Me ) & "." & Getthreadinfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Property
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Property Get stagePost03 As Variant
+		On Error Goto error_point
+		Call Me.log.enter( Typename( Me ) & "." & Getthreadinfo(1))
+		
+		Set stagePost03 = New TPS_Payments_AccountType_StageOwners( "stage_post_3", Me.nd, Me.sm )
+		
+		Call Me.log.exit( Typename( Me ) & "." & Getthreadinfo(1))
+		Exit Property
+		
+error_point:
+		On Error Goto 0
+		Error Err, Typename( Me ) & "." & Getthreadinfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Property
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Property Get stagePost04 As Variant
+		On Error Goto error_point
+		Call Me.log.enter( Typename( Me ) & "." & Getthreadinfo(1))
+		
+		Set stagePost04 = New TPS_Payments_AccountType_StageOwners( "stage_post_4", Me.nd, Me.sm )
+		
+		Call Me.log.exit( Typename( Me ) & "." & Getthreadinfo(1))
+		Exit Property
+		
+error_point:
+		On Error Goto 0
+		Error Err, Typename( Me ) & "." & Getthreadinfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Property
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Property Get stagePost05 As Variant
+		On Error Goto error_point
+		Call Me.log.enter( Typename( Me ) & "." & Getthreadinfo(1))
+		
+		Set stagePost05 = New TPS_Payments_AccountType_StageOwners( "stage_post_5", Me.nd, Me.sm )
+		
+		Call Me.log.exit( Typename( Me ) & "." & Getthreadinfo(1))
+		Exit Property
+		
+error_point:
+		On Error Goto 0
+		Error Err, Typename( Me ) & "." & Getthreadinfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Property
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Property Get stagePost06 As Variant
+		On Error Goto error_point
+		Call Me.log.enter( Typename( Me ) & "." & Getthreadinfo(1))
+		
+		Set stagePost06 = New TPS_Payments_AccountType_StageOwners( "stage_post_6", Me.nd, Me.sm )
+		
+		Call Me.log.exit( Typename( Me ) & "." & Getthreadinfo(1))
+		Exit Property
+		
+error_point:
+		On Error Goto 0
+		Error Err, Typename( Me ) & "." & Getthreadinfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Property
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Property Get stagePost07 As Variant
+		On Error Goto error_point
+		Call Me.log.enter( Typename( Me ) & "." & Getthreadinfo(1))
+		
+		Set stagePost07 = New TPS_Payments_AccountType_StageOwners( "stage_post_7", Me.nd, Me.sm )
+		
+		Call Me.log.exit( Typename( Me ) & "." & Getthreadinfo(1))
+		Exit Property
+		
+error_point:
+		On Error Goto 0
+		Error Err, Typename( Me ) & "." & Getthreadinfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Property
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Property Get stagePost08 As Variant
+		On Error Goto error_point
+		Call Me.log.enter( Typename( Me ) & "." & Getthreadinfo(1))
+		
+		Set stagePost08 = New TPS_Payments_AccountType_StageOwners( "stage_post_8", Me.nd, Me.sm )
+		
+		Call Me.log.exit( Typename( Me ) & "." & Getthreadinfo(1))
+		Exit Property
+		
+error_point:
+		On Error Goto 0
+		Error Err, Typename( Me ) & "." & Getthreadinfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Property
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Property Get stagePost09 As Variant
+		On Error Goto error_point
+		Call Me.log.enter( Typename( Me ) & "." & Getthreadinfo(1))
+		
+		Set stagePost09 = New TPS_Payments_AccountType_StageOwners( "stage_post_9", Me.nd, Me.sm )
+		
+		Call Me.log.exit( Typename( Me ) & "." & Getthreadinfo(1))
+		Exit Property
+		
+error_point:
+		On Error Goto 0
+		Error Err, Typename( Me ) & "." & Getthreadinfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Property
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Property Get stagePost10 As Variant
+		On Error Goto error_point
+		Call Me.log.enter( Typename( Me ) & "." & Getthreadinfo(1))
+		
+		Set stagePost10 = New TPS_Payments_AccountType_StageOwners( "stage_post_10", Me.nd, Me.sm )
+		
+		Call Me.log.exit( Typename( Me ) & "." & Getthreadinfo(1))
+		Exit Property
+		
+error_point:
+		On Error Goto 0
+		Error Err, Typename( Me ) & "." & Getthreadinfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Property
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Property Get stageExecution As Variant
+		On Error Goto error_point
+		Call Me.log.enter( Typename( Me ) & "." & Getthreadinfo(1))
+		
+		Set stageExecution = New TPS_Payments_AccountType_StageOwners( "stage_execution", Me.nd, Me.sm )
+		
+		Call Me.log.exit( Typename( Me ) & "." & Getthreadinfo(1))
+		Exit Property
+		
+error_point:
+		On Error Goto 0
+		Error Err, Typename( Me ) & "." & Getthreadinfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Property
+End Class
+
+
+'======================================================================================================================================
+'	CLASS TPS_Payments_AccountType_StageOwners
+'======================================================================================================================================
+Public Class TPS_Payments_AccountType_StageOwners
+	Private m_prefix As String	
+	Private m_doc As NotesDocument
+	Private m_sm As Variant
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------	
+	' PUBLIC
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------	
+	Sub New( in_prefix As String, in_doc As NotesDocument, in_sm As Variant )
+		On Error Goto error_point
+		Call in_sm.base.log.enter( Typename( Me ) & "." & Getthreadinfo(1))
+		
+		m_prefix = in_prefix
+		Set m_doc = in_doc
+		Set m_sm = in_sm
+		
+		Call in_sm.base.log.exit( Typename( Me ) & "." & Getthreadinfo(1))
+		Exit Sub
+		
+error_point:
+		On Error Goto 0
+		Error Err, Typename( Me ) & "." & Getthreadinfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Sub
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------	
+	Property Get isActive As Boolean
+		On Error Goto error_point
+		Call m_sm.base.log.enter( Typename( Me ) & "." & Getthreadinfo(1))
+		
+		Dim v As Variant
+		v = m_doc.getItemValue(  "is_" & m_prefix )(0)
+		isActive = ( v = "1" )
+		
+		Call m_sm.base.log.trace( "result: " & isActive )
+		Call m_sm.base.log.exit( Typename( Me ) & "." & Getthreadinfo(1))
+		Exit Property
+		
+error_point:
+		On Error Goto 0
+		Error Err, Typename( Me ) & "." & Getthreadinfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Property
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------	
+	Property Get name As String
+		On Error Goto error_point
+		Call m_sm.base.log.enter( Typename( Me ) & "." & Getthreadinfo(1))
+		
+		Me.name = m_doc.getItemValue(  m_prefix & "_name" )(0)
+		
+		Call m_sm.base.log.trace( "result: " & Me.name )
+		Call m_sm.base.log.exit( Typename( Me ) & "." & Getthreadinfo(1))
+		Exit Property
+		
+error_point:
+		On Error Goto 0
+		Error Err, Typename( Me ) & "." & Getthreadinfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Property
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------	
+	Property Get values As MixCollection
+		On Error Goto error_point
+		Call m_sm.base.log.enter( Typename( Me ) & "." & Getthreadinfo(1))
+		
+		Dim result As New MixCollection
+		Set values = result
+		
+		Dim vals As Variant
+		vals = m_doc.getItemValue( m_prefix & "ObjID" )
+		If ( vals(0) <> "" ) Then
+			Dim i As Integer
+			For i=0 To Ubound( vals )
+				Dim f As New ODFields( i, m_prefix, m_doc )
+				Call values.Append( f )
+			Next
+		End If
+		
+		Call m_sm.base.log.traceObject( "result: ", values )
+		Call m_sm.base.log.exit( Typename( Me ) & "." & Getthreadinfo(1))		
+		Exit Property
+		
+error_point:
+		On Error Goto 0
+		Error Err, Typename( Me ) & "." & Getthreadinfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Property	
+End Class
+
+
+
+
+'======================================================================================================================================
+'	CLASS TPS_Payments_Account
+'======================================================================================================================================
+Public Class TPS_Payments_Account As FBase_Abstract_Object_Doc
+	
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	'	PUBLIC:
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Sub New( in_doc As NotesDocument, in_ps As Variant )
+	End Sub
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Property Get title As String
+		On Error Goto error_point
+		Call Me.log.enter( Typename( Me ) & "." & Getthreadinfo(1))
+		
+		title = "№" & Me.number & ",  " & Me.sum
+		
+		Call Me.log.trace( "result: " & title )
+		Call Me.log.exit( Typename( Me ) & "." & Getthreadinfo(1))
+		Exit Property
+		
+error_point:
+		On Error Goto 0
+		Error Err, Typename( Me ) & "." & Getthreadinfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Property
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Property Get id As String
+		On Error GoTo error_point
+		Call Me.log.enter( TypeName( Me ) & "." & GetThreadInfo(1))
+		
+		id = me.nd.universalID
+		
+		Call Me.log.exit( TypeName( Me ) & "." & GetThreadInfo(1))
+		Exit Property
+		
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Property
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Property Get domain As String
+		On Error GoTo error_point
+		Call Me.log.enter( TypeName( Me ) & "." & GetThreadInfo(1))
+		
+		domain = DOMAIN_TYPE_TPS_PAYMENTS_ACCOUNT
+		
+		Call Me.log.exit( TypeName( Me ) & "." & GetThreadInfo(1))
+		Exit Property
+		
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Property
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	
+	Property Get number As String
+		On Error Goto error_point
+		Call Me.log.enter( Typename( Me ) & "." & Getthreadinfo(1))
+		
+		number = Me.nd.NumberTotal(0)
+		
+		Call Me.log.trace( "result: " & number )
+		Call Me.log.exit( Typename( Me ) & "." & Getthreadinfo(1))
+		Exit Property
+		
+error_point:
+		On Error Goto 0
+		Error Err, Typename( Me ) & "." & Getthreadinfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Property
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Property Get payer As Variant
+		On Error Goto error_point
+		Call Me.log.enter( Typename( Me ) & "." & Getthreadinfo(1))
+		
+		Set payer = New ObjectLink( Me.nd.payer_id(0), Me.nd.payer_title(0), Me.nd.payer_domain(0))
+		
+		Call Me.log.traceObject( "result", payer )
+		Call Me.log.exit( Typename( Me ) & "." & Getthreadinfo(1))
+		Exit Property
+		
+error_point:
+		On Error Goto 0
+		Error Err, Typename( Me ) & "." & Getthreadinfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Property
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Property Get type As Variant
+		On Error Goto error_point
+		Call Me.log.enter( Typename( Me ) & "." & Getthreadinfo(1))
+		
+		Set Me.type = New ObjectLink( Me.nd.type_id(0), Me.nd.type_title(0), Me.nd.type_domain(0))
+		
+		Call Me.log.traceObject( "result", payer )
+		Call Me.log.exit( Typename( Me ) & "." & Getthreadinfo(1))
+		Exit Property
+		
+error_point:
+		On Error Goto 0
+		Error Err, Typename( Me ) & "." & Getthreadinfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Property
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Property Get contract As Variant
+		On Error Goto error_point
+		Call Me.log.enter( Typename( Me ) & "." & Getthreadinfo(1))
+		
+		Set contract = New ObjectLink( Me.nd.contract_id(0), Me.nd.contract_title(0), Me.nd.contract_domain(0) )
+		
+		Call Me.log.traceObject( "result", contract )
+		Call Me.log.exit( Typename( Me ) & "." & Getthreadinfo(1))
+		Exit Property
+		
+error_point:
+		On Error Goto 0
+		Error Err, Typename( Me ) & "." & Getthreadinfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Property
+'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Property Get contragents As MixCollection
+		On Error Goto error_point
+		Call Me.log.enter( Typename( Me ) & "." & Getthreadinfo(1))
+		
+		Dim mxResult As New MixCollection
+		Set contragents = mxResult
+		If ( Me.nd.contragents_id(0) <> "" ) Then
+			Dim i As Integer
+			For i=0 To Ubound( Me.nd.contragents_id )
+				Dim cId As String, cTitle As String, cDomain As String
+				cId = Me.nd.contragents_id(i)
+				cTitle = Me.nd.contragents_title(i)
+				cDomain = Me.nd.contragents_domain(i)
+				
+				Dim c As New ObjectLink( cId, cTitle, cDomain )
+				Call mxResult.Append( c )
+			Next
+		End If
+		
+		Call Me.log.traceObject( "result", mxResult )
+		Call Me.log.exit( Typename( Me ) & "." & Getthreadinfo(1))
+		Exit Property
+		
+error_point:
+		On Error Goto 0
+		Error Err, Typename( Me ) & "." & Getthreadinfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Property
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------	
+	Property Get payType As String
+		On Error Goto error_point
+		Call Me.log.enter( Typename( Me ) & "." & Getthreadinfo(1))
+		
+		Select Case Me.nd.pay_type(0)
+		Case "cash", "1":		payType = "нал"
+		Case "cashless", "2":	payType = "б/н"
+		End Select
+		
+		Call Me.log.trace( "result: " & payType )
+		Call Me.log.exit( Typename( Me ) & "." & Getthreadinfo(1))
+		Exit Property
+		
+error_point:
+		On Error Goto 0
+		Error Err, Typename( Me ) & "." & Getthreadinfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Property
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Property Get payDate As NotesDateTime
+		On Error Goto error_point
+		Call Me.log.enter( Typename( Me ) & "." & Getthreadinfo(1))
+		
+		Set payDate = New NotesDateTime( Me.nd.pay_date(0))
+		
+		Call Me.log.traceObject( "result", payDate )
+		Call Me.log.exit( Typename( Me ) & "." & Getthreadinfo(1))
+		Exit Property
+		
+error_point:
+		On Error Goto 0
+		Error Err, Typename( Me ) & "." & Getthreadinfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Property
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------	
+	Property Get sum As Currency
+		On Error Goto error_point
+		Call Me.log.enter( Typename( Me ) & "." & Getthreadinfo(1))
+		
+		sum = Me.nd.sum(0)
+		
+		Call Me.log.trace( "result: " & sum )
+		Call Me.log.exit( Typename( Me ) & "." & Getthreadinfo(1))
+		Exit Property
+		
+error_point:
+		On Error Goto 0
+		Error Err, Typename( Me ) & "." & Getthreadinfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Property
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------	
+	Property Get isNDS As Boolean
+		On Error Goto error_point
+		Call Me.log.enter( Typename( Me ) & "." & Getthreadinfo(1))
+		
+'		isNDS = ( Me.nd.is_set_nds(0) = "1" ) ' TLD-1677
+		isNDS = CStr(Me.nd.sum_nds(0)) <> ""
+		
+		Call Me.log.trace( "result: " & isNDS )
+		Call Me.log.exit( Typename( Me ) & "." & Getthreadinfo(1))
+		Exit Property
+		
+error_point:
+		On Error Goto 0
+		Error Err, Typename( Me ) & "." & Getthreadinfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Property
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------	
+	Property Get nds As Long
+		On Error Goto error_point
+		Call Me.log.enter( Typename( Me ) & "." & Getthreadinfo(1))
+		
+		nds = Me.nd.sum_nds(0)
+		
+		Call Me.log.trace( "result: " & nds )
+		Call Me.log.exit( Typename( Me ) & "." & Getthreadinfo(1))
+		Exit Property
+		
+error_point:
+		On Error Goto 0
+		Error Err, Typename( Me ) & "." & Getthreadinfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Property
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------	
+	Property Get valuta As String
+		On Error Goto error_point
+		Call Me.log.enter( Typename( Me ) & "." & Getthreadinfo(1))
+		
+		valuta = Me.nd.valuta(0)
+		
+		Call Me.log.trace( "result: " & valuta )
+		Call Me.log.exit( Typename( Me ) & "." & Getthreadinfo(1))
+		Exit Property
+		
+error_point:
+		On Error Goto 0
+		Error Err, Typename( Me ) & "." & Getthreadinfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Property
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------	
+	Property Get subject As String
+		On Error Goto error_point
+		Call Me.log.enter( Typename( Me ) & "." & Getthreadinfo(1))
+		
+		subject = Me.nd.subject(0)
+		
+		Call Me.log.trace( "result: " & subject )
+		Call Me.log.exit( Typename( Me ) & "." & Getthreadinfo(1))
+		Exit Property
+		
+error_point:
+		On Error Goto 0
+		Error Err, Typename( Me ) & "." & Getthreadinfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Property
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------	
+	Property Get comments As String
+		On Error Goto error_point
+		Call Me.log.enter( Typename( Me ) & "." & Getthreadinfo(1))
+		
+		comments = Me.nd.comments(0)
+		
+		Call Me.log.trace( "result: " & comments )
+		Call Me.log.exit( Typename( Me ) & "." & Getthreadinfo(1))
+		Exit Property
+		
+error_point:
+		On Error Goto 0
+		Error Err, Typename( Me ) & "." & Getthreadinfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Property
+End Class
+
+
+
+'======================================================================================================================================
+'	CLASS TPS_Payments_Account_Specification
+'======================================================================================================================================
+Public Class TPS_Payments_Account_Specification As FBase_Abstract_Object_Doc
+	
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	'	PUBLIC:
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Sub New( in_doc As NotesDocument, in_ps As Variant )
+	End Sub
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Property Get account As Variant
+		On Error Goto error_point
+		Call Me.log.enter( Typename( Me ) & "." & Getthreadinfo(1))
+		
+		If ( Me.nd.account_id(0) = "" ) Then
+			Set account = Nothing
+		Else
+			Set account = New ObjectLink( Me.nd.account_id(0), Me.nd.account_title(0), DOMAIN_TYPE_TPS_PAYMENTS_ACCOUNT )
+		End If
+		
+		Call Me.log.traceObject( "result", contragent )
+		Call Me.log.exit( Typename( Me ) & "." & Getthreadinfo(1))
+		Exit Property
+		
+error_point:
+		On Error Goto 0
+		Error Err, Typename( Me ) & "." & Getthreadinfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Property
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Property Get contragent As Variant
+		On Error Goto error_point
+		Call Me.log.enter( Typename( Me ) & "." & Getthreadinfo(1))
+		
+		If ( Me.nd.contragent_title(0) = "" ) Then
+			Set contragent = Nothing
+		Else
+			Set contragent = New ObjectLink( Me.nd.contragent_id(0), Me.nd.contragent_title(0), Me.nd.contragent_domain(0) )
+		End If
+		
+		Call Me.log.traceObject( "result", contragent )
+		Call Me.log.exit( Typename( Me ) & "." & Getthreadinfo(1))
+		Exit Property
+		
+error_point:
+		On Error Goto 0
+		Error Err, Typename( Me ) & "." & Getthreadinfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Property
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Property Get department As Variant
+		On Error Goto error_point
+		Call Me.log.enter( Typename( Me ) & "." & Getthreadinfo(1))
+		
+'		If ( Me.nd.contragent_title(0) = "" ) Then   <TLD-2187>
+		If ( Me.nd.direction_title(0) = "" ) Then
+			Set department = Nothing
+		Else
+			Set department = New ObjectLink( Me.nd.direction_id(0), Me.nd.direction_title(0), Me.nd.direction_domain(0) )
+		End If
+		
+		Call Me.log.traceObject( "result", contragent )
+		Call Me.log.exit( Typename( Me ) & "." & Getthreadinfo(1))
+		Exit Property
+		
+error_point:
+		On Error Goto 0
+		Error Err, Typename( Me ) & "." & Getthreadinfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Property
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Property Get sum As Variant
+		On Error Goto error_point
+		Call Me.log.enter( Typename( Me ) & "." & Getthreadinfo(1))
+		
+		Set sum = New TPS_Payments_Specification_Sum( Me.nd, Me.Me_Variant )
+		
+		Call Me.log.traceObject( "result: ", sum )
+		Call Me.log.exit( Typename( Me ) & "." & Getthreadinfo(1))
+		Exit Property
+		
+error_point:
+		On Error Goto 0
+		Error Err, Typename( Me ) & "." & Getthreadinfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Property
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+'	Property Get subject As String
+'		On Error Goto error_point
+'		Call Me.log.enter( Typename( Me ) & "." & Getthreadinfo(1))
+'	
+'		subject = Me.nd.subject(0)
+'	
+'		Call Me.log.trace( "result: " & subject )
+'		Call Me.log.exit( Typename( Me ) & "." & Getthreadinfo(1))
+'		Exit Property
+'	
+'error_point:
+'		On Error Goto 0
+'		Error Err, Typename( Me ) & "." & Getthreadinfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+'	End Property
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------	
+	Property Get costItem As Variant
+		On Error Goto error_point
+		Call Me.log.enter( Typename( Me ) & "." & Getthreadinfo(1))
+		
+		If ( Me.nd.cost_item_id(0) = "" ) Then
+			Set costItem = Nothing
+		Else
+			Set costItem = New ObjectLink( Me.nd.cost_item_id(0), Me.nd.cost_item_title(0), DOMAIN_TYPE_TPS_PAYMENTS_BUDGET_ITEM )
+		End If
+		
+		Call Me.log.traceObject( "result", costItem )
+		Call Me.log.exit( Typename( Me ) & "." & Getthreadinfo(1))
+		Exit Property
+		
+error_point:
+		On Error Goto 0
+		Error Err, Typename( Me ) & "." & Getthreadinfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Property
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------	
+	Property Get project As Variant
+		On Error Goto error_point
+		Call Me.log.enter( Typename( Me ) & "." & Getthreadinfo(1))
+		
+		If ( Me.nd.project_id(0) = "" ) Then
+			Set project = Nothing
+		Else
+			Set project = New ObjectLink( Me.nd.project_id(0), Me.nd.project_title(0), DOMAIN_TYPE_TPS_PAYMENTS_PROJECT )
+		End If
+		
+		Call Me.log.traceObject( "result", project )
+		Call Me.log.exit( Typename( Me ) & "." & Getthreadinfo(1))
+		Exit Property
+		
+error_point:
+		On Error Goto 0
+		Error Err, Typename( Me ) & "." & Getthreadinfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Property
+End Class
+
+
+'======================================================================================================================================
+'	CLASS TPS_Payments_Specification_Sum
+'======================================================================================================================================
+Public Class TPS_Payments_Specification_Sum As FBase_Abstract_Object_Doc
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	'	PUBLIC:
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Sub New( in_doc As NotesDocument, in_ps As Variant )
+	End Sub
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Property Get total As Currency
+		On Error Goto error_point
+		Call Me.log.enter( Typename( Me ) & "." & Getthreadinfo(1))
+		
+		If CStr(Me.nd.sum_total(0)) = "" Then
+			total = 0
+		else
+			total = Me.nd.sum_total(0)
+		End If
+		
+		Call Me.log.trace( "result: " & total )
+		Call Me.log.exit( Typename( Me ) & "." & Getthreadinfo(1))
+		Exit Property
+		
+error_point:
+		On Error Goto 0
+		Error Err, Typename( Me ) & "." & Getthreadinfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Property
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Property Get total_NDS As Currency
+		On Error GoTo error_point
+		Call Me.log.enter( TypeName( Me ) & "." & GetThreadInfo(1))
+		
+		If CStr(Me.nd.sum_nds(0)) = "" Then
+			total_NDS = 0
+		Else
+			total_NDS = Me.nd.sum_nds(0)
+		End If
+				
+		Call Me.log.trace( "result: " & total_NDS )
+		Call Me.log.exit( TypeName( Me ) & "." & GetThreadInfo(1))
+		Exit Property
+		
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Property
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Property Get NDS As string
+		On Error GoTo error_point
+		Call Me.log.enter( TypeName( Me ) & "." & GetThreadInfo(1))
+		
+		NDS = Me.nd.nds(0)
+		
+		Call Me.log.trace( "result: " & NDS )
+		Call Me.log.exit( TypeName( Me ) & "." & GetThreadInfo(1))
+		Exit Property
+		
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Property
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Property Get month As Variant
+		On Error Goto error_point
+		Call Me.log.enter( Typename( Me ) & "." & Getthreadinfo(1))
+		
+		Set Me.month = New TPS_Payments_Specification_Sum_Details( "month", Me.nd, Me.Me_variant )
+		
+		Call Me.log.exit( Typename( Me ) & "." & Getthreadinfo(1))
+		Exit Property
+		
+error_point:
+		On Error Goto 0
+		Error Err, Typename( Me ) & "." & Getthreadinfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Property
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Property Get period As Variant
+		On Error Goto error_point
+		Call Me.log.enter( Typename( Me ) & "." & Getthreadinfo(1))
+		
+		Set Me.period = New TPS_Payments_Specification_Sum_Details( "period", Me.nd, Me.Me_variant )
+		
+		Call Me.log.exit( Typename( Me ) & "." & Getthreadinfo(1))
+		Exit Property
+		
+error_point:
+		On Error Goto 0
+		Error Err, Typename( Me ) & "." & Getthreadinfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Property
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Property Get year As Variant
+		On Error Goto error_point
+		Call Me.log.enter( Typename( Me ) & "." & Getthreadinfo(1))
+		
+		Set Me.year = New TPS_Payments_Specification_Sum_Details( "year", Me.nd, Me.Me_variant )
+		
+		Call Me.log.exit( Typename( Me ) & "." & Getthreadinfo(1))
+		Exit Property
+		
+error_point:
+		On Error Goto 0
+		Error Err, Typename( Me ) & "." & Getthreadinfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Property
+End Class
+
+
+'======================================================================================================================================
+'	CLASS TPS_Payments_Specification_Sum_Details
+'======================================================================================================================================
+Public Class TPS_Payments_Specification_Sum_Details
+	Private m_postfix As String
+	Private m_doc As NotesDocument
+	Private m_spec As Variant
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	'	PUBLIC:
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Sub New( in_postfix As String, in_doc As NotesDocument, in_spec As Variant )
+		On Error Goto error_point
+		Call in_spec.log.enter( Typename( Me ) & "." & Getthreadinfo(1))
+		
+		m_postfix = in_postfix
+		Set m_doc = in_doc
+		Set m_spec = in_spec
+		
+		Call in_spec.log.exit( Typename( Me ) & "." & Getthreadinfo(1))
+		Exit Sub
+		
+error_point:
+		On Error Goto 0
+		Error Err, Typename( Me ) & "." & Getthreadinfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Sub
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Property Get fact As Currency
+		On Error Goto error_point
+		Call m_spec.log.enter( Typename( Me ) & "." & Getthreadinfo(1))
+		
+		fact = m_doc.GetItemValue( "sum_fact_" & m_postfix )(0)
+		
+		Call m_spec.log.log.trace( "result: " & fact )
+		Call m_spec.log.exit( Typename( Me ) & "." & Getthreadinfo(1))
+		Exit Property
+		
+error_point:
+		On Error Goto 0
+		Error Err, Typename( Me ) & "." & Getthreadinfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Property
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Property Set fact As Currency
+		On Error Goto error_point
+		Call m_spec.log.enter( Typename( Me ) & "." & Getthreadinfo(1))
+		
+		Call m_doc.ReplaceItemValue( "sum_fact_" & m_postfix, Round( fact, 2 ))
+		
+		Call m_spec.log.exit( Typename( Me ) & "." & Getthreadinfo(1))
+		Exit Property
+		
+error_point:
+		On Error Goto 0
+		Error Err, Typename( Me ) & "." & Getthreadinfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Property
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Property Get rest As Currency
+		On Error Goto error_point
+		Call m_spec.log.enter( Typename( Me ) & "." & Getthreadinfo(1))
+		
+		rest = m_doc.GetItemValue(  "sum_rest_" & m_postfix )(0)
+		
+		Call m_spec.log.log.trace( "result: " & rest )
+		Call m_spec.log.exit( Typename( Me ) & "." & Getthreadinfo(1))		
+		Exit Property
+		
+error_point:
+		On Error Goto 0
+		Error Err, Typename( Me ) & "." & Getthreadinfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Property
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Property Set rest As Currency
+		On Error Goto error_point
+		Call m_spec.log.enter( Typename( Me ) & "." & Getthreadinfo(1))
+		
+		Call m_doc.ReplaceItemValue(  "sum_rest_" & m_postfix, Round( rest, 2 ))
+		
+		Call m_spec.log.exit( Typename( Me ) & "." & Getthreadinfo(1))
+		Exit Property
+		
+error_point:
+		On Error Goto 0
+		Error Err, Typename( Me ) & "." & Getthreadinfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Property
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Property Get plan As Currency
+		On Error GoTo error_point
+		Call m_spec.log.enter( TypeName( Me ) & "." & GetThreadInfo(1))
+		
+		fact = m_doc.GetItemValue( "sum_plan_" & m_postfix )(0)
+		
+		Call m_spec.log.log.trace( "result: " & plan )
+		Call m_spec.log.exit( TypeName( Me ) & "." & GetThreadInfo(1))
+		Exit Property
+		
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Property
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Property Set plan As Currency
+		On Error GoTo error_point
+		Call m_spec.log.enter( TypeName( Me ) & "." & GetThreadInfo(1))
+		
+		Call m_doc.ReplaceItemValue( "sum_plan_" & m_postfix, Round( plan, 2 ))
+		
+		Call m_spec.log.exit( TypeName( Me ) & "." & GetThreadInfo(1))
+		Exit Property
+		
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Property
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Property Get fore As Currency
+		On Error GoTo error_point
+		Call m_spec.log.enter( TypeName( Me ) & "." & GetThreadInfo(1))
+		
+		rest = m_doc.GetItemValue(  "sum_fore_" & m_postfix )(0)
+		
+		Call m_spec.log.log.trace( "result: " & fore )
+		Call m_spec.log.exit( TypeName( Me ) & "." & GetThreadInfo(1))		
+		Exit Property
+		
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Property
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Property Set fore As Currency
+		On Error GoTo error_point
+		Call m_spec.log.enter( TypeName( Me ) & "." & GetThreadInfo(1))
+		
+		Call m_doc.ReplaceItemValue(  "sum_fore_" & m_postfix, Round( fore, 2 ))
+		
+		Call m_spec.log.exit( TypeName( Me ) & "." & GetThreadInfo(1))
+		Exit Property
+		
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Property
+End Class
+
+
+'======================================================================================================================================
+'	CLASS TPS_Payments_Project
+'======================================================================================================================================
+Public Class TPS_Payments_Project As FBase_Abstract_Object_Doc
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------	
+	' PUBLIC
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------	
+	Sub New( in_doc As NotesDocument, in_ps As Variant )
+	End Sub
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Property Get isSelectable As Boolean
+		On Error Goto error_point
+		Call Me.log.enter( Typename( Me ) & "." & Getthreadinfo(1))
+		
+		isSelectable = ( Me.nd.is_selected(0) = "1" )
+		
+		Call Me.log.trace( "result: " & isSelectable )
+		Call Me.log.exit( Typename( Me ) & "." & Getthreadinfo(1))		
+		Exit Property
+		
+error_point:
+		On Error Goto 0
+		Error Err, Typename( Me ) & "." & Getthreadinfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$		
+	End Property
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------	
+	Property Get isActive As Boolean
+		On Error Goto error_point
+		Call Me.log.enter( Typename( Me ) & "." & Getthreadinfo(1))
+		
+		isActive = ( Me.nd.status(0) = "active" )		
+		
+		Call Me.log.trace( "result: " & isActive )
+		Call Me.log.exit( Typename( Me ) & "." & Getthreadinfo(1))		
+		Exit Property
+		
+error_point:
+		On Error Goto 0
+		Error Err, Typename( Me ) & "." & Getthreadinfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$		
+	End Property
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------	
+	Property Get Title As String
+		On Error GoTo error_point
+		Call Me.log.enter( TypeName( Me ) & "." & GetThreadInfo(1))
+		
+		Title =  Me.nd.Title(0) 		
+		
+		Call Me.log.trace( "result: " & Title )
+		Call Me.log.exit( TypeName( Me ) & "." & GetThreadInfo(1))		
+		Exit Property
+		
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$		
+	End Property
+End Class
+'======================================================================================================================================
+'	CLASS TPS_Payments_TaxTemplate
+'======================================================================================================================================
+Public Class TPS_Payments_TaxTemplate As FBase_Abstract_Object_Doc
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------	
+	' PUBLIC
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------	
+	Sub New( in_doc As NotesDocument, in_ps As Variant )
+	End Sub
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------	
+	Property Get isActive As Boolean
+		On Error GoTo error_point
+		Call Me.log.enter( TypeName( Me ) & "." & GetThreadInfo(1))
+		
+		isActive = ( Me.nd.status(0) = "active" )		
+		
+		Call Me.log.trace( "result: " & isActive )
+		Call Me.log.exit( TypeName( Me ) & "." & GetThreadInfo(1))		
+		Exit Property
+		
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$		
+	End Property
+End Class
+'======================================================================================================================================
+'	CLASS TPS_Payments_BudgetType
+'======================================================================================================================================
+Public Class TPS_Payments_BudgetType As FBase_Abstract_Object_Doc
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------	
+	' PUBLIC
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------	
+	Sub New( in_doc As NotesDocument, in_ps As Variant )
+	End Sub
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------	
+	Property Get isActive As Boolean
+		On Error GoTo error_point
+		Call Me.log.enter( TypeName( Me ) & "." & GetThreadInfo(1))
+		
+		isActive = ( Me.nd.status(0) = "active" )		
+		
+		Call Me.log.trace( "result: " & isActive )
+		Call Me.log.exit( TypeName( Me ) & "." & GetThreadInfo(1))		
+		Exit Property
+		
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$		
+	End Property
+End Class
+
+
+
+'======================================================================================================================================
+'	CLASS TPS_Payments_PayForCompany
+' это класс для компании, за которую производится оплата
+'======================================================================================================================================
+Public Class TPS_Payments_PayForCompany As FBase_Abstract_Object_Doc
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------	
+	' PUBLIC
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------	
+	Sub New( in_doc As NotesDocument, in_ps As Variant )
+	End Sub
+	
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Property Get title As String
+		On Error GoTo error_point
+		Call Me.log.enter( TypeName( Me ) & "." & GetThreadInfo(1))
+		
+		title = me.nd.getItemValue("title")(0)
+		
+		Call Me.log.trace( "result: " & title )
+		Call Me.log.exit( TypeName( Me ) & "." & GetThreadInfo(1))
+		Exit Property
+		
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Property
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Property Get id As String
+		On Error GoTo error_point
+		Call Me.log.enter( TypeName( Me ) & "." & GetThreadInfo(1))
+		
+		id = me.nd.universalID
+		
+		Call Me.log.exit( TypeName( Me ) & "." & GetThreadInfo(1))
+		Exit Property
+		
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Property
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Property Get domain As String
+		On Error GoTo error_point
+		Call Me.log.enter( TypeName( Me ) & "." & GetThreadInfo(1))
+		
+		domain = DOMAIN_TYPE_TPS_PAYMENTS_PAYFOR_COMPANY
+		
+		Call Me.log.exit( TypeName( Me ) & "." & GetThreadInfo(1))
+		Exit Property
+		
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Property
+	
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------	
+	Property Get code1c As String
+		On Error GoTo error_point
+		Call Me.log.enter( TypeName( Me ) & "." & GetThreadInfo(1))
+		
+		code1c = CStr(Me.nd.getItemValue("code_1c")(0))
+		If ( code1c = "" ) Then 
+			Call Me.log.warn( "Код 1С пуст " )	
+		End If
+		
+		Call Me.log.trace( "result: " & code1c )
+		Call Me.log.exit( TypeName( Me ) & "." & GetThreadInfo(1))
+		Exit Property
+		
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$		
+	End Property
+End Class

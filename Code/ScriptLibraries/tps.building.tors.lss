@@ -1,0 +1,1412 @@
+'++LotusScript Development Environment:2:5:(Options):0:74
+Option Public
+Option Declare
+
+Use "fbyte"
+Use "tps.common"
+
+'++LotusScript Development Environment:2:5:(Forward):0:1
+Declare Public Class TPS_BuildingTORsService As FBase_Abstract_Service
+Declare Class TPS_BuldingTORs_FragmentPckg As Fbase_abstract_object_doc
+Declare Class TPS_BuldingTORs_Fragment As Fbase_abstract_object_doc
+Declare Class TPS_BuldingTORs_CardAgree As Fbase_abstract_object_doc
+Declare Class TPS_BuldingTORs_Category As Fbase_abstract_object_doc
+Declare Class TPS_BuldingTORs_FragmentPckgDict As Fbase_abstract_object_doc
+Declare Class TPS_BuldingTORs_FragmentDict As Fbase_abstract_object_doc
+Declare Class TPS_BuldingTORs_CompareResult As Fbase_abstract_object_doc
+Declare Class TPS_BuldingTORs_Company As Fbase_abstract_object_doc
+Declare Class TPS_BuldingTORs_DocType As FBase_Abstract_Object_Doc
+
+'++LotusScript Development Environment:2:5:(Declarations):0:10
+Private Const DATABASE_KEY = "tps.building.tors"
+
+Const DOMAIN_BULDING_TORS_CARDAGREE = "tps.building.tors.cardagree"
+Const DOMAIN_BULDING_TORS_FRAGMENTPCKG = "tps.building.tors.fragmentpckg"
+Const DOMAIN_BULDING_TORS_FRAGMENT = "tps.building.tors.fragment"
+Const DOMAIN_BULDING_TORS_CATEGORY_DICT = "tps.building.tors.category_dict"
+Const DOMAIN_BULDING_TORS_FRAGMENTPCKG_DICT = "tps.building.tors.fragmentpckg_dict"
+Const DOMAIN_BULDING_TORS_FRAGMENT_DICT = "tps.building.tors.fragment_dict"
+Const DOMAIN_BULDING_TORS_COMPARE_RESULT = "tps.building.tors.compare_result"
+Const DOMAIN_BULDING_TORS_COMPANY_DICT 		= "tps.building.tors.company_dict"
+Const DOMAIN_BULDING_TORS_DOCTYPE_DICT 		= "tps.building.tors.doctype_dict"
+
+'======================================================================================================================================
+'	CLASS TPS_BuildingTORsService
+'======================================================================================================================================
+Public Class TPS_BuildingTORsService As FBase_Abstract_Service
+	Private m_db As NotesDatabase
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Private Function getId( in_key As Variant ) As String
+		On Error Goto error_point
+		Call Me.log.enter( Typename( Me ) & "." & Getthreadinfo(1))
+		
+		Dim key As String
+		If ( Lcase( Typename( in_key )) = "objectlink" ) Then
+			key = in_key.id 
+		Elseif Isscalar( in_key ) Then 
+			key = in_key
+		Else
+			Error 1001, "The type of data of parameter 'in_key' is '" & Typename( in_key ) & "'. It is not supported"
+		End If
+		
+		getId = key
+		
+		Call Me.log.trace( "result: " & getId )
+		Call Me.log.exit( Typename( Me ) & "." & Getthreadinfo(1))
+		Exit Function
+		
+error_point:
+		On Error Goto 0
+		Error Err, Typename( Me ) & "." & Getthreadinfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Function
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	'	PUBLIC:
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Sub New( in_ps As Variant )
+	End Sub
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Property Get db As NotesDatabase
+		On Error Goto error_point
+		Call Me.log.enter( Typename( Me ) & "." & Getthreadinfo(1))
+		
+		If( m_db Is Nothing )Then
+			Set m_db = Me.sm.base.databases.get( DATABASE_KEY )
+		End If
+		Set db = m_db
+		
+		Call Me.log.traceObject( "result", db )		
+		Call Me.log.exit( Typename( Me ) & "." & Getthreadinfo(1))
+		Exit Property
+		
+error_point:
+		On Error Goto 0
+		Error Err, Typename( Me ) & "." & Getthreadinfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Property
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Property Set db As NotesDatabase
+		On Error GoTo error_point
+		Call Me.log.enter( TypeName( Me ) & "." & GetThreadInfo(1))
+		
+		Set m_db = db
+		
+		Exit Property
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Property
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Function getObject( in_link As Variant ) As Variant
+		On Error Goto error_point
+		Call Me.log.enter( Typename( Me ) & "." & Getthreadinfo(1))
+		
+		Select Case in_link.domain
+		Case DOMAIN_BULDING_TORS_CARDAGREE:
+			Set getObject = Me.getCardAgree( in_link )
+		Case DOMAIN_BULDING_TORS_FRAGMENTPCKG:
+			Set getObject = Me.getFragmentPckg( in_link )
+		Case DOMAIN_BULDING_TORS_FRAGMENT:
+			Set getObject = Me.getFragment( in_link )
+		Case DOMAIN_BULDING_TORS_CATEGORY_DICT:
+			Set getObject = Me.getCategory( in_link )
+		Case DOMAIN_BULDING_TORS_COMPARE_RESULT:
+			Set getObject = Me.getCompareResult( in_link )
+		Case DOMAIN_BULDING_TORS_COMPANY_DICT
+			Set getObject = Me.getCompany( in_link )	
+		Case DOMAIN_BULDING_TORS_DOCTYPE_DICT
+			Set getObject = Me.getDocType( in_link )
+		Case Else
+			Error 1001, "The data of type '" & in_link.domain & "' of parameter 'in_link.domain' is not supported"
+		End Select
+		
+		Call Me.log.traceObject( "result", getObject )
+		Call Me.log.exit( Typename( Me ) & "." & Getthreadinfo(1))
+		Exit Function
+		
+error_point:
+		On Error Goto 0
+		Error Err, Typename( Me ) & "." & Getthreadinfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Function
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------	
+	Function getDocObject( in_doc As NotesDocument ) As Variant
+		On Error Goto error_point
+		Call Me.log.enter( Typename( Me ) & "." & Getthreadinfo(1))
+		
+		Select Case LCase(in_doc.form(0))
+		Case LCase("tps.building.tors.cardagree"):
+				Set getDocObject =  New TPS_BuldingTORs_CardAgree( in_doc, Me.Me_variant )
+		Case LCase("tps.building.tors.fragmentpckg"):
+				Set getDocObject =  New TPS_BuldingTORs_FragmentPckg( in_doc, Me.Me_variant )
+		Case LCase("tps.building.tors.fragment"):
+				Set getDocObject =  New TPS_BuldingTORs_Fragment( in_doc, Me.Me_variant )	
+		Case LCase("tps.building.tors.category_dict"):
+				Set getDocObject =  New TPS_BuldingTORs_Category( in_doc, Me.Me_variant )	
+		Case LCase("tps.building.tors.fragment_dict"):
+				Set getDocObject =  New TPS_BuldingTORs_FragmentDict( in_doc, Me.Me_variant )
+		Case LCase("tps.building.tors.fragmentpckg_dict"):
+				Set getDocObject =  New TPS_BuldingTORs_FragmentPckgDict( in_doc, Me.Me_variant )
+		Case LCase("tps.building.tors.compare_result"):
+				Set getDocObject =  New TPS_BuldingTORs_CompareResult( in_doc, Me.Me_variant )
+			Case LCase("tps.building.tors.company_dict"):
+				Set getDocObject =  New TPS_BuldingTORs_Company( in_doc, Me.Me_variant )
+			Case LCase("tps.building.tors.doctype_dict"):
+				Set getDocObject =  New TPS_BuldingTORs_DocType( in_doc, Me.Me_variant )				
+		Case Else:
+			Error 1001, "Форма '" & in_doc.form(0) & "' не поддерживается"
+		End Select
+		
+		'Call Me.log.traceObject( "result", getDocObject )
+		Call Me.log.exit( Typename( Me ) & "." & Getthreadinfo(1))
+		Exit Function
+		
+error_point:
+		On Error Goto 0
+		Error Err, Typename( Me ) & "." & Getthreadinfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Function
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Function getCardAgree( in_key As Variant ) As Variant
+		On Error Goto error_point
+		Call Me.log.enter( Typename( Me ) & "." & Getthreadinfo(1))
+		
+		Dim key As String, doc As NotesDocument
+		key = Me.getId( in_key )
+		On Error 4091 Resume Next 'bad unid
+		Set doc = Me.db.getdocumentbyunid( key )
+		If ( doc Is Nothing ) Then
+			Error 1001, "In database '" & Me.db.Title & "' ( path: " & Me.db.FilePath & " ) not found document  by key '" & in_key & "'"
+		Else
+			Set Me.getCardAgree = Me.getDocObject( doc )
+		End If
+		
+		Call Me.log.traceObject( "result", getCardAgree )
+		Call Me.log.exit( Typename( Me ) & "." & Getthreadinfo(1))
+		Exit Function
+		
+error_point:
+		On Error Goto 0
+		Error Err, Typename( Me ) & "." & Getthreadinfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$ 
+	End Function
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Function getFragmentPckg( in_key As Variant ) As Variant
+		On Error GoTo error_point
+		Call Me.log.enter( TypeName( Me ) & "." & GetThreadInfo(1))
+		
+		Dim key As String, doc As NotesDocument
+		key = Me.getId( in_key )
+		On Error 4091 Resume Next 'bad unid
+		Set doc = Me.db.getdocumentbyunid( key )
+		If ( doc Is Nothing ) Then
+			Error 1001, "In database '" & Me.db.Title & "' ( path: " & Me.db.FilePath & " ) not found document  by key '" & in_key & "'"
+		Else
+			Set Me.getFragmentPckg = Me.getDocObject( doc )
+		End If
+		
+		Call Me.log.traceObject( "result", getFragmentPckg )
+		Call Me.log.exit( TypeName( Me ) & "." & GetThreadInfo(1))
+		Exit Function
+		
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$ 
+	End Function
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Function getFragment( in_key As Variant ) As Variant
+		On Error GoTo error_point
+		Call Me.log.enter( TypeName( Me ) & "." & GetThreadInfo(1))
+		
+		Dim key As String, doc As NotesDocument
+		key = Me.getId( in_key )
+		On Error 4091 Resume Next 'bad unid
+		Set doc = Me.db.getdocumentbyunid( key )
+		If ( doc Is Nothing ) Then
+			Error 1001, "In database '" & Me.db.Title & "' ( path: " & Me.db.FilePath & " ) not found document  by key '" & in_key & "'"
+		Else
+			Set Me.getFragment = Me.getDocObject( doc )
+		End If
+		
+		Call Me.log.traceObject( "result", getFragment )
+		Call Me.log.exit( TypeName( Me ) & "." & GetThreadInfo(1))
+		Exit Function
+		
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$ 
+	End Function
+	'--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Function createFragment( in_doc As NotesDocument ) As Variant
+		On Error GoTo error_point
+		
+		Set createFragment = Nothing
+		If ( Not ( in_doc Is Nothing ) ) Then
+			Dim cardAgree As Variant
+			Set cardAgree = Me.getDocObject( in_doc )
+			If Not IsEmpty( cardAgree ) Then
+				If ( cardAgree.domain = DOMAIN_BULDING_TORS_CARDAGREE ) Then
+					
+					Dim session As New NotesSession
+					Dim docNew As NotesDocument 
+					
+					Set docNew = Me.db.Createdocument()
+					Dim fragment As New TPS_BuldingTORs_Fragment(docNew, Me.Me_variant)
+					
+					Call fragment.nd.Replaceitemvalue("Form", "tps.building.tors.fragment")
+					Call fragment.nd.Replaceitemvalue("domain", DOMAIN_BULDING_TORS_FRAGMENT )
+					Call fragment.nd.Replaceitemvalue("id", fragment.nd.Universalid )
+					Call fragment.nd.Replaceitemvalue("CustomID", fragment.nd.Universalid )
+					Call fragment.nd.Replaceitemvalue("docKind", "ExtraDoc" )
+					
+					Dim item As NotesItem
+					'Set item = in_doc.Getfirstitem("DWF$Authors")
+					'If ( Not item Is Nothing ) Then
+					'	Call item.Copyitemtodocument( fragment.nd, item.Name )
+					'End If
+					
+					Dim s As New NotesSession, v As Variant
+					v = in_doc.Getfirstitem("DWF$Authors").Values
+					If ( CStr(v(0)) <> "" ) Then
+						ReDim Preserve v(UBound(v)+1) As String
+					End If
+					v(UBound(v)) = s.Username
+					ReDim Preserve v(UBound(v)+1) As String
+					v(UBound(v)) = "[converter]"
+										
+					Call fragment.nd.ReplaceItemValue("DWF$Authors", v )
+					Set item = fragment.nd.Getfirstitem("DWF$Authors") 
+					If ( Not ( item Is Nothing ) ) Then
+						item.IsAuthors = True
+					End If
+					
+					
+					Set item = in_doc.Getfirstitem("DWF$Readers")
+					If ( Not item Is Nothing ) Then
+						Call item.Copyitemtodocument( fragment.nd, item.Name )
+					End If
+					Set item = in_doc.Getfirstitem("DWF$Server")
+					If ( Not item Is Nothing ) Then
+						Call item.Copyitemtodocument( fragment.nd, item.Name )
+					End If
+					
+					Dim docTemp As New NotesDocument( Me.db ), ItemRef As NotesItem
+					Call docTemp.Makeresponse( in_doc )
+					Set ItemRef = docTemp.Getfirstitem("$Ref") 
+					If Not ( ItemRef Is Nothing ) Then
+						Call ItemRef.Copyitemtodocument( fragment.nd, "MainRef" )
+					Else
+						Error 4001, {Не удалось сформировать поле "$Ref"}
+					End If
+					
+				Else
+					Error 4001, {Не верный входящий параметр: Домен не равен домену 'карточки заявки'. UNID: } & in_doc.Universalid & { / domain: } & cardAgree.domain
+				End If
+			Else
+				Error 4001, {Не удалось получить объект по входящему параметру (документу). UNID: } & in_doc.Universalid
+			End If
+			
+		End If
+		Set createFragment = fragment
+		
+		Call Me.log.exit( "</" & TypeName( Me ) & "." & GetThreadInfo(1) & ">" )
+		Exit Function
+		
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Function
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Function getFragments( in_link As Variant ) As MixCollection
+		On Error GoTo error_point
+		Call Me.log.enter( TypeName( Me ) & "." & GetThreadInfo(1))
+		
+		If ( in_link.domain = DOMAIN_BULDING_TORS_FRAGMENTPCKG ) Then
+			Dim mxResult As New MixCollection
+			Set getFragments = mxResult
+
+			Dim vw As NotesView, dc As NotesDocumentCollection
+			Set vw = Me.db.Getview("(fragments.byfragmentpckg_id)")
+			If ( Not vw Is Nothing ) Then
+				Call vw.Refresh()
+				vw.Autoupdate = False
+				Set dc = vw.Getalldocumentsbykey( in_link.id )
+				If ( dc.Count > 0 ) Then
+					Dim doc As NotesDocument
+					Set doc = dc.Getfirstdocument()
+					While Not ( doc Is Nothing )
+						Dim fragmnt As Variant
+						Set fragmnt = Me.getDocObject( doc )
+						If Not ( fragmnt Is Nothing ) Then
+							Call mxResult.Append( fragmnt )	
+						End If
+						Set doc = dc.Getnextdocument(doc)
+					Wend
+				End If
+			Else
+				Error 1001, "View '(fragments.byfragmentpckg_id)' is not exist"
+			End If
+		Else
+			Error 1001, "The data of type '" & in_link.domain & "' of parameter 'in_link.domain' is wrong"
+		End If
+		
+		Call Me.log.traceObject( "result", mxResult )		
+		Call Me.log.exit( "</" & TypeName( Me ) & "." & GetThreadInfo(1) & ">" )
+		Exit Function
+		
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Function
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------	
+	Function dialogSelectCardAgree( in_isMult As Boolean ) As MixCollection
+		On Error GoTo error_point
+		Call Me.log.enter( "<" & TypeName( Me ) & "." & GetThreadInfo(1) & ">" )
+		Call Me.log.parameter( "in_isMult", in_isMult )
+		
+		Dim mxResult As New MixCollection
+		Set dialogSelectCardAgree = mxResult
+		
+		Dim vw As NotesView, viewname As String
+		viewname = "app.docmain.all.actual"
+		Set vw = Me.db.getView( viewname )
+		If ( vw Is Nothing ) Then
+			Error 1001, {View '} & viewname & {' is not exist}
+		End If		
+		
+		Dim ws As New NotesUIWorkspace, dc As NotesDocumentCollection
+		Set dc = ws.PickListCollection( 3, in_isMult, Me.db.Server, Me.db.FilePath, vw.Name, "Список документов", "Выберите документ(ы) и нажмите  OK" )
+		If ( dc.Count > 0 ) Then
+			Dim doc As NotesDocument
+			Set doc = dc.GetFirstDocument
+			Do While Not ( doc Is Nothing )
+				Dim c As Variant
+				Set c = Me.getDocObject(doc)
+				Call mxResult.Append( c )
+				Set doc = dc.GetNextDocument( doc )
+			Loop
+		End If
+		
+		Call Me.log.exit( "</" & TypeName( Me ) & "." & GetThreadInfo(1) & ">" )
+		Exit Function
+		
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Function
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Function getCategory( in_key As Variant ) As Variant
+		On Error GoTo error_point
+		Call Me.log.enter( TypeName( Me ) & "." & GetThreadInfo(1))
+		
+		Dim key As String, doc As NotesDocument
+		key = Me.getId( in_key )
+		On Error 4091 Resume Next 'bad unid
+		Set doc = Me.db.getdocumentbyunid( key )
+		If ( doc Is Nothing ) Then
+			Error 1001, "In database '" & Me.db.Title & "' ( path: " & Me.db.FilePath & " ) not found document  by key '" & in_key & "'"
+		Else
+			Set Me.getCategory = Me.getDocObject( doc )
+		End If
+		
+		Call Me.log.traceObject( "result", getCategory )
+		Call Me.log.exit( TypeName( Me ) & "." & GetThreadInfo(1))
+		Exit Function
+		
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$ 
+	End Function
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Function getFragmentDict( in_key As Variant ) As Variant
+		On Error GoTo error_point
+		Call Me.log.enter( TypeName( Me ) & "." & GetThreadInfo(1))
+		
+		Dim key As String, doc As NotesDocument
+		key = Me.getId( in_key )
+		On Error 4091 Resume Next 'bad unid
+		Set doc = Me.db.getdocumentbyunid( key )
+		If ( doc Is Nothing ) Then
+			Error 1001, "In database '" & Me.db.Title & "' ( path: " & Me.db.FilePath & " ) not found document  by key '" & in_key & "'"
+		Else
+			Set Me.getFragmentDict = Me.getDocObject( doc )
+		End If
+		
+		Call Me.log.traceObject( "result", getFragmentDict )
+		Call Me.log.exit( TypeName( Me ) & "." & GetThreadInfo(1))
+		Exit Function
+		
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$ 
+	End Function
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Function getFragmentsDict( in_link As Variant ) As MixCollection
+		On Error GoTo error_point
+		Call Me.log.enter( TypeName( Me ) & "." & GetThreadInfo(1))
+		
+		If ( in_link.domain = DOMAIN_BULDING_TORS_FRAGMENTPCKG_DICT ) Then
+			Dim mxResult As New MixCollection
+			Set getFragmentsDict = mxResult
+
+			Dim vw As NotesView, dc As NotesDocumentCollection
+			Set vw = Me.db.Getview("(fragments_dict.byfragmentpckg_dict_id)")
+			If ( Not vw Is Nothing ) Then
+				Call vw.Refresh()
+				vw.Autoupdate = False
+				Set dc = vw.Getalldocumentsbykey( in_link.id )
+				If ( dc.Count > 0 ) Then
+					Dim doc As NotesDocument
+					Set doc = dc.Getfirstdocument()
+					While Not ( doc Is Nothing )
+						Dim fragmnt As Variant
+						Set fragmnt = Me.getDocObject( doc )
+						If Not ( fragmnt Is Nothing ) Then
+							Call mxResult.Append( fragmnt )	
+						End If
+						Set doc = dc.Getnextdocument(doc)
+					Wend
+				End If
+			Else
+				Error 1001, "View '(fragments_dict.byfragmentpckg_dict_id)' is not exist"
+			End If
+		Else
+			Error 1001, "The data of type '" & in_link.domain & "' of parameter 'in_link.domain' is wrong"
+		End If
+		
+		Call Me.log.traceObject( "result", mxResult )		
+		Call Me.log.exit( "</" & TypeName( Me ) & "." & GetThreadInfo(1) & ">" )
+		Exit Function
+		
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Function
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Function getFragmentPckgDict( in_key As Variant ) As Variant
+		On Error GoTo error_point
+		Call Me.log.enter( TypeName( Me ) & "." & GetThreadInfo(1))
+		
+		Dim key As String, doc As NotesDocument
+		key = Me.getId( in_key )
+		On Error 4091 Resume Next 'bad unid
+		Set doc = Me.db.getdocumentbyunid( key )
+		If ( doc Is Nothing ) Then
+			Error 1001, "In database '" & Me.db.Title & "' ( path: " & Me.db.FilePath & " ) not found document  by key '" & in_key & "'"
+		Else
+			Set Me.getFragmentPckgDict = Me.getDocObject( doc )
+		End If
+		
+		Call Me.log.traceObject( "result", getFragmentPckgDict )
+		Call Me.log.exit( TypeName( Me ) & "." & GetThreadInfo(1))
+		Exit Function
+		
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$ 
+	End Function
+	'--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Function createCompareResult( in_doc As NotesDocument ) As Variant
+		On Error GoTo error_point
+		
+		Set createCompareResult = Nothing
+		If ( Not ( in_doc Is Nothing ) ) Then
+			Dim cardAgree As Variant
+			Set cardAgree = Me.getDocObject( in_doc )
+			If Not IsEmpty( cardAgree ) Then
+				If ( cardAgree.domain = DOMAIN_BULDING_TORS_CARDAGREE ) Then
+					
+					Dim session As New NotesSession
+					Dim docNew As NotesDocument 
+					
+					Set docNew = Me.db.Createdocument()
+					Dim result As New TPS_BuldingTORs_CompareResult(docNew, Me.Me_variant)
+					
+					Call result.nd.Replaceitemvalue("Form", "tps.building.tors.compare_result")
+					Call result.nd.Replaceitemvalue("domain", DOMAIN_BULDING_TORS_FRAGMENT )
+					Call result.nd.Replaceitemvalue("id", result.nd.Universalid )
+					Call result.nd.Replaceitemvalue("CustomID", result.nd.Universalid )
+					Call result.nd.Replaceitemvalue("docKind", "ExtraDoc" )
+					
+					Dim item As NotesItem
+					'Set item = in_doc.Getfirstitem("DWF$Authors")
+					'If ( Not item Is Nothing ) Then
+					'	Call item.Copyitemtodocument( fragment.nd, item.Name )
+					'End If
+					
+					Dim s As New NotesSession, v As Variant
+					v = in_doc.Getfirstitem("DWF$Authors").Values
+					If ( CStr(v(0)) <> "" ) Then
+						ReDim Preserve v(UBound(v)+1) As String
+					End If
+					v(UBound(v)) = s.Username
+					
+					Call result.nd.ReplaceItemValue("DWF$Authors", v )
+					Set item = result.nd.Getfirstitem("DWF$Authors") 
+					If ( Not ( item Is Nothing ) ) Then
+						item.IsAuthors = True
+					End If
+					
+					
+					Set item = in_doc.Getfirstitem("DWF$Readers")
+					If ( Not item Is Nothing ) Then
+						Call item.Copyitemtodocument( result.nd, item.Name )
+					End If
+					Set item = in_doc.Getfirstitem("DWF$Server")
+					If ( Not item Is Nothing ) Then
+						Call item.Copyitemtodocument( result.nd, item.Name )
+					End If
+					
+					Dim docTemp As New NotesDocument( Me.db ), ItemRef As NotesItem
+					Call docTemp.Makeresponse( in_doc )
+					Set ItemRef = docTemp.Getfirstitem("$Ref") 
+					If Not ( ItemRef Is Nothing ) Then
+						Call ItemRef.Copyitemtodocument( result.nd, "MainRef" )
+					Else
+						Error 4001, {Не удалось сформировать поле "$Ref"}
+					End If
+					
+				Else
+					Error 4001, {Не верный входящий параметр: Домен не равен домену 'карточки заявки'. UNID: } & in_doc.Universalid & { / domain: } & cardAgree.domain
+				End If
+			Else
+				Error 4001, {Не удалось получить объект по входящему параметру (документу). UNID: } & in_doc.Universalid
+			End If
+			
+		End If
+		Set createCompareResult = result
+		
+		Call Me.log.exit( "</" & TypeName( Me ) & "." & GetThreadInfo(1) & ">" )
+		Exit Function
+		
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Function
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Function getCompareResult( in_key As Variant ) As Variant
+		On Error GoTo error_point
+		Call Me.log.enter( TypeName( Me ) & "." & GetThreadInfo(1))
+		
+		Dim key As String, doc As NotesDocument
+		key = Me.getId( in_key )
+		On Error 4091 Resume Next 'bad unid
+		Set doc = Me.db.getdocumentbyunid( key )
+		If ( doc Is Nothing ) Then
+			Error 1001, "In database '" & Me.db.Title & "' ( path: " & Me.db.FilePath & " ) not found document  by key '" & in_key & "'"
+		Else
+			Set Me.getCompareResult = Me.getDocObject( doc )
+		End If
+		
+		Call Me.log.traceObject( "result", getCompareResult )
+		Call Me.log.exit( TypeName( Me ) & "." & GetThreadInfo(1))
+		Exit Function
+		
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$ 
+	End Function
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Function getCompareResults( in_link As Variant ) As MixCollection
+		On Error GoTo error_point
+		Call Me.log.enter( TypeName( Me ) & "." & GetThreadInfo(1))
+		
+		If ( in_link.domain = DOMAIN_BULDING_TORS_FRAGMENTPCKG ) Then
+			Dim mxResult As New MixCollection
+			Set getCompareResults = mxResult
+
+			Dim vw As NotesView, dc As NotesDocumentCollection
+			Set vw = Me.db.Getview("(compare_results.byfragmentpckg_id)")
+			If ( Not vw Is Nothing ) Then
+				Call vw.Refresh()
+				vw.Autoupdate = False
+				Set dc = vw.Getalldocumentsbykey( in_link.id )
+				If ( dc.Count > 0 ) Then
+					Dim doc As NotesDocument
+					Set doc = dc.Getfirstdocument()
+					While Not ( doc Is Nothing )
+						Dim elem As Variant
+						Set elem = Me.getDocObject( doc )
+						If Not ( elem Is Nothing ) Then
+							Call mxResult.Append( elem )	
+						End If
+						Set doc = dc.Getnextdocument(doc)
+					Wend
+				End If
+			Else
+				Error 1001, "View '(fragments.byfragmentpckg_id)' is not exist"
+			End If
+		Else
+			Error 1001, "The data of type '" & in_link.domain & "' of parameter 'in_link.domain' is wrong"
+		End If
+		
+		Call Me.log.traceObject( "result", mxResult )		
+		Call Me.log.exit( "</" & TypeName( Me ) & "." & GetThreadInfo(1) & ">" )
+		Exit Function
+		
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Function
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Function getCompany( in_key As Variant ) As Variant
+		On Error GoTo error_point
+		Call Me.log.enter( TypeName( Me ) & "." & GetThreadInfo(1))
+		
+		Dim key As String, doc As NotesDocument
+		key = Me.getId( in_key )
+		On Error 4091 Resume Next 'bad unid
+		Set doc = Me.db.getdocumentbyunid( key )
+		If ( doc Is Nothing ) Then
+			Error 1001, "In database '" & Me.db.Title & "' ( path: " & Me.db.FilePath & " ) not found document  by key '" & in_key & "'"
+		Else
+			Set Me.getCompany = Me.getDocObject( doc )
+		End If
+		
+		Call Me.log.traceObject( "result", getCompany )
+		Call Me.log.exit( TypeName( Me ) & "." & GetThreadInfo(1))
+		Exit Function
+		
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$ 
+	End Function
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Function getDocType( in_key As Variant ) As Variant
+		On Error GoTo error_point
+		Call Me.log.enter( TypeName( Me ) & "." & GetThreadInfo(1))
+		
+		Dim key As String, doc As NotesDocument
+		key = Me.getId( in_key )
+		On Error 4091 Resume Next 'bad unid
+		Set doc = Me.db.getdocumentbyunid( key )
+		If ( doc Is Nothing ) Then
+			Error 1001, "In database '" & Me.db.Title & "' ( path: " & Me.db.FilePath & " ) not found document  by key '" & in_key & "'"
+		Else
+			Set Me.getDocType = Me.getDocObject( doc )
+		End If
+		
+		Call Me.log.traceObject( "result", getDocType )
+		Call Me.log.exit( TypeName( Me ) & "." & GetThreadInfo(1))
+		Exit Function
+		
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$ 
+	End Function
+	
+	
+	
+End Class
+
+
+'======================================================================================================================================
+'	CLASS TPS_BuldingTORs_FragmentPckg
+'======================================================================================================================================
+Class TPS_BuldingTORs_FragmentPckg As Fbase_abstract_object_doc
+	Private m_ratePeriodType As String
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	'	PUBLIC:
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Sub New (in_doc As NotesDocument, in_ps As Variant)
+	End Sub
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Property Get id As String
+		On Error GoTo error_point
+		If (m_doc.HasItem( "id" )) Then
+			id = m_doc.id(0)
+		Else
+			id = m_doc.UniversalID
+		End If
+		Exit Property 
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Property
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Property Get domain As String
+		On Error GoTo error_point
+		domain = DOMAIN_BULDING_TORS_FRAGMENTPCKG
+		Exit Property 
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Property
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Property Get title As String
+		On Error GoTo error_point
+		
+		If (m_doc.HasItem( "title" )) Then
+			title = m_doc.title(0)
+		End If
+		
+		Exit Property 
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Property
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Property Get dateBaseBlocked As Integer
+		On Error GoTo error_point
+		
+		If m_doc.HasItem( "date_base_blocked" ) Then
+			dateBaseBlocked = m_doc.date_base_blocked(0)
+		End If
+		
+		Exit Property 
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Property
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Property Set dateBaseBlocked As Integer
+		On Error GoTo error_point
+		Call m_doc.Replaceitemvalue( "date_base_blocked", dateBaseBlocked )
+		Exit Property 
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Property
+	
+	
+End Class
+
+
+'======================================================================================================================================
+'	CLASS TPS_BuldingTORs_Fragment
+'======================================================================================================================================
+Class TPS_BuldingTORs_Fragment As Fbase_abstract_object_doc
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	'	PUBLIC:
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Sub New (in_doc As NotesDocument, in_ps As Variant)
+	End Sub
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Property Get id As String
+		On Error GoTo error_point
+		If (m_doc.HasItem( "id" )) Then
+			id = m_doc.id(0)
+		Else
+			id = m_doc.UniversalID
+		End If
+		Exit Property 
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Property
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Property Get domain As String
+		On Error GoTo error_point
+		domain = DOMAIN_BULDING_TORS_FRAGMENT
+		Exit Property 
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Property
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Property Get title As String
+		On Error GoTo error_point
+		
+		If (m_doc.HasItem( "title" )) Then
+			title = m_doc.title(0)
+		End If
+		
+		Exit Property 
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Property
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Property Set title As String
+		On Error GoTo error_point
+		Call m_doc.Replaceitemvalue( "title", title )
+		Exit Property 
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Property
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Property Get number As Variant
+		On Error GoTo error_point
+		
+		If (m_doc.HasItem( "number" )) Then
+			number = m_doc.number(0)
+		End If
+		
+		Exit Property 
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Property
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Property Set number As Variant
+		On Error GoTo error_point
+		Call m_doc.Replaceitemvalue( "number", number )
+		Exit Property 
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Property
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Property Get isIndependent As Boolean
+		On Error GoTo error_point
+		
+		'If m_doc.HasItem( "ParentRef" ) Then
+		'	If m_doc.HasItem( "fragment_Pckg_id" ) Then
+		'		If ( m_doc.Getitemvalue("ParentRef")(0) = m_doc.Getitemvalue("fragment_Pckg_id")(0) ) Then
+		'			isIndependent = True
+		'		End If
+		'	End If
+		'Else
+		'	Error 1001, {Документ "фрагмент" ( unid:} & m_doc.Universalid & {; db path: } & m_doc.Parentdatabase.Filepath & { ) не содержит поля "ParentRef"}	
+		'End If
+		
+		If Not m_doc.HasItem( "parent_fragment_id" ) Then
+			isIndependent = True
+		End If
+		
+		
+		Exit Property 
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Property
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Property Get description As String
+		On Error GoTo error_point
+		
+		If m_doc.HasItem( "description" ) Then
+			description = m_doc.description(0)
+		End If
+		
+		Exit Property 
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Property
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Property Set description As String
+		On Error GoTo error_point
+		Call m_doc.Replaceitemvalue( "description", description )
+		Exit Property 
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Property
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------	
+	Property Get isActive As Boolean
+		On Error GoTo error_point
+		Call Me.log.enter( TypeName( Me ) & "." & GetThreadInfo(1))
+		
+		isActive = ( Me.nd.status(0) = "active" )		
+		
+		Call Me.log.trace( "result: " & isActive )
+		Call Me.log.exit( TypeName( Me ) & "." & GetThreadInfo(1))		
+		Exit Property
+		
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$		
+	End Property
+	
+	
+	
+	
+	
+	
+	
+	
+	
+End Class
+
+
+
+
+
+'======================================================================================================================================
+'	CLASS TPS_BuldingTORs_CardAgree
+'======================================================================================================================================
+Class TPS_BuldingTORs_CardAgree As Fbase_abstract_object_doc
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	'	PUBLIC:
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Sub New(in_doc As NotesDocument, in_ps As Variant)
+	End Sub
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Property Get id As String
+		On Error GoTo error_point
+		If (m_doc.HasItem( "id" )) Then
+			id = m_doc.id(0)
+		Else
+			id = m_doc.UniversalID
+		End If
+		Exit Property 
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Property
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Property Get domain As String
+		On Error GoTo error_point
+		domain = DOMAIN_BULDING_TORS_CARDAGREE
+		Exit Property 
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Property
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Property Get title As String
+		On Error GoTo error_point
+		If m_doc.Hasitem("Title") Then
+			title = m_doc.Title(0)	
+		End If
+		If m_doc.Hasitem("numbertotal") Then
+			If (title <> "") Then
+				title = title & { [заявка: } & m_doc.numbertotal(0) & {]}	
+			Else
+				title = {[заявка: } & m_doc.numbertotal(0) & {]}
+			End If
+		End If
+		
+		Exit Property 
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Property
+	
+			
+End Class
+Class TPS_BuldingTORs_Category As Fbase_abstract_object_doc
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	'	PUBLIC:
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Sub New (in_doc As NotesDocument, in_ps As Variant)
+	End Sub
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Property Get id As String
+		On Error GoTo error_point
+		If (m_doc.HasItem( "id" )) Then
+			id = m_doc.id(0)
+		Else
+			id = m_doc.UniversalID
+		End If
+		Exit Property 
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Property
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Property Get domain As String
+		On Error GoTo error_point
+		domain = DOMAIN_BULDING_TORS_CATEGORY_DICT
+		Exit Property 
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Property
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Property Get title As String
+		On Error GoTo error_point
+		
+		If (m_doc.HasItem( "title" )) Then
+			title = m_doc.title(0)
+		End If
+		
+		Exit Property 
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Property
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------	
+	Property Get isActive As Boolean
+		On Error Goto error_point
+		Call Me.log.enter( Typename( Me ) & "." & Getthreadinfo(1))
+		
+		isActive = ( Me.nd.status(0) = "active" )		
+		
+		Call Me.log.trace( "result: " & isActive )
+		Call Me.log.exit( Typename( Me ) & "." & Getthreadinfo(1))		
+		Exit Property
+		
+error_point:
+		On Error Goto 0
+		Error Err, Typename( Me ) & "." & Getthreadinfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$		
+	End Property
+	
+	
+End Class 
+
+Class TPS_BuldingTORs_FragmentPckgDict As Fbase_abstract_object_doc
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	'	PUBLIC:
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Sub New (in_doc As NotesDocument, in_ps As Variant)
+	End Sub
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Property Get id As String
+		On Error GoTo error_point
+		If (m_doc.HasItem( "id" )) Then
+			id = m_doc.id(0)
+		Else
+			id = m_doc.UniversalID
+		End If
+		Exit Property 
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Property
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Property Get domain As String
+		On Error GoTo error_point
+		domain = DOMAIN_BULDING_TORS_FRAGMENTPCKG_DICT
+		Exit Property 
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Property
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Property Get title As String
+		On Error GoTo error_point
+		
+		If (m_doc.HasItem( "title" )) Then
+			title = m_doc.title(0)
+		End If
+		
+		Exit Property 
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Property
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------	
+	Property Get isActive As Boolean
+		On Error GoTo error_point
+		Call Me.log.enter( TypeName( Me ) & "." & GetThreadInfo(1))
+		
+		isActive = ( Me.nd.status(0) = "active" )		
+		
+		Call Me.log.trace( "result: " & isActive )
+		Call Me.log.exit( TypeName( Me ) & "." & GetThreadInfo(1))		
+		Exit Property
+		
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$		
+	End Property
+	
+	
+End Class
+
+Class TPS_BuldingTORs_FragmentDict As Fbase_abstract_object_doc
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	'	PUBLIC:
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Sub New (in_doc As NotesDocument, in_ps As Variant)
+	End Sub
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Property Get id As String
+		On Error GoTo error_point
+		If (m_doc.HasItem( "id" )) Then
+			id = m_doc.id(0)
+		Else
+			id = m_doc.UniversalID
+		End If
+		Exit Property 
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Property
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Property Get domain As String
+		On Error GoTo error_point
+		domain = DOMAIN_BULDING_TORS_FRAGMENT_DICT
+		Exit Property 
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Property
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Property Get title As String
+		On Error GoTo error_point
+		
+		If (m_doc.HasItem( "title" )) Then
+			title = m_doc.title(0)
+		End If
+		
+		Exit Property 
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Property
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------	
+	Property Get isActive As Boolean
+		On Error GoTo error_point
+		Call Me.log.enter( TypeName( Me ) & "." & GetThreadInfo(1))
+		
+		isActive = ( Me.nd.status(0) = "active" )		
+		
+		Call Me.log.trace( "result: " & isActive )
+		Call Me.log.exit( TypeName( Me ) & "." & GetThreadInfo(1))		
+		Exit Property
+		
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$		
+	End Property
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Property Get isIndependent As Boolean
+		On Error GoTo error_point
+		
+		If Not m_doc.HasItem( "parent_fragment_id" ) Then
+			isIndependent = True
+		End If
+		
+		Exit Property 
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Property
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Property Get number As Variant
+		On Error GoTo error_point
+		
+		If (m_doc.HasItem( "number" )) Then
+			number = m_doc.number(0)
+		End If
+		
+		Exit Property 
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Property
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Property Set number As Variant
+		On Error GoTo error_point
+		Call m_doc.Replaceitemvalue( "number", number )
+		Exit Property 
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Property
+	
+	
+	
+End Class 
+'======================================================================================================================================
+'	CLASS TPS_BuldingTORs_CompareResult
+'======================================================================================================================================
+Class TPS_BuldingTORs_CompareResult As Fbase_abstract_object_doc
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	'	PUBLIC:
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Sub New (in_doc As NotesDocument, in_ps As Variant)
+	End Sub
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Property Get id As String
+		On Error GoTo error_point
+		If (m_doc.HasItem( "id" )) Then
+			id = m_doc.id(0)
+		Else
+			id = m_doc.UniversalID
+		End If
+		Exit Property 
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Property
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Property Get domain As String
+		On Error GoTo error_point
+		domain = DOMAIN_BULDING_TORS_COMPARE_RESULT
+		Exit Property 
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Property
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Property Get title As String
+		On Error GoTo error_point
+		
+		If (m_doc.HasItem( "title" )) Then
+			title = m_doc.title(0)
+		End If
+		
+		Exit Property 
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Property
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Property Set title As String
+		On Error GoTo error_point
+		Call m_doc.Replaceitemvalue( "title", title )
+		Exit Property 
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Property
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Property Get number As Variant
+		On Error GoTo error_point
+		
+		If (m_doc.HasItem( "number" )) Then
+			number = m_doc.number(0)
+		End If
+		
+		Exit Property 
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Property
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Property Set number As Variant
+		On Error GoTo error_point
+		Call m_doc.Replaceitemvalue( "number", number )
+		Exit Property 
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Property
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Property Get description As String
+		On Error GoTo error_point
+		
+		If m_doc.HasItem( "description" ) Then
+			description = m_doc.description(0)
+		End If
+		
+		Exit Property 
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Property
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Property Set description As String
+		On Error GoTo error_point
+		Call m_doc.Replaceitemvalue( "description", description )
+		Exit Property 
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Property
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------	
+	Property Get isActive As Boolean
+		On Error GoTo error_point
+		Call Me.log.enter( TypeName( Me ) & "." & GetThreadInfo(1))
+		
+		isActive = ( Me.nd.status(0) = "active" )		
+		
+		Call Me.log.trace( "result: " & isActive )
+		Call Me.log.exit( TypeName( Me ) & "." & GetThreadInfo(1))		
+		Exit Property
+		
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$		
+	End Property
+	
+	
+	
+	
+	
+End Class
+
+'======================================================================================================================================
+'	CLASS TPS_BuldingTORs_Company
+'======================================================================================================================================
+Class TPS_BuldingTORs_Company As Fbase_abstract_object_doc
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	'	PUBLIC:
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Sub New( in_doc As NotesDocument, in_ps As Variant )
+	End Sub
+	'-----------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Property Get id As String
+		On Error GoTo error_point
+		If (m_doc.HasItem( "id" )) Then
+			id = m_doc.id(0)
+		Else
+			id = m_doc.UniversalID
+		End If
+		Exit Property 
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Property
+	'-----------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Property Get title As String
+		On Error GoTo error_point
+		If (m_doc.HasItem( "title" )) Then
+			title = m_doc.title(0)
+		End If
+		Exit Property 
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Property
+	'-----------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Property Get domain As String
+		On Error GoTo error_point
+		domain = DOMAIN_BULDING_TORS_COMPANY_DICT
+		Exit Property 
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Property
+	
+End Class
+
+'======================================================================================================================================
+'	CLASS TPS_BuldingTORs_DocType
+'======================================================================================================================================
+Class TPS_BuldingTORs_DocType As FBase_Abstract_Object_Doc
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	'	PUBLIC:
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Sub New( in_doc As NotesDocument, in_ps As Variant )
+	End Sub
+	'-----------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Property Get id As String
+		On Error GoTo error_point
+		If (m_doc.HasItem( "id" )) Then
+			id = m_doc.id(0)
+		Else
+			id = m_doc.UniversalID
+		End If
+		Exit Property 
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Property
+	'-----------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Property Get title As String
+		On Error GoTo error_point
+		If m_doc.HasItem( "title" ) Then
+			title = m_doc.title(0)
+		End If
+		Exit Property 
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Property
+	'-----------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Property Get domain As String
+		On Error GoTo error_point
+		domain = DOMAIN_BULDING_TORS_DOCTYPE_DICT
+		Exit Property 
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Property
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------	
+	Property Get isSelectable As Boolean
+		On Error GoTo error_point
+		Call Me.log.enter( TypeName( Me ) & "." & GetThreadInfo(1))
+		
+		isSelectable = ( Me.nd.MarkIsDirectory(0) = "1" )
+		
+		Call Me.log.trace( "result: " & isSelectable )
+		Call Me.log.exit( TypeName( Me ) & "." & GetThreadInfo(1))		
+		Exit Property
+		
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$		
+	End Property
+	
+	
+End Class

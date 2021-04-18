@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8"?><note class="filter" maintenanceversion="1.0" replicaid="44257D5C002A4928" version="10.0" xmlns="http://www.lotus.com/dxl">
+<noteinfo noteid="3da" sequence="514" unid="C564BBD669A43012C325775F0027C279">
+<created><datetime dst="true">20100713T111416,89+04</datetime></created>
+<modified><datetime>20210418T115555,89+03</datetime></modified>
+<revised><datetime>20210324T103252,68+03</datetime></revised>
+<lastaccessed><datetime>20210418T115555,88+03</datetime></lastaccessed>
+<addedtofile><datetime>20210418T115555,88+03</datetime></addedtofile></noteinfo>
+<updatedby><name>CN=Tambiev/O=tps</name><name>CN=zeos/O=tps</name><name>CN=Tambiev/O=tps</name><name>CN=zeos/O=tps</name><name>CN=Tambiev/O=tps</name><name>CN=zeos/O=tps</name><name>CN=Tambiev/O=tps</name><name>CN=zeos/O=tps</name><name>CN=Tambiev/O=tps</name><name>CN=zeos/O=tps</name><name>CN=Salpagarov/O=tps</name><name>CN=zeos/O=tps</name><name>CN=Tambiev/O=tps</name><name>CN=zeos/O=tps</name><name>CN=Tambiev/O=tps</name><name>CN=zeos/O=tps</name><name>CN=Tambiev/O=tps</name><name>CN=zeos/O=tps</name><name>CN=Tambiev/O=tps</name><name>CN=zeos/O=tps</name><name>CN=Tambiev/O=tps</name><name>CN=zeos/O=tps</name><name>CN=Tambiev/O=tps</name><name>CN=zeos/O=tps</name><name>CN=Grechkina/O=tps</name><name>CN=zeos/O=tps</name><name>CN=Grechkina/O=tps</name><name>CN=zeos/O=tps</name><name>CN=Tambiev/O=tps</name><name>CN=zeos/O=tps</name><name>CN=Tambiev/O=tps</name><name>CN=zeos/O=tps</name><name>CN=develop/O=tps</name><name>CN=Tambiev/O=tps</name><name>CN=Salpagarov/O=tps</name><name>CN=Tambiev/O=tps</name><name>CN=Salpagarov/O=tps</name><name>CN=Tambiev/O=tps</name><name>CN=Salpagarov/O=tps</name><name>CN=Tambiev/O=tps</name><name>CN=Salpagarov/O=tps</name><name>CN=Igor V Tomnov/O=SVO</name><name>CN=Aleksandr Galko/O=tps</name><name>CN=Salpagarov/O=tps</name><name>CN=Igor V Tomnov/O=SVO</name><name>CN=Aleksandr Galko/O=tps</name><name>CN=Igor V Tomnov/O=SVO</name><name>CN=Salpagarov/O=tps</name><name>CN=Aleksey V Shcherbakov/O=SVO</name><name>CN=Aleksei Petrov/O=tps</name></updatedby>
+<wassignedby><name>CN=Aleksei Petrov/O=tps</name></wassignedby>
+<item name="$TITLE" sign="true"><text>DWFRequest</text></item>
+<item name="$Flags"><text>s34Q</text></item>
+<item name="$PublicAccess" sign="true"><text>1</text></item>
+
+
+<item name="$POID"><datetime>20210324T103252,68+03</datetime></item></note>

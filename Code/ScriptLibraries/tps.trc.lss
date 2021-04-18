@@ -1,0 +1,1827 @@
+'++LotusScript Development Environment:2:5:(Options):0:74
+Option Public
+Option Declare
+
+Use "fbyte"
+Use "CustomView_Interface_UI"
+Use "DWFAppLib"
+
+'++LotusScript Development Environment:2:5:(Forward):0:1
+Declare Public Class TPS_TRCService As FBase_Abstract_Service
+Declare Public Class ABSTACT_TPS_TRC_UNIT As FBase_Abstract_Object_Doc
+Declare Public Class TPS_TRC_Mall As ABSTACT_TPS_TRC_UNIT
+Declare Public Class TPS_TRC_Floor As ABSTACT_TPS_TRC_UNIT
+Declare Public Class TPS_TRC_Zone As ABSTACT_TPS_TRC_UNIT
+Declare Public Class TPS_TRC_Place As ABSTACT_TPS_TRC_UNIT
+Declare Class ABSTACT_TPS_TRC_UNIT_Info1C  As FBase_Abstract_Object_Doc
+Declare Public Class TPS_TRC_Brend As ABSTACT_TPS_TRC_UNIT
+Declare Public Class TPS_TRC_Arendator As ABSTACT_TPS_TRC_UNIT
+Declare Public Class TPS_TRC_Profile As ABSTACT_TPS_TRC_UNIT
+Declare Public Class TPS_TRC_PlaceLink As ABSTACT_TPS_TRC_UNIT
+Declare Public Class TPS_TRC_Inventory As ABSTACT_TPS_TRC_UNIT
+Declare Public Class TPS_TRC_Request As ABSTACT_TPS_TRC_UNIT
+Declare Public Class TPS_TRC_ASMRequest as FBase_Abstract_Object_Doc	
+Declare Public Class TPS_TRC_MPZLink As FBase_Abstract_Object_Doc
+
+'++LotusScript Development Environment:2:5:(Declarations):0:10
+
+Private Const DATABASE_KEY = "tps.trc"
+
+Const DOMAIN_TYPE_TPS_TRC_MALL = "tps.trc.mall"
+Const DOMAIN_TYPE_TPS_TRC_FLOOR = "tps.trc.floor"
+Const DOMAIN_TYPE_TPS_TRC_ZONE = "tps.trc.zone"
+Const DOMAIN_TYPE_TPS_TRC_PLACE = "tps.trc.place"
+Const DOMAIN_TYPE_TPS_TRC_BREND = "tps.trc.brend"
+Const DOMAIN_TYPE_TPS_TRC_PLACELINK = "tps.trc.placelink"
+Const DOMAIN_TYPE_TPS_TRC_PROFILE = "tps.trc.profile"
+Const DOMAIN_TYPE_TPS_TRC_ARENDATOR = "tps.trc.arendator"
+Const DOMAIN_TYPE_TPS_TRC_INVENTORY = "tps.trc.inventory"
+Const DOMAIN_TYPE_TPS_TRC_REQUEST = "tps.trc.request"
+Const DOMAIN_TYPE_TPS_TRC_ASMREQUEST = "tps.trc.asmrequest"
+Const DOMAIN_TYPE_TPS_TRC_MPZLINK = "tps.trc.mpzlink"
+
+Private Const TRCOBJECTS_PROCESS_BREND = "Согласование бренда"
+
+Public Const cmd_created = "lotus_finalise" 'линк создан
+Public Const cmd_voted_yes = "lotus_approve" 'утвердили
+Public Const cmd_voted_no = "lotus_disapprove" 'отклонили
+Public Const cmd_moved_up = "lotus_escalate" 'вопрос будет утверждаться выше
+Public Const cmd_delete = "lotus_delete" 'вопрос удалён
+
+
+
+
+
+'======================================================================================================================================
+'	CLASS TPS_TRCService
+'======================================================================================================================================
+Public Class TPS_TRCService As FBase_Abstract_Service
+	Private m_db As NotesDatabase
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Private Function getId( in_key As Variant ) As String
+		On Error GoTo error_point
+		Call Me.log.enter( TypeName( Me ) & "." & GetThreadInfo(1))
+		
+		Dim key As String
+		If ( LCase( TypeName( in_key )) = "objectlink" ) Then
+			key = in_key.id 
+		ElseIf IsScalar( in_key ) Then 
+			key = in_key
+		Else
+			Error 1001, "The type of data of parameter 'in_key' is '" & TypeName( in_key ) & "'. It is not supported"
+		End If
+	 
+		getId = key
+		
+		Call Me.log.trace( "result: " & getId )
+		Call Me.log.exit( TypeName( Me ) & "." & GetThreadInfo(1))
+		Exit Function
+		
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Function
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	'	PUBLIC:
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Sub New( in_ps As Variant )
+	End Sub
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Property Get db As NotesDatabase
+		On Error GoTo error_point
+		Call Me.log.enter( TypeName( Me ) & "." & GetThreadInfo(1))
+		
+		If ( m_db Is Nothing )Then
+			Set m_db = Me.sm.base.databases.get( DATABASE_KEY )
+		End If
+		Set db = m_db
+		
+		Call Me.log.traceObject( "result", db )		
+		Call Me.log.exit( TypeName( Me ) & "." & GetThreadInfo(1))
+		Exit Property
+		
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Property
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Function getObject( in_link As Variant ) As Variant
+		On Error GoTo error_point
+		Call Me.log.enter( TypeName( Me ) & "." & GetThreadInfo(1))
+		Call Me.log.parameter( "in_link", in_link )
+		
+		Select Case in_link.domain
+		Case DOMAIN_TYPE_TPS_TRC_MALL:
+			Set getObject = Me.getMall (in_link)
+		Case DOMAIN_TYPE_TPS_TRC_FLOOR:
+			Set getObject = Me.getFloor (in_link)
+		Case DOMAIN_TYPE_TPS_TRC_ZONE:
+			Set getObject = Me.getZone (in_link)
+		Case DOMAIN_TYPE_TPS_TRC_PLACE:
+			Set getObject = Me.getPlace (in_link)
+		Case DOMAIN_TYPE_TPS_TRC_ARENDATOR:
+			Set getObject = Me.getObjectByKey (in_link)	
+		Case DOMAIN_TYPE_TPS_TRC_BREND:
+			Set getObject = Me.getBrend (in_link)	
+		Case DOMAIN_TYPE_TPS_TRC_PROFILE:
+			Set getObject = Me.getProfile (in_link)
+			Case DOMAIN_TYPE_TPS_TRC_INVENTORY, DOMAIN_TYPE_TPS_TRC_REQUEST, DOMAIN_TYPE_TPS_TRC_ASMREQUEST, DOMAIN_TYPE_TPS_TRC_MPZLINK:
+			Set getObject = Me.getSourceObject (in_link)
+		Case Else
+			Error 1001, "The data of type '" & in_link.domain & "' of parameter 'in_link.domain' is not supported"
+		End Select
+		
+		Call Me.log.traceObject( "result", getObject )
+		Call Me.log.exit( TypeName( Me ) & "." & GetThreadInfo(1))
+		Exit Function
+		
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Function
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Function getDocObject( in_doc As NotesDocument ) As Variant
+		On Error GoTo error_point
+		Call Me.log.enter( TypeName( Me ) & "." & GetThreadInfo(1))
+		Call Me.log.parameter( "in_doc", in_doc )
+		
+		Select Case LCase( in_doc.form(0))
+		Case LCase("ASM01"):
+			Set getDocObject = New TPS_TRC_Mall( in_doc, Me.Me_Variant )
+		Case LCase("ASM02"):
+			Set getDocObject = New TPS_TRC_Floor( in_doc, Me.Me_Variant )
+		Case LCase("ASM03"):
+			Set getDocObject = New TPS_TRC_Zone( in_doc, Me.Me_Variant )			
+		Case LCase("ASM04"):
+			Set getDocObject = New TPS_TRC_Place( in_doc, Me.Me_Variant )
+		Case LCase("ASM05"):
+			Set getDocObject = New TPS_TRC_Arendator( in_doc, Me.Me_Variant )
+		Case LCase("ASM06"):
+			Set getDocObject = New TPS_TRC_Brend( in_doc, Me.Me_Variant )
+		Case LCase("ASM08"):
+			Set getDocObject = New TPS_TRC_Profile( in_doc, Me.Me_Variant )
+		Case LCase("INVENTORY"):
+			Set getDocObject = New TPS_TRC_Inventory( in_doc, Me.Me_Variant )
+		Case LCase("INVENTORYLINK"):
+			Set getDocObject = New TPS_TRC_PlaceLink( in_doc, Me.Me_Variant )
+		Case LCase("REQUEST"):
+			Set getDocObject = New TPS_TRC_Request( in_doc, Me.Me_Variant )
+		Case "mpzlink":
+			Set getDocObject = New TPS_TRC_MPZLink( in_doc, me.me_variant )
+		Case "asmrequest":
+			Set getDocObject = New TPS_TRC_ASMREQUEST( in_doc, me.me_variant )
+		Case Else:
+			Error 1001, "Форма '" & in_doc.form(0) & "' не поддерживается"
+		End Select
+		
+		Call Me.log.traceObject( "result", getDocObject )
+		Call Me.log.exit( TypeName( Me ) & "." & GetThreadInfo(1))
+		Exit Function
+		
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Function
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Function getObjectByKey ( in_key As Variant ) As Variant
+		On Error GoTo error_point
+		Call Me.log.enter( TypeName( Me ) & "." & GetThreadInfo(1))
+		Call Me.log.parameter( "in_key", in_key )
+		
+		Const VIEW_NAME = "(UNID)"
+		
+		Dim key As String, vw As NotesView, dc As NotesDocumentCollection
+		key = Me.getId( in_key )
+		Set vw = Me.sm.core.cache.getView( VIEW_NAME, Me.db )
+		Set dc = vw.GetAllDocumentsByKey( key, True )
+		If ( dc.Count = 0 ) Then
+			Set Me.getObjectByKey = Nothing
+		ElseIf ( dc.Count > 1 ) Then
+			Error 1001, "In database '" & Me.db.Title & "' ( path: " & Me.db.FilePath & " ) founded more than one mall by key '" & in_key & "' ( count: " & CStr( dc.Count ) & " )"
+		Else
+			Set Me.getObjectByKey = Me.getDocObject( dc.GetFirstDocument )
+		End If
+		
+		Call Me.log.traceObject( "result", getObjectByKey )
+		Call Me.log.exit( TypeName( Me ) & "." & GetThreadInfo(1))
+		Exit Function
+		
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$ 
+	End Function
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Function getSourceObject ( in_key As Variant ) As Variant
+		On Error GoTo error_point
+		Call Me.log.enter( TypeName( Me ) & "." & GetThreadInfo(1))
+		Call Me.log.parameter( "in_key", in_key )
+		
+		Const VIEW_NAME = "(UNID)"
+		
+		Dim key As String, vw As NotesView, dc As NotesDocumentCollection
+		key = Me.getId (in_key)
+		Set vw = Me.sm.core.cache.getView( VIEW_NAME, Me.db )
+		Set dc = vw.GetAllDocumentsByKey( key, True )
+		If ( dc.Count = 0 ) Then
+			Set Me.getSourceObject = Nothing
+		ElseIf ( dc.Count > 1 ) Then
+			Error 1001, "In database '" & Me.db.Title & "' ( path: " & Me.db.FilePath & " ) founded more than one place by key '" & in_key & "' ( count: " & CStr( dc.Count ) & " )"
+		Else
+			Set Me.getSourceObject = Me.getDocObject( dc.GetFirstDocument )
+		End If
+		
+		Call Me.log.traceObject( "result", getSourceObject )
+		Call Me.log.exit( TypeName( Me ) & "." & GetThreadInfo(1))
+		Exit Function
+		
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$ 
+	End Function
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Function getArendatorByContragent ( in_key As Variant ) As Variant
+		On Error GoTo error_point
+		Call Me.log.enter( TypeName( Me ) & "." & GetThreadInfo(1))
+		Call Me.log.parameter( "in_key", in_key )
+		
+		Const VIEW_NAME = "(ArendatorsByContragent)"
+		
+		Dim key As String, vw As NotesView, dc As NotesDocumentCollection
+		key = Me.getId( in_key )
+		Set vw = Me.sm.core.cache.getView( VIEW_NAME, Me.db )
+		Call vw.Refresh()
+		
+		Set dc = vw.GetAllDocumentsByKey( UCase(key), True )
+		If ( dc.Count = 0 ) Then
+			Set Me.getArendatorByContragent = Nothing
+		ElseIf ( dc.Count > 1 ) Then
+			Error 1001, "In database '" & Me.db.Title & "' ( path: " & Me.db.FilePath & " ) founded more than one mall by key '" & in_key & "' ( count: " & CStr( dc.Count ) & " )"
+		Else
+			Set Me.getArendatorByContragent = Me.getDocObject( dc.GetFirstDocument )
+		End If
+		
+		Call Me.log.traceObject( "result", getArendatorByContragent )
+		Call Me.log.exit( TypeName( Me ) & "." & GetThreadInfo(1))
+		Exit Function
+		
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$ 
+	End Function
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Function getMall( in_key As Variant ) As Variant
+		On Error GoTo error_point
+		Call Me.log.enter( TypeName( Me ) & "." & GetThreadInfo(1))
+		Call Me.log.parameter( "in_key", in_key )
+		
+		Const VIEW_NAME = "(UNID)"
+		
+		Dim key As String, vw As NotesView, dc As NotesDocumentCollection
+		key = Me.getId( in_key )
+		Set vw = Me.sm.core.cache.getView( VIEW_NAME, Me.db )
+		Set dc = vw.GetAllDocumentsByKey( key, True )
+		If ( dc.Count = 0 ) Then
+			Set Me.getMall = Nothing
+		ElseIf ( dc.Count > 1 ) Then
+			Error 1001, "In database '" & Me.db.Title & "' ( path: " & Me.db.FilePath & " ) founded more than one mall by key '" & in_key & "' ( count: " & CStr( dc.Count ) & " )"
+		Else
+			Set Me.getMall = Me.getDocObject( dc.GetFirstDocument )
+		End If
+		
+		Call Me.log.traceObject( "result", getMall )
+		Call Me.log.exit( TypeName( Me ) & "." & GetThreadInfo(1))
+		Exit Function
+		
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$ 
+	End Function
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Function getBrend( in_key As Variant ) As Variant
+		On Error GoTo error_point
+		Call Me.log.enter( TypeName( Me ) & "." & GetThreadInfo(1))
+		Call Me.log.parameter( "in_key", in_key )
+		
+		Const VIEW_NAME = "(UNID)"
+		
+		Dim key As String, vw As NotesView, dc As NotesDocumentCollection
+		key = Me.getId( in_key )
+		Set vw = Me.sm.core.cache.getView( VIEW_NAME, Me.db )
+		Set dc = vw.GetAllDocumentsByKey( key, True )
+		If ( dc.Count = 0 ) Then
+			Set Me.getBrend = Nothing
+		ElseIf ( dc.Count > 1 ) Then
+			Error 1001, "In database '" & Me.db.Title & "' ( path: " & Me.db.FilePath & " ) founded more than one mall by key '" & in_key & "' ( count: " & CStr( dc.Count ) & " )"
+		Else
+			Set Me.getBrend = Me.getDocObject( dc.GetFirstDocument )
+		End If
+		
+		Call Me.log.traceObject( "result", getBrend )
+		Call Me.log.exit( TypeName( Me ) & "." & GetThreadInfo(1))
+		Exit Function
+		
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$ 
+	End Function
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Function getFloor( in_key As Variant ) As Variant
+		On Error GoTo error_point
+		Call Me.log.enter( TypeName( Me ) & "." & GetThreadInfo(1))
+		Call Me.log.parameter( "in_key", in_key )
+		
+		Const VIEW_NAME = "(UNID)"
+		
+		Dim key As String, vw As NotesView, dc As NotesDocumentCollection
+		key = Me.getId( in_key )
+		Set vw = Me.sm.core.cache.getView( VIEW_NAME, Me.db )
+		Set dc = vw.GetAllDocumentsByKey( key, True )
+		If ( dc.Count = 0 ) Then
+			Set Me.getFloor = Nothing
+		ElseIf ( dc.Count > 1 ) Then
+			Error 1001, "In database '" & Me.db.Title & "' ( path: " & Me.db.FilePath & " ) founded more than one floor by key '" & in_key & "' ( count: " & CStr( dc.Count ) & " )"
+		Else
+			Set Me.getFloor = Me.getDocObject( dc.GetFirstDocument )
+		End If
+		
+		Call Me.log.traceObject( "result", getFloor )
+		Call Me.log.exit( TypeName( Me ) & "." & GetThreadInfo(1))
+		Exit Function
+		
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$ 
+	End Function
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Function getZone( in_key As Variant ) As Variant
+		On Error GoTo error_point
+		Call Me.log.enter( TypeName( Me ) & "." & GetThreadInfo(1))
+		Call Me.log.parameter( "in_key", in_key )
+		
+		Const VIEW_NAME = "(UNID)"
+		
+		Dim key As String, vw As NotesView, dc As NotesDocumentCollection
+		key = Me.getId( in_key )
+		Set vw = Me.sm.core.cache.getView( VIEW_NAME, Me.db )
+		Set dc = vw.GetAllDocumentsByKey( key, True )
+		If ( dc.Count = 0 ) Then
+			Set Me.getZone = Nothing
+		ElseIf ( dc.Count > 1 ) Then
+			Error 1001, "In database '" & Me.db.Title & "' ( path: " & Me.db.FilePath & " ) founded more than one zone by key '" & in_key & "' ( count: " & CStr( dc.Count ) & " )"
+		Else
+			Set Me.getZone = Me.getDocObject( dc.GetFirstDocument )
+		End If
+		
+		Call Me.log.traceObject( "result", getZone )
+		Call Me.log.exit( TypeName( Me ) & "." & GetThreadInfo(1))
+		Exit Function
+		
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$ 
+	End Function
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Function getPlace( in_key As Variant ) As Variant
+		On Error GoTo error_point
+		Call Me.log.enter( TypeName( Me ) & "." & GetThreadInfo(1))
+		Call Me.log.parameter( "in_key", in_key )
+		
+		Const VIEW_NAME = "(UNID)"
+		
+		Dim key As String, vw As NotesView, dc As NotesDocumentCollection
+		key = Me.getId( in_key )
+		Set vw = Me.sm.core.cache.getView( VIEW_NAME, Me.db )
+		Set dc = vw.GetAllDocumentsByKey( key, True )
+		If ( dc.Count = 0 ) Then
+			Set Me.getPlace = Nothing
+		ElseIf ( dc.Count > 1 ) Then
+			Error 1001, "In database '" & Me.db.Title & "' ( path: " & Me.db.FilePath & " ) founded more than one place by key '" & in_key & "' ( count: " & CStr( dc.Count ) & " )"
+		Else
+			Set Me.getPlace = Me.getDocObject( dc.GetFirstDocument )
+		End If
+		
+		Call Me.log.traceObject( "result", getPlace )
+		Call Me.log.exit( TypeName( Me ) & "." & GetThreadInfo(1))
+		Exit Function
+		
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$ 
+	End Function
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------	
+	Function dialogSelectMall( in_isMult As Boolean ) As MixCollection
+		On Error GoTo error_point
+		Call Me.log.enter( "<" & TypeName( Me ) & "." & GetThreadInfo(1) & ">" )
+		Call Me.log.parameter( "in_isMult", in_isMult )
+		
+		Dim mxResult As New MixCollection, Viewname As String 
+		Set dialogSelectMall = mxResult
+		
+		Viewname = {(ForChoice_ShoppingMalls)}
+		Dim ws As New NotesUIWorkspace, dc As NotesDocumentCollection
+		Set dc = ws.PickListCollection( 3, in_isMult, Me.db.Server, Me.db.FilePath, Viewname, Me.db.Title, "Выберите ТРЦ" )
+		If ( dc.Count > 0 ) Then
+			Dim docSelect As NotesDocument
+			Set docSelect = dc.GetFirstDocument
+			Do While Not ( docSelect Is Nothing )
+				Dim obj As Variant
+				Set obj = Me.getDocObject( docSelect )
+				Call mxResult.Append( obj )
+				Set docSelect = dc.GetNextDocument( docSelect )
+			Loop
+		End If
+		
+		Call Me.log.exit( "</" & TypeName( Me ) & "." & GetThreadInfo(1) & ">" )
+		Exit Function
+		
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Function
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------	
+	Function dialogSelectFloor( in_punit As Variant, in_isMult As Boolean ) As MixCollection
+		On Error GoTo error_point
+		Call Me.log.enter( "<" & TypeName( Me ) & "." & GetThreadInfo(1) & ">" )
+		Call Me.log.parameter( "in_isMult", in_isMult )
+		
+		Dim mxResult As New MixCollection, Viewname As String 
+		Set dialogSelectFloor = mxResult
+		
+		Viewname = {}
+		Dim ws As New NotesUIWorkspace, dc As NotesDocumentCollection
+		Set dc = ws.PickListCollection( 3, in_isMult, Me.db.Server, Me.db.FilePath, Viewname, Me.db.Title, "Выберите этаж" )
+		If ( dc.Count > 0 ) Then
+			Dim docSelect As NotesDocument
+			Set docSelect = dc.GetFirstDocument
+			Do While Not ( docSelect Is Nothing )
+				Dim obj As Variant
+				Set obj = Me.getDocObject( docSelect )
+				Call mxResult.Append( obj )
+				Set docSelect = dc.GetNextDocument( docSelect )
+			Loop
+		End If
+		
+		Call Me.log.exit( "</" & TypeName( Me ) & "." & GetThreadInfo(1) & ">" )
+		Exit Function
+		
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Function
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Function dialogSelectZone( in_punit As Variant, in_isMult As Boolean ) As MixCollection
+		On Error GoTo error_point
+		Call Me.log.enter( "<" & TypeName( Me ) & "." & GetThreadInfo(1) & ">" )
+		Call Me.log.parameter( "in_isMult", in_isMult )
+		
+		Dim mxResult As New MixCollection, Viewname As String 
+		Set dialogSelectZone = mxResult
+		
+		Viewname = {}
+		Dim ws As New NotesUIWorkspace, dc As NotesDocumentCollection
+		Set dc = ws.PickListCollection( 3, in_isMult, Me.db.Server, Me.db.FilePath, Viewname, Me.db.Title, "Выберите зону ТРЦ" )
+		If ( dc.Count > 0 ) Then
+			Dim docSelect As NotesDocument
+			Set docSelect = dc.GetFirstDocument
+			Do While Not ( docSelect Is Nothing )
+				Dim obj As Variant
+				Set obj = Me.getDocObject( docSelect )
+				Call mxResult.Append( obj )
+				Set docSelect = dc.GetNextDocument( docSelect )
+			Loop
+		End If
+		
+		Call Me.log.exit( "</" & TypeName( Me ) & "." & GetThreadInfo(1) & ">" )
+		Exit Function
+		
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Function
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Function dialogSelectPlace( in_punit As Variant, in_isMult As Boolean ) As MixCollection
+		On Error GoTo error_point
+		Call Me.log.enter( "<" & TypeName( Me ) & "." & GetThreadInfo(1) & ">" )
+		Call Me.log.parameter( "in_isMult", in_isMult )
+		
+		Dim mxResult As New MixCollection, Viewname As String, category As String
+		Set dialogSelectPlace = mxResult
+		
+		Dim ws As New NotesUIWorkspace, placesvw As NotesView, dc As Variant
+		Dim placesdc As NotesDocumentCollection
+		Set placesvw = Me.db.Getview("(ForChoice_PlacesByMall)")
+		Set placesdc = placesvw.Getalldocumentsbykey(in_punit.id, True)
+		If ( placesdc.Count > 0 ) Then
+			Set dc = CustomView_PickCollection(placesdc, 1, in_isMult, Me.db.Server, Me.db.Filepath, "ForChoice_Places.FromContracts", in_punit.title, "Выберите помещения", "")
+		End If
+		
+		'Set dc = ws.PickListCollection( 3, in_isMult, Me.db.Server, Me.db.FilePath, Viewname, Me.db.Title, "Выберите помещение(я)", category )
+		If ( dc.Count > 0 ) Then
+			Dim docSelect As NotesDocument
+			Set docSelect = dc.GetFirstDocument
+			Do While Not ( docSelect Is Nothing )
+				Dim obj As Variant
+				Set obj = Me.getDocObject( docSelect )
+				Call mxResult.Append( obj )
+				Set docSelect = dc.GetNextDocument'( docSelect )
+			Loop
+		End If
+		
+		Call Me.log.exit( "</" & TypeName( Me ) & "." & GetThreadInfo(1) & ">" )
+		Exit Function
+		
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Function
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Function dialogSelectPlace_ForTransfer ( in_punit As Variant, in_isMult As Boolean ) As MixCollection
+		On Error GoTo error_point
+		Call Me.log.enter( "<" & TypeName( Me ) & "." & GetThreadInfo(1) & ">" )
+		Call Me.log.parameter( "in_isMult", in_isMult )
+		
+		Dim mxResult As New MixCollection, Viewname As String, category As String
+		Set dialogSelectPlace_ForTransfer = mxResult
+		
+		Dim dc As Variant
+		Dim searchFormula As String
+		searchFormula = {(Form = "ASM04" & mall_id = "} & in_punit.id & {" & PlaceStatusValue *= "perspective":"actual") & StatusValue = "0" & DeletedDoc != "1" & IsDelete != "1" & @IsUnavailable ($Conflict)}
+		
+		Dim placesdc As NotesDocumentCollection		
+		Set placesdc = Me.db.Search (searchFormula, Nothing, 0)
+		If ( placesdc.Count > 0 ) Then
+			Set dc = CustomView_PickCollection(placesdc, 1, in_isMult, Me.db.Server, Me.db.Filepath, "ForChoice_Places.FromContracts", in_punit.title, "Выберите помещения", "")
+						
+			'Set dc = ws.PickListCollection( 3, in_isMult, Me.db.Server, Me.db.FilePath, Viewname, Me.db.Title, "Выберите помещение(я)", category )
+			If ( dc.Count > 0 ) Then
+				Dim docSelect As NotesDocument
+				Set docSelect = dc.GetFirstDocument
+				Do While Not ( docSelect Is Nothing )
+					Dim obj As Variant
+					Set obj = Me.getDocObject( docSelect )
+					Call mxResult.Append( obj )
+					Set docSelect = dc.GetNextDocument'( docSelect )
+				Loop
+			End If
+		End If
+		
+		Call Me.log.exit( "</" & TypeName( Me ) & "." & GetThreadInfo(1) & ">" )
+		Exit Function
+		
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Function
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Function dialogSelectPlace_ForReturn ( in_punit As Variant, in_isMult As Boolean ) As MixCollection
+		On Error GoTo error_point
+		Call Me.log.enter( "<" & TypeName( Me ) & "." & GetThreadInfo(1) & ">" )
+		Call Me.log.parameter( "in_isMult", in_isMult )
+		
+		Dim mxResult As New MixCollection, Viewname As String, category As String
+		Set dialogSelectPlace_ForReturn = mxResult
+		
+		Dim dc As Variant
+		Dim searchFormula As String
+		searchFormula = {(Form = "ASM04" & mall_id = "} & in_punit.id & {" & PlaceStatusValue *= "prearchive":"actual") & StatusValue = "1" & DeletedDoc != "1" & IsDelete != "1" & @IsUnavailable ($Conflict)}
+		
+		Dim placesdc As NotesDocumentCollection		
+		Set placesdc = Me.db.Search (searchFormula, Nothing, 0)
+		If ( placesdc.Count > 0 ) Then
+			Set dc = CustomView_PickCollection(placesdc, 1, in_isMult, Me.db.Server, Me.db.Filepath, "ForChoice_Places.FromContracts", in_punit.title, "Выберите помещения", "")
+			
+			'Set dc = ws.PickListCollection( 3, in_isMult, Me.db.Server, Me.db.FilePath, Viewname, Me.db.Title, "Выберите помещение(я)", category )
+			If ( dc.Count > 0 ) Then
+				Dim docSelect As NotesDocument
+				Set docSelect = dc.GetFirstDocument
+				Do While Not ( docSelect Is Nothing )
+					Dim obj As Variant
+					Set obj = Me.getDocObject( docSelect )
+					Call mxResult.Append( obj )
+					Set docSelect = dc.GetNextDocument'( docSelect )
+				Loop
+			End If
+		End If
+		
+		Call Me.log.exit( "</" & TypeName( Me ) & "." & GetThreadInfo(1) & ">" )
+		Exit Function
+		
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Function
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	'	Function dialogSelectPlaceLink( in_punit As Variant, in_isMult As Boolean ) As MixCollection
+	'		On Error GoTo error_point
+	'		Call Me.log.enter( "<" & TypeName( Me ) & "." & GetThreadInfo(1) & ">" )
+	'		Call Me.log.parameter( "in_isMult", in_isMult )
+	'		
+	'		Dim mxResult As New MixCollection, Viewname As String, category As String
+	'		Set dialogSelectPlaceLink = mxResult
+	'		
+	'		If Not IsEmpty( in_punit ) Then
+	'			category = in_punit.title
+	'			Viewname = {(ForChoice_PlaceLinks)}
+	'		Else
+	'			Viewname = {(ForChoice_PlaceLinks)}	
+	'		End If
+	'		
+	'		Dim ws As New NotesUIWorkspace, dc As NotesDocumentCollection
+	'		Set dc = ws.PickListCollection( 3, in_isMult, Me.db.Server, Me.db.FilePath, Viewname, Me.db.Title, "Выберите помещение(я)", category )
+	'		If ( dc.Count > 0 ) Then
+	'			Dim docSelect As NotesDocument
+	'			Set docSelect = dc.GetFirstDocument
+	'			Do While Not ( docSelect Is Nothing )
+	'				Dim obj As Variant
+	'				Set obj = Me.getDocObject( docSelect )
+	'				Call mxResult.Append( obj )
+	'				Set docSelect = dc.GetNextDocument( docSelect )
+	'			Loop
+	'		End If
+	'		
+	'		Call Me.log.exit( "</" & TypeName( Me ) & "." & GetThreadInfo(1) & ">" )
+	'		Exit Function
+	'		
+	'error_point:
+	'		On Error GoTo 0
+	'		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	'	End Function
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+		Function dialogSelectBrend( in_isMult As Boolean ) As MixCollection
+		On Error GoTo error_point
+		Call Me.log.enter( "<" & TypeName( Me ) & "." & GetThreadInfo(1) & ">" )
+		Call Me.log.parameter( "in_isMult", in_isMult )
+		
+		Dim mxResult As New MixCollection, Viewname As String 
+		Set dialogSelectBrend = mxResult
+		
+		Viewname = {(ForChoice_Brends)}
+		Dim ws As New NotesUIWorkspace, dc As NotesDocumentCollection
+		Set dc = ws.PickListCollection( 3, in_isMult, Me.db.Server, Me.db.FilePath, Viewname, Me.db.Title, "Выберите Бренд" )
+		If ( dc.Count > 0 ) Then
+			Dim docSelect As NotesDocument
+			Set docSelect = dc.GetFirstDocument
+			Do While Not ( docSelect Is Nothing )
+				Dim obj As Variant
+				Set obj = Me.getDocObject( docSelect )
+				Call mxResult.Append( obj )
+				Set docSelect = dc.GetNextDocument( docSelect )
+			Loop
+		End If
+		
+		Call Me.log.exit( "</" & TypeName( Me ) & "." & GetThreadInfo(1) & ">" )
+		Exit Function
+		
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Function
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Function dialogSelectProfile( in_isMult As Boolean, profileType As String ) As MixCollection
+		On Error GoTo error_point
+		Call Me.log.enter( "<" & TypeName( Me ) & "." & GetThreadInfo(1) & ">" )
+		Call Me.log.parameter( "in_isMult", in_isMult )
+		
+		Dim mxResult As New MixCollection, Viewname As String 
+		Set dialogSelectProfile = mxResult
+		
+		Viewname = {(ForChoice_Profiles)}
+		Dim ws As New NotesUIWorkspace, dc As NotesDocumentCollection
+		Set dc = ws.PickListCollection( 3, in_isMult, Me.db.Server, Me.db.FilePath, Viewname, Me.db.Title, "Выберите профиль", profileType )
+		If ( dc.Count > 0 ) Then
+			Dim docSelect As NotesDocument
+			Set docSelect = dc.GetFirstDocument
+			Do While Not ( docSelect Is Nothing )
+				Dim obj As Variant
+				Set obj = Me.getDocObject( docSelect )
+				Call mxResult.Append( obj )
+				Set docSelect = dc.GetNextDocument( docSelect )
+			Loop
+		End If
+		
+		Call Me.log.exit( "</" & TypeName( Me ) & "." & GetThreadInfo(1) & ">" )
+		Exit Function
+		
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Function
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Function getProfile( in_key As Variant ) As Variant
+		On Error GoTo error_point
+		Call Me.log.enter( TypeName( Me ) & "." & GetThreadInfo(1))
+		Call Me.log.parameter( "in_key", in_key )
+		
+		Const VIEW_NAME = "(UNID)"
+		
+		Dim key As String, vw As NotesView, dc As NotesDocumentCollection
+		key = Me.getId( in_key )
+		Set vw = Me.sm.core.cache.getView( VIEW_NAME, Me.db )
+		Set dc = vw.GetAllDocumentsByKey( key, True )
+		If ( dc.Count = 0 ) Then
+			Set Me.getProfile = Nothing
+		ElseIf ( dc.Count > 1 ) Then
+			Error 1001, "In database '" & Me.db.Title & "' ( path: " & Me.db.FilePath & " ) founded more than one profile by key '" & in_key & "' ( count: " & CStr( dc.Count ) & " )"
+		Else
+			Set Me.getProfile = Me.getDocObject( dc.GetFirstDocument )
+		End If
+		
+		Call Me.log.traceObject( "result", getProfile )
+		Call Me.log.exit( TypeName( Me ) & "." & GetThreadInfo(1))
+		Exit Function
+		
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$ 
+	End Function
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Function getDocObjectById1c( in_key As Variant ) As Variant
+		On Error GoTo error_point
+		
+		Const VIEW_NAME = "ID_1C"
+		
+		Dim key As String, vw As NotesView, dc As NotesDocumentCollection
+		key = Me.getId( in_key )
+		Set vw = Me.sm.core.cache.getView( VIEW_NAME, Me.db )
+		Set dc = vw.GetAllDocumentsByKey( key, True )
+		If ( dc.Count = 0 ) Then
+			Set Me.getDocObjectById1c = Nothing
+		ElseIf ( dc.Count > 1 ) Then
+			Error 1001, "In database '" & Me.db.Title & "' ( path: " & Me.db.FilePath & " ) founded more than one mall by key '" & in_key & "' ( count: " & CStr( dc.Count ) & " )"
+		Else
+			Set Me.getDocObjectById1c = Me.getDocObject( dc.GetFirstDocument )
+		End If
+		
+		Exit Function
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Function
+	
+	
+	Private Function createDWFDoc (process As Variant) As NotesDocument
+		
+		Dim s As New NotesSession
+		
+		Dim processView As NotesView
+		Dim processName As String
+		Set processView = me.db.GetView("DWFBasicProcess")
+		If processView Is Nothing Then Exit Function
+
+		Dim docProcess As NotesDocument
+		If IsObject (process) Then
+			Set docProcess = process
+			processName = docProcess.getItemValue("Name")(0)
+		Else
+			processName = process
+			Set docProcess = processView.Getfirstdocument()
+			Do While Not docProcess Is Nothing		
+				If UCase(Trim(docProcess.Getitemvalue("Name")(0))) = UCase(Trim(process)) Then
+					Exit Do
+				End If		
+				Set docProcess = processView.Getnextdocument(docProcess)
+			Loop	
+		End If	
+		
+		If docProcess Is Nothing Then
+			Error 5000, "Не найден процесс для заявок на изменение - '" & processName & "'"
+		End If
+		
+		'---------------------------------------------------------------------------------------------------------------------------
+		
+		Dim ErrorStr As String
+		Dim dbOrg As Variant
+		'Set dbOrg = s.Getdatabase(TRCObjects_GetDb.Server, s.Getenvironmentstring("TRC.ODFilePath"))
+		Set dbOrg = s.Getdatabase(me.db.Server, docProcess.getItemValue("OrgDir")(0))
+		If ( dbOrg Is Nothing ) Then
+			Error 5000, "Не удалось получить БД Орг.директория"
+		End If
+		
+		Dim ODStoreUI As ODStoreUI
+		Set ODStoreUI = New ODStoreUI(CStr(dbOrg.Filepath), ErrorStr)
+		If (ErrorStr <> "") Then
+			MsgBox ErrorStr, 48, ERR_MSG_TITLE
+			Exit Function
+		End If
+
+		Dim ODObj As ODObj
+		'получение должности пользователя
+		Set ODObj = ODStoreUI.GetObjByValue(s.userName, ErrorStr)
+		If (ErrorStr <> "") Then
+			MsgBox ErrorStr, 48, ERR_MSG_TITLE
+			Exit Function
+		End If
+		If (ODObj Is Nothing) Then
+			Exit Function
+		End If
+		Dim Person As New Person
+		If (Person.Init(ODObj.doc, ErrorStr) <> 1) Then
+			MsgBox ErrorStr, 48, ERR_MSG_TITLE
+			Exit Function
+		End If
+		
+		Dim Position As ODObj
+		Set Position = Person.GetUserPosition(ErrorStr)
+		If (ErrorStr <> "") Then
+			MsgBox ErrorStr, 48, ERR_MSG_TITLE
+			Exit Function
+		End If
+		If (Position Is Nothing) Then
+			Exit Function
+		End If
+		
+		Dim InitObjID As String
+		'получение инфы от имени кого инициирует
+		If (DWFAGetObjIDByProcessItem(docProcess, "ProcessInitiator", ODStoreUI, "Инициировать процесс", InitObjID) <> 1) Then
+			Exit Function
+		End If
+		If (Not IsArray(InitObjID)) Then
+			If (InitObjID = "<anybody>") Then
+				InitObjID = Position.ObjAccess
+			End If
+		End If
+		
+		'---------------------------------------------------------------------------------------------------------------------------
+		
+		Dim dbPC As NotesDatabase
+		Set dbPC = s.Getdatabase(me.db.Server, docProcess.Getitemvalue("PCenter")(0))
+		If ( dbPC Is Nothing ) Then
+			Set dbPC = Me.sm.base.databases.get( "tps.core.process_center" )
+			If ( dbPC Is Nothing ) Then
+				Error 5000, "Не удалось получить БД 'tps.core.process_center'"	
+			End If	
+		End If
+		
+		Dim docMain As NotesDocument
+		Dim docMail As NotesDocument	
+		Set docMail = dbPC.CreateDocument
+		docMail.Form 		= "Task"
+		docMail.Action 		= "InitProcess"
+		docMail.InitServer 	= me.db.Server
+		docMail.AppPath 	= me.db.Filepath
+		docMail.UserName 	= s.username
+		docMail.ProcessID 	= docProcess.Universalid
+		docMail.InitPosID 	= Position.ObjID
+		docMail.InitObjID 	= InitObjID
+		
+		Call docMail.Save(True, True)
+		If ( DWFAAskForAction( docMail ) <> 1 ) Then
+			'nothing
+		ElseIf ( docMail.Error(0) <> "" ) Then
+			Error 5000, docMail.Error(0)
+		Else
+			Dim unid As String
+			unid = docMail.getItemValue("docMainUNID")(0)
+			Set docMain = me.db.getDocumentByUNID(unid)
+			If ( docMain Is Nothing ) Then
+				Error 1001, {Ошибка при инициации процесса: docMain Is Nothing}
+			End If
+		End If
+		
+		Set createDWFDoc = docMain
+		
+	End Function
+	
+	
+	Public Function createNewBrandRequest()
+		Dim newDoc As NotesDocument
+		Set newDoc = me.createDWFDoc (TRCOBJECTS_PROCESS_BREND)
+		If Not newDoc Is Nothing Then
+			Dim ws As New NotesUIWorkspace()
+			Call ws.editDocument(False, newDoc)
+		End If
+		Set createNewBrandRequest = newDoc
+	End Function
+	
+	'-----------------------------------------------------------------------------------------------------------------------
+	Public Function dialogSelectASMRequest( in_isMult As Boolean) As MixCollection
+		On Error GoTo error_point
+
+		Dim ws As New NotesUIWorkspace
+		
+		Dim res As New MixCollection
+		Set dialogSelectASMRequest = res
+
+		Dim dc As NotesDocumentCollection
+		Set dc = ws.PickListCollection(PICKLIST_CUSTOM, in_isMult, me.db.Server, me.db.FilePath, "ASMRequests", "Заявки ASM", "Выберите из списка:")
+		
+		If(dc Is Nothing)Then Exit Function 'есть такой глюк на некоторых версиях клиента
+		If(dc.Count = 0)Then Exit Function 
+		
+		Dim adoc As NotesDocument
+		Set adoc = dc.Getfirstdocument()
+		While Not(adoc Is Nothing)
+			Dim asm As Variant
+			Set asm = me.Getdocobject(adoc)
+			Call res.Append(asm)
+			
+			Set adoc = dc.Getnextdocument(adoc)
+		Wend
+		
+
+		Exit Function
+		
+error_point:
+		Error Err,  GetThreadInfo(2) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$		
+	End Function
+	
+	'-----------------------------------------------------------------------------------------------------------------------
+	Public Function dialogSelectASMRequestUpdated( in_isMult As Boolean) As MixCollection
+		On Error GoTo error_point
+		
+		Call me.updateAsmRequests()
+		
+		Set dialogSelectASMRequestUpdated = dialogSelectASMRequest(in_isMult)
+
+
+		Exit Function
+		
+error_point:
+		Error Err,  GetThreadInfo(2) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$		
+	End Function
+	'-----------------------------------------------------------------------------------------------------------------------
+	Public Sub createASMLinkFromMPZ()
+		'создает связку между группой АСМ и заявкой на вопрос в МПЗ
+		'условие - текущий открытый документ = заявка на вопрос в МПЗ
+		On Error GoTo error_point
+
+		Dim mix As Mixcollection
+		Set mix = me.dialogSelectASMRequestUpdated(False)
+		If(mix.Count = 0)Then Exit Sub
+		
+		Dim asm As Variant
+		Set asm = mix.Getfirst()
+
+		Dim ws As New NotesUIWorkspace
+		Dim mpzDoc As NotesDocument, mpz As Variant
+		
+		Set mpzDoc = ws.currentDocument.document
+		Set mpz = me.tps.conferences.QApproval.getDocObject(mpzDoc)
+		
+		Call createASMLink(asm, mpz)
+		
+		If(ws.currentDocument.editMode)Then Call ws.Currentdocument.Refresh()
+		
+		Exit Sub
+		
+error_point:
+		Error Err, GetThreadInfo(2) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$		
+		
+	End Sub
+	'-----------------------------------------------------------------------------------------------------------------------
+	Public Sub createASMLink(asm As Variant, mpz As Variant)
+		On Error GoTo error_point
+		
+		Dim view As NotesView
+		Set view = me.db.getView("(app.mpzlinks.byQuestionId)")
+		Call view.Refresh()
+		
+		Dim rcol As NotesDocumentCollection, rdoc As NotesDocument
+		Set rcol = view.Getalldocumentsbykey(mpz.id, True)
+		If(rcol.count > 0)Then
+			Set rdoc = rcol.Getfirstdocument()
+			While Not(rdoc Is Nothing)
+				If(rdoc.getItemValue("asm_id")(0) = asm.id)Then Exit Sub 'такая связь уже есть
+				
+				Set rdoc = rcol.Getnextdocument(rdoc)
+			Wend
+		End If
+		
+		Dim lDoc As NotesDocument
+		Set lDoc = New NotesDocument(me.db)
+		
+		Call lDoc.replaceItemValue("Form", "MPZLink")
+		
+		Call lDoc.replaceItemValue("Asm_id", asm.id)
+		Call lDoc.replaceItemValue("Asm_domain", asm.domain)
+		Call lDoc.replaceItemValue("Asm_title", asm.title)
+		
+		Call lDoc.replaceItemValue("Question_id", mpz.id)
+		Call lDoc.replaceItemValue("Question_domain", mpz.domain)
+		Call lDoc.replaceItemValue("Question_title", mpz.title)
+		
+		Let lDoc.Replaceitemvalue("DWF$Authors", "*").Isauthors = True
+
+		Call lDoc.save(True, False)
+		
+
+		Exit Sub
+		
+error_point:
+		Error Err, GetThreadInfo(2) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$		
+		
+	End Sub
+	
+	Private Property Get tps As Variant
+		Set tps = me.ps
+	End Property
+	
+	
+	'-----------------------------------------------------------------------------------------------------------------------
+	Public Sub deleteASMLinkFromMPZ()
+	'удаляет связку между группой АСМ и заявкой на вопрос в МПЗ
+	'условие - текущий открытый документ = заявка на вопрос в МПЗ
+		On Error GoTo error_point
+
+		Dim ws As New NotesUIWorkspace
+		Dim lDoc As NotesDocument
+		Dim mpzDoc As NotesDocument, mpz As Variant
+		
+		Set mpzDoc = ws.currentDocument.document
+		Set mpz = me.tps.conferences.QApproval.getDocObject(mpzDoc)
+		
+		Dim rcol As NotesDocumentCollection, rdoc As NotesDocument
+		Set rcol = ws.Picklistcollection(PICKLIST_CUSTOM, True, me.db.server, me.db.filepath, "(app.mpzlinks.byQuestionId)", "Удаление ссылки...", "Выберите ссылку для удаления:", mpz.id)
+		
+		If(rcol Is Nothing)Then Exit Sub 'бывает такое
+		If(rcol.count = 0)Then Exit Sub
+		
+		Set rdoc = rcol.Getfirstdocument()
+		While Not(rdoc Is Nothing)
+			Call rdoc.replaceItemValue("IsDelete", "1")
+			Call rdoc.save(True, False)
+			
+			Set rdoc = rcol.Getnextdocument(rdoc)
+		Wend
+		
+		Dim view As NotesView
+		Set view = me.db.getView("(app.mpzlinks.byQuestionId)")
+		Call view.refresh()
+		
+		If(ws.currentDocument.editMode)Then Call ws.Currentdocument.Refresh()
+
+
+		Exit Sub
+		
+error_point:
+		Error Err, GetThreadInfo(2) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$		
+	End Sub
+	
+	'--------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Public Function getAsmLinksByMpzId ( mpzId As String ) As mixcollection
+		' взять коллекцию линков на АСМ по ИД вопроса МПЗ
+		On Error GoTo error_point
+
+		Set getAsmLinksByMpzId = New MixCollection()
+		
+		'создает связку между группой АСМ и заявкой на вопрос в МПЗ
+		'условие - текущий открытый документ = заявка на вопрос в МПЗ
+
+		Dim view As NotesView
+		Set view = me.db.getView("(app.mpzlinks.byQuestionId)")
+		Dim rcol As NotesDocumentCollection, rdoc As NotesDocument
+		Set rcol = view.Getalldocumentsbykey(mpzId, True)
+		If(rcol.count > 0)Then
+			Set rdoc = rcol.Getfirstdocument()
+			While Not(rdoc Is Nothing)
+				Dim alink As Variant
+				Set alink = getDocObject(rdoc)
+				Call getAsmLinksByMpzId.Append(alink)
+				
+				Set rdoc = rcol.Getnextdocument(rdoc)
+			Wend
+		End If
+
+
+		Exit Function
+		
+error_point:
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Function
+	
+	
+	'--------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Public Function getAsmLinksByAsmId ( asmId As String ) As mixcollection
+		' взять коллекцию линков на АСМ по ИД вопроса МПЗ
+		On Error GoTo error_point
+
+		Set getAsmLinksByAsmId = New MixCollection()
+		
+		'создает связку между группой АСМ и заявкой на вопрос в МПЗ
+		'условие - текущий открытый документ = заявка на вопрос в МПЗ
+
+		Dim view As NotesView
+		Set view = me.db.getView("(app.mpzlinks.byAsmId)")
+		Dim rcol As NotesDocumentCollection, rdoc As NotesDocument
+		Set rcol = view.Getalldocumentsbykey(asmId, True)
+		If(rcol.count > 0)Then
+			Set rdoc = rcol.Getfirstdocument()
+			While Not(rdoc Is Nothing)
+				Dim alink As Variant
+				Set alink = getDocObject(rdoc)
+				Call getAsmLinksByAsmId.Append(alink)
+				
+				Set rdoc = rcol.Getnextdocument(rdoc)
+			Wend
+		End If
+
+
+		Exit Function
+		
+error_point:
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Function
+	'--------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Public Sub syncAsmMpzLink(mpzLink As Variant)
+		On Error GoTo error_point
+
+		Dim ag As NotesAgent
+		Set ag = mpzLink.nd.parentDatabase.getAgent("syncMpzLinks.runner")
+		Call ag.runOnServer(mpzLink.nd.noteId)
+
+
+		Exit Sub
+		
+error_point:
+		Error Err, TypeName(Me) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$		
+		
+	End Sub
+	
+	'--------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Public Sub updateAsmRequests()
+		On Error GoTo error_point
+		
+		Dim ag As NotesAgent
+		Set ag = me.db.getAgent("getASMRequests.runner")
+		Call ag.runOnServer()
+		
+		
+		Exit Sub
+		
+error_point:
+		Error Err, TypeName(Me) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$		
+		
+	End Sub
+	'--------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	%REM
+		Sub notifyAsmQuestionDelete
+		Description: Уведомляем АСМ об удалении вопроса из повестки
+		параметр - вопрос ИЗ ПМ СОВЕЩАНИЯ, т.е. уже протокольный вопрос!
+	%END REM
+	Public Sub notifyAsmQuestionDelete(question As NotesDocument)
+		On Error GoTo error_point
+		On Error 4091 Resume Next
+		
+		If(question.Getitemvalue("RequestUNID")(0) = "")Then Exit Sub
+		
+		' проверка включен ли механизм ссылок АСМ в совещаниях
+		Dim setting As Variant
+		Set setting = me.sm.core.settings( question.Parentdatabase ).get( "tps.workflow.conferences.ASMLinks.enable" )
+		If(setting Is Nothing)Then Exit Sub
+		If(CStr(setting.value) <> "1")Then Exit Sub
+		
+		Dim mpz As Variant
+		Set mpz = me.tps.conferences.QApproval.getCardAgree(question.Getitemvalue("RequestUNID")(0))
+		If(mpz Is Nothing)Then
+			Print("Не найдена заявка на вопрос")
+			Exit Sub
+		End If
+		
+		Dim view As NotesView
+		Set view = me.db.getView("(app.mpzlinks.byQuestionId)")
+		
+		Dim rcol As NotesDocumentCollection, rdoc As NotesDocument
+		Set rcol = view.Getalldocumentsbykey(mpz.id, True)
+		If(rcol.count > 0)Then
+			Set rdoc = rcol.Getfirstdocument()
+			While Not(rdoc Is Nothing)
+				Call doAsmAction(cmd_delete, rdoc, question)
+				
+				Set rdoc = rcol.Getnextdocument(rdoc)
+			Wend
+		End If
+		
+		
+		Exit Sub
+		
+error_point:
+		Error Err, TypeName(Me) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$		
+		
+	End Sub
+	
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Private m_con As Variant
+	Public Sub doAsmAction(action As String, mpzLinkDoc As NotesDocument, questionDoc As NotesDocument)
+		On Error GoTo error_point
+		On Error 4091 Resume Next
+		
+		If(action = mpzLinkDoc.getItemValue("LastSyncAction")(0))Then Exit Sub 
+
+		Dim sqlServer As String
+		Dim sqlDb As String
+		sqlServer = getSqlServer()
+		sqlDb = getSqlDb()
+
+		If(IsEmpty(m_con))Then
+			Set m_con = CreateObject ("ADODB.Connection")
+			Call m_con.Open (sqlServer, "lotus_upload", "1q2w!Q@W")
+		End If
+		
+		Dim protoDoc As NotesDocument, confDate As String, confName As String
+		If(LCase(questionDoc.getItemValue("Form")(0)) = "cardagree")Then 'заявка на вопрос
+			If(questionDoc.getItemValue("date")(0) <> "")Then
+				confDate = Format$(questionDoc.getItemValue("Date")(0), "yyyymmdd")
+			End If
+		ElseIf(LCase(questiondoc.getItemValue("Form")(0)) = "question")Then 'сам вопрос из конфы
+			Set protoDoc = questionDoc.Parentdatabase.Getdocumentbyunid(questionDoc.Getitemvalue("ParentRef")(0))
+			If(protoDoc Is Nothing)Then
+				Print("ОШИБКА: для вопроса " & questionDoc.Universalid & " не найден протокол!")
+				Exit Sub
+			Else
+				If(CInt(protoDoc.getItemValue("StageCount")(0)) < 6) And (action <> cmd_delete) Then
+					'если стадия всё ещё не протокол и НЕ удале
+					Exit Sub
+				End If
+				If(protoDoc.getItemValue("date")(0) <> "")Then
+					confDate = Format$(protoDoc.getItemValue("Date")(0), "yyyymmdd")
+				End If
+			End If
+		End If
+		confName = questionDoc.getItemValue("Managmentagency")(0)
+		
+		Dim asmRequest As NotesDocument
+		Set asmRequest = db.getDocumentByUnid(mpzLinkDoc.getItemValue("Asm_id")(0))
+		If(asmRequest Is Nothing)Then
+			MsgBox "ERROR: НЕТ ЗАЯВКИ НА АСМ С UNID " & mpzLinkDoc.getItemValue("Asm_id")(0)
+			Exit Sub
+		End If
+		
+		Call m_con.Execute ({[} & sqlDb & {].[dbo].[} & action & {] '} _
+		& asmRequest.getItemValue("Number")(0) & {', '} & questionDoc.Notesurl & {'} _
+		& {, '} & confDate & {', '} & confName & {'})
+		
+		Call mpzLinkDoc.replaceItemValue("LastSyncAction", action)
+		Call mpzLinkDoc.save(True, False)
+		
+exit_sub: 
+		Exit Sub
+		
+error_point:
+		Print GetThreadInfo(2) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+		If Not(mpzLinkDoc Is Nothing)Then
+			Call mpzLinkDoc.replaceItemValue("lastError", GetThreadInfo(2) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$)
+			Call mpzLinkDoc.save(False, False)
+		End If
+		Resume exit_sub
+		'		Error Err, GetThreadInfo(2) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$		
+		
+	End Sub
+	
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Private sql_db As String
+	Public Function getSqlDb() As String
+		On Error GoTo error_point
+
+		If(sql_db = "")Then
+			Dim sm As Variant, setting As Variant
+			Set sm = getServicesManager()
+			Set setting = sm.core.settings( me.db ).get( "app.sql.dbName" )
+			If(setting Is Nothing)Then Error 1111, "Не указана sql-база, настройка app.sql.dbName"
+			sql_db = setting.value
+		End If
+
+		If(sql_db = "")Then Error 1111, "Не указана sql-база в настройке app.sql.dbName"
+		
+		getSqlDb = sql_db
+
+		
+		Exit Function
+		
+error_point:
+		Error Err, GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$		
+		
+	End Function
+	
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Private sql_server As String
+	Public Function getSqlServer() As String
+		On Error GoTo error_point
+
+		If(sql_server = "")Then
+			Dim sm As Variant, setting As Variant
+			Set sm = getServicesManager()
+			Set setting = sm.core.settings( db ).get( "app.sql.serverName" )
+			If(setting Is Nothing)Then Error 1111, "Не указан sql-сервер, настройка app.sql.serverName"
+			sql_server = setting.value
+		End If
+
+		If(sql_server = "")Then Error 1111, "Не указан sql-сервер в настройке app.sql.serverName"
+		
+		getSqlServer = sql_server
+
+
+		Exit Function
+		
+error_point:
+		Error Err, GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$		
+		
+	End Function
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	%REM
+		Sub copyAsmLinkForQuestion
+		Description: создаёт копию линков на группы асм на основе старого вопроса в новый
+	%END REM
+	Public Sub copyAsmLinkForQuestion(oldQuestion As NotesDocument, newQuestion As NotesDocument)
+		On Error GoTo error_point
+		
+		Dim mx As Mixcollection
+		
+		Set mx = getAsmLinksByMpzId(oldQuestion.Universalid)
+		If(mx.Count = 0)Then Exit Sub 'копировать нечего
+		
+		ForAll lnk In mx.Array
+			Dim newLink As NotesDocument
+			Set newLink = New NotesDocument(lnk.nd.parentDatabase)
+			
+			Call lnk.nd.copyAllItems(newLink, True)
+			Call newLink.Replaceitemvalue("LastSyncAction", "")
+			Call newLink.Replaceitemvalue("copy_question_id", newLink.getItemValue("question_id"))
+			Call newLink.Replaceitemvalue("question_id", newQuestion.Universalid)
+			Call newLink.save(True, False)
+			
+		End ForAll
+		
+		
+		Exit Sub
+		
+error_point:
+		Error Err, GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$		
+		
+	End Sub
+	
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	%REM
+		Sub getAsmRequestByNumber
+		Description: берет из базы запрос АСМ по его номеру
+	%END REM
+	Public Function getAsmRequestByNumber(number As String)As TPS_TRC_ASMRequest
+		On Error GoTo error_point
+		
+		Set getAsmRequestByNumber = Nothing
+		
+		Dim view As NotesView
+		Set view = db.Getview("(app.asmRequests.byNumber)")
+
+		Dim doc As NotesDocument
+		Set doc = view.Getdocumentbykey(UCase$(number), True)
+
+		If(doc Is Nothing)Then Exit Function
+		
+		Set getAsmRequestByNumber = getDocObject(doc)
+		
+
+		Exit Function
+		
+error_point:
+		Error Err, GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$		
+		
+	End Function
+	
+	
+End Class
+
+
+'======================================================================================================================================
+'	CLASS ABSTACT_TPS_TRC_UNIT
+'======================================================================================================================================
+Public Class ABSTACT_TPS_TRC_UNIT As FBase_Abstract_Object_Doc
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	'	PUBLIC:
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Sub New( in_doc As NotesDocument, in_ps As Variant )
+	End Sub
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Property Get id As String
+		On Error GoTo error_point
+		id = Me.nd.CUSTOMID(0)
+		Exit Property
+		
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Property
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Property Get title As String
+		On Error GoTo error_point
+		title = Me.nd.Name(0)
+		Exit Property
+		
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Property
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Property Get info1C As Variant
+		Set info1C = New ABSTACT_TPS_TRC_UNIT_Info1C( Me.nd, Me.Me_variant )
+	End Property
+	
+End Class
+'======================================================================================================================================
+'	CLASS ABSTACT_TPS_TRC_UNIT
+'======================================================================================================================================
+
+
+
+
+
+'======================================================================================================================================
+'	CLASS TPS_TRC_Mall
+'======================================================================================================================================
+Public Class TPS_TRC_Mall As ABSTACT_TPS_TRC_UNIT
+	
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	'	PUBLIC:
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Sub New( in_doc As NotesDocument, in_ps As Variant )
+	End Sub
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Property Get domain As String
+		On Error GoTo error_point
+		domain = DOMAIN_TYPE_TPS_TRC_MALL
+		Exit Property
+		
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Property
+End Class
+
+
+
+'======================================================================================================================================
+'	CLASS TPS_TRC_Floor
+'======================================================================================================================================
+Public Class TPS_TRC_Floor As ABSTACT_TPS_TRC_UNIT
+	
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	'	PUBLIC:
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Sub New( in_doc As NotesDocument, in_ps As Variant )
+	End Sub
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Property Get domain As String
+		On Error GoTo error_point
+		domain = DOMAIN_TYPE_TPS_TRC_FLOOR
+		Exit Property
+		
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Property
+End Class
+
+
+'======================================================================================================================================
+'	CLASS TPS_TRC_Zone
+'======================================================================================================================================
+Public Class TPS_TRC_Zone As ABSTACT_TPS_TRC_UNIT
+	
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	'	PUBLIC:
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Sub New( in_doc As NotesDocument, in_ps As Variant )
+	End Sub
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Property Get domain As String
+		On Error GoTo error_point
+		domain = DOMAIN_TYPE_TPS_TRC_ZONE
+		Exit Property
+		
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Property
+End Class
+
+
+
+'======================================================================================================================================
+'	CLASS TPS_TRC_Place
+'======================================================================================================================================
+Public Class TPS_TRC_Place As ABSTACT_TPS_TRC_UNIT
+	
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	'	PUBLIC:
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Sub New( in_doc As NotesDocument, in_ps As Variant )
+	End Sub
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Property Get domain As String
+		On Error GoTo error_point
+		domain = DOMAIN_TYPE_TPS_TRC_PLACE
+		Exit Property
+		
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Property
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	
+End Class
+'======================================================================================================================================
+'	CLASS ABSTACT_TPS_TRC_UNIT_Info1C
+'======================================================================================================================================
+Class ABSTACT_TPS_TRC_UNIT_Info1C  As FBase_Abstract_Object_Doc
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	'	PUBLIC:
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Sub New( in_doc As NotesDocument, in_ps As Variant )
+	End Sub
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Property Get code As String
+		On Error GoTo error_point
+		code = Me.nd.code_1C(0)
+		Exit Property 
+		
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Property
+	'-----------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Property Set code As String
+		On Error GoTo error_point
+		Call Me.nd.ReplaceItemValue( "code_1C", code )
+		Exit Property
+		
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Property
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Property Get id As String
+		On Error GoTo error_point
+		id = Me.nd.ID_1С(0)
+		Exit Property 
+		
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Property
+	'-----------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Property Set id As String
+		On Error GoTo error_point
+		Call Me.nd.ReplaceItemValue( "ID_1С", id )
+		Exit Property
+		
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Property
+End Class
+
+
+'======================================================================================================================================
+'	CLASS TPS_TRC_Brend
+'======================================================================================================================================
+Public Class TPS_TRC_Brend As ABSTACT_TPS_TRC_UNIT
+	
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	'	PUBLIC:
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Sub New( in_doc As NotesDocument, in_ps As Variant )
+	End Sub
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Property Get domain As String
+		On Error GoTo error_point
+		domain = DOMAIN_TYPE_TPS_TRC_BREND
+		Exit Property
+		
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Property
+End Class
+'======================================================================================================================================
+'	CLASS TPS_TRC_Arendator
+'======================================================================================================================================
+Public Class TPS_TRC_Arendator As ABSTACT_TPS_TRC_UNIT
+	
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	'	PUBLIC:
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Sub New( in_doc As NotesDocument, in_ps As Variant )
+	End Sub
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Property Get domain As String
+		On Error GoTo error_point
+		domain = DOMAIN_TYPE_TPS_TRC_ARENDATOR
+		Exit Property
+		
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Property
+End Class
+
+
+'======================================================================================================================================
+'	CLASS TPS_TRC_PROFILE
+'======================================================================================================================================
+Public Class TPS_TRC_Profile As ABSTACT_TPS_TRC_UNIT
+	
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	'	PUBLIC:
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Sub New( in_doc As NotesDocument, in_ps As Variant )
+	End Sub
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Property Get domain As String
+		On Error GoTo error_point
+		domain = DOMAIN_TYPE_TPS_TRC_PROFILE
+		Exit Property
+		
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Property
+	
+	Property Get profile_type As String
+		On Error GoTo error_point
+		profile_type = Me.nd.Type(0)
+		Exit Property
+		
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Property
+End Class
+'======================================================================================================================================
+'	CLASS TPS_TRC_PlaceLink
+'======================================================================================================================================
+Public Class TPS_TRC_PlaceLink As ABSTACT_TPS_TRC_UNIT
+	
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	'	PUBLIC:
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Sub New( in_doc As NotesDocument, in_ps As Variant )
+	End Sub
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Property Get domain As String
+		On Error GoTo error_point
+		domain = DOMAIN_TYPE_TPS_TRC_PLACELINK
+		Exit Property
+		
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Property
+	
+	Property Get title As String
+		On Error GoTo error_point
+		
+		Dim n As String
+		n = Me.nd.getItemValue("PlaceNames")(0)
+		If Trim(n)  = "" Then
+			n = Me.nd.Getitemvalue("Place_title")(0)
+		End If
+		
+		title = n
+		Exit Property
+		
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Property
+	
+	Property Get id As String
+		On Error GoTo error_point
+		
+		Dim unid As String
+		unid = Me.nd.getItemValue("PlaceUNIDs")(0)
+		If Trim(unid)  = "" Then
+			unid = Me.nd.getItemValue("Place_id")(0)
+		End If
+		
+		id = unid
+		Exit Property
+		
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Property
+	
+End Class
+
+
+
+'======================================================================================================================================
+'	CLASS TPS_TRC_Inventory
+'======================================================================================================================================
+Public Class TPS_TRC_Inventory As ABSTACT_TPS_TRC_UNIT
+	
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	'	PUBLIC:
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Sub New( in_doc As NotesDocument, in_ps As Variant )
+	End Sub
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Property Get domain As String
+		On Error GoTo error_point
+		domain = DOMAIN_TYPE_TPS_TRC_INVENTORY
+		Exit Property
+		
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Property
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Property Get title As String
+		On Error GoTo error_point
+		title = "Инвентаризация №" & Me.Nd.Getitemvalue("NUMBERTOTAL")(0) & " от " & Me.Nd.Getitemvalue("InventoryDate")(0)
+		Exit Property
+		
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Property
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	
+End Class
+
+'======================================================================================================================================
+'	CLASS TPS_TRC_Request
+'======================================================================================================================================
+Public Class TPS_TRC_Request As ABSTACT_TPS_TRC_UNIT
+	
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	'	PUBLIC:
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Sub New( in_doc As NotesDocument, in_ps As Variant )
+	End Sub
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Property Get domain As String
+		On Error GoTo error_point
+		domain = DOMAIN_TYPE_TPS_TRC_REQUEST
+		Exit Property
+		
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Property
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Property Get title As String
+		On Error GoTo error_point
+		title = "Заявка на изменение №" & Me.Nd.Getitemvalue("NUMBERTOTAL")(0) & " от " & Me.Nd.Getitemvalue("RequestDate")(0)
+		Exit Property
+		
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Property
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	
+End Class
+
+
+Public Class TPS_TRC_ASMRequest as FBase_Abstract_Object_Doc	
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Sub New( in_doc As NotesDocument, in_ps As Variant )
+	End Sub
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+	Public Property Get domain As String 
+		domain = DOMAIN_TYPE_TPS_TRC_ASMREQUEST
+	End Property
+	
+	Public Property Get asmDate As String
+		asmDate = me.nd.getItemValue("Date")(0)
+	End Property
+	
+	Public Property Get mallName As String
+		mallName = me.nd.getItemValue("MallName")(0)
+	End Property
+	
+	Public Property Get number As String
+		number = me.nd.getItemValue("Number")(0)
+	End Property
+	
+	Public Property Get person As String
+		person = me.nd.getItemValue("Person")(0)
+	End Property
+	
+	Public Property Get title As String
+		title = me.mallName & ", " & me.number & ", " & me.asmDate & ", " & me.person
+	End Property
+	
+	Public Property Get id As String
+		Dim s As String
+		s = me.nd.Getitemvalue("id")(0)
+		If(s = "")Then s = me.nd.getItemValue("CustomId")(0)
+		If(s = "")Then s = me.nd.Universalid
+		id = s
+	End Property
+	
+End Class
+
+Public Class TPS_TRC_MPZLink As FBase_Abstract_Object_Doc
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Sub New( in_doc As NotesDocument, in_ps As Variant )
+	End Sub
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+	Public Property Get domain As String
+		domain = DOMAIN_TYPE_TPS_TRC_MPZLINK
+	End Property
+	
+End Class

@@ -1,0 +1,37 @@
+<?xml version='1.0' encoding='utf-8'?>
+<note class='view' xmlns='http://www.lotus.com/dxl' version='10.0' maintenanceversion='1.0'
+ replicaid='44257D5C002A4928'>
+<noteinfo noteid='762' unid='0A327E18DBC0F6F7432580500047C80E' sequence='9'>
+<created><datetime>20161018T160402,70+03</datetime></created>
+<modified><datetime>20210418T115609,25+03</datetime></modified>
+<revised><datetime>20161018T110414,82+03</datetime></revised>
+<lastaccessed><datetime>20210418T115609,24+03</datetime></lastaccessed>
+<addedtofile><datetime>20210418T115609,24+03</datetime></addedtofile></noteinfo>
+<updatedby><name>CN=Aleksandr Galko/O=tps</name></updatedby>
+<wassignedby><name>CN=Aleksandr Galko/O=tps</name></wassignedby>
+<item name='$FormulaClass' sign='true'><text>1</text></item>
+<item name='$TITLE' sign='true'><text>(app.lookup.methodicLinks)|app.lookup.methodicLinks</text></item>
+<item name='$Index' sign='true'><text/></item>
+<item name='$Formula' summary='true' sign='true'><formula compiled='true'>
+ggAFACwAJwADAAkACwAJAFRvRG9jVU5JREZyb21Eb2NVTklEJENvbmZsaWN0AAQABAAAADoABQAE
+AEZvcm0BABAATGlua1RvQW5vdGhlckRvYwoCBQAHAERlbGV0ZWQAAQABADEACwIcAgMABwAWABAA
+CUwxUzJTM1M0UzVTNlM3Uw==
+</formula></item>
+<item name='$Collation' summary='true'>
+<rawitemdata type='2'>
+KAACAABEAGYAAAAJAABmAAkACwBUb0RvY1VOSURGcm9tRG9jVU5JRA==
+</rawitemdata></item>
+<item name='$ViewFormat' summary='true' sign='true'>
+<rawitemdata type='5'>
+AQACAAIACgAAAFZDAQAJAAUAAAAAAAABAQAACgAAAAAAAAAAAAICAAAAVkMBAAsABwAAAAAAAAEB
+AAAKAAAAAAAAAAAAAgIAAABUb0RvY1VOSUR0b0RvY0Zyb21Eb2NVTklEZnJvbURvYyYAAQAAAAEB
+AAkBAAAKAQEOCgAAAQCtKwEAAQABAAAAAAAAAAAAV0MBAQAJAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+AAAA//8AAAAAAAAAAAAAAAAAAFdDAQEACQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAP//AAAAAAAA
+AAAAAAAAAABCAAAAAAABAP///wAFAP///wABAAAAAAAAAAAAAAAAAAEA////AAEA////AAAAAQAA
+AAAAAQAAAAAAAQAAAAAAAAAIAAAAAAABAA==
+</rawitemdata></item>
+<item name='$Comment' sign='true'><text>поиск линков на документы - toDoc, fromDoc</text></item>
+<item name='$DesignerVersion'><text>8.5.3</text></item>
+<item name='$Class'><text>dev.tps.workflow.orders.re</text></item>
+<item name='$Flags'><text>Y</text></item></note>
+

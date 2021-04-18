@@ -1,0 +1,466 @@
+'++LotusScript Development Environment:2:5:(Options):0:74
+Option Public
+Option Declare
+Use "BitOperations"
+'++LotusScript Development Environment:2:5:(Forward):0:1
+Declare Class MD5
+
+'++LotusScript Development Environment:2:5:(Declarations):0:10
+%REM
+'********* MD5 Class Library ********
+'** This is a LotusScript implementation of the MD5 message digest algorithm
+'** as described by internet RFC 1321.
+'** Version .5, Dec. 13, 1999
+'** Written by Damien Katz of Iris Associates
+'** This code may be freely distributed.
+
+'** This library requires the BitOperations library
+
+
+****** Descriptions of use *********
+Use is simple, just instantiate an object, add bytes, integers, longs and strings,
+then get the digest value.
+
+	'Instantiate
+	Dim md5 As New MD5
+	
+	'add byte
+	Call md5.addByte( 89)
+	
+	'add integer
+	Call md5.addInteger( 23000)
+	
+	'add Long
+	Call md5.addlong( 300000000)
+	
+	'add a string
+	Call md5.addAsciiStr( "Damien Katz")
+	
+	'output the digest string
+	Print md5.digestStr()
+
+	'Reset and do it again
+	call md5.reset()
+	'.....
+
+****** MD5 Methods *********
+
+Sub reset()
+* This method resets the digest so another can be computed.
+
+Sub addAsciiStr( strVal As String)
+* Adds an ascii string to the digest.  If non-ascii characters are in the string
+* then their value is truncated by the asc() function
+
+Sub addUnicodeStr( strVal As String)
+* Adds a unicode string to the current digest
+
+Sub addByte( byteVal As Integer)
+* adds a byte value to the digest
+* Although an 16 bit integer value is passed the most significant 8 bits are ignored
+
+Sub addInteger( Byval intVal As Integer)
+* Adds a 16 bit integer value to the digest
+
+Sub addLong( Byval longVal As Long)
+* Adds a 32 bit long value to the digest
+
+Property Get digestByteArray As Variant
+* Returns a byte array containing the current digest.
+* The returned values are actually integers but only the least significant bits contain the digest.
+* Once this is retrieved no more data can be added to the digest until the reset() method is called
+
+Property Get digestString As String
+* Returns a hexidecimal string representation of the current digest.
+* Once this is retrieved no more data can be added to the digest until the reset() method is called
+
+Function isEqualByteArray( digest As Variant) As Integer
+* Compares a digest byte array to the current digest and test for equality
+* The actual type is a 16 element integer array.  The most significant 8 bits in each element
+are ignored
+* Once this method is call no more data can be added to the digest until the reset() method is called
+
+Function isEqualString( digest As String) As Integer
+* Compares a string representation of digest to the current digest and test for equality
+* Once this method is call no more data can be added to the digest until the reset() method is called
+
+Function isEqualMD5( md5 As MD5) As Integer
+* Compares a MD5 digest object to the current digest and test for equality
+* Once this method is call no more data can be added to the current digest or the 
+* supplied digest object until each objects the reset() method is called 
+
+%END REM
+
+'********* MD5 Class Library ********
+'** This is a LotusScript implementation of the MD5 message digest algorithm
+'** as described by internet RFC 1321.
+'** Version .5, Dec. 13, 1999
+'** Written by Damien Katz of Iris Associates
+'** This code may be freely distributed.
+
+'** This library requires the BitOperations library
+
+
+Class MD5
+	Private digestFinished As Integer ' This is the flag that the finish method has been called
+	Private byteCount As Long ' This is the count of the number of bytes added to the digest
+	Private x(15) As Long ' This is the buffer where bytes are added and is digested when full
+	Private state(3) As Long ' This is where the digest is stored
+	
+'Forward declarations
+Declare Property Get digestByteArray As Variant
+Declare Property Get digestString As String
+Declare Sub reset
+Declare Private Sub doBlock
+Declare Function isEqualByteArray( digest As Variant) As Integer
+Declare Function isEqualString( digest As String) As Integer
+Declare Function isEqualMD5( md5 As MD5) As Integer
+Declare Sub addByte( byteVal As Integer)
+Declare Sub addLong( Byval longVal As Long)
+Declare Sub addInteger( Byval intVal As Integer)
+Declare Sub addAsciiStr( strVal As String)
+Declare Sub addUnicodeStr( strVal As String)
+Declare Private Sub finish
+Declare Private Sub FF( a As Long, b As Long, c As Long, d As Long, x As Long, s As Integer, t As Long)
+Declare Private Sub GG( a As Long, b As Long, c As Long, d As Long, x As Long, s As Integer, t As Long)
+Declare Private Sub HH( a As Long, b As Long, c As Long, d As Long, x As Long, s As Integer, t As Long)
+Declare Private Sub II( a As Long, b As Long, c As Long, d As Long, x As Long, s As Integer, t As Long)
+	
+	Sub new
+		Call Me.reset()
+	End Sub
+	
+	Property Get digestByteArray As Variant
+		'** This returns the message digest as a byte array
+		'** The most significant eight bits in each element is not used.
+		'** Once this method is called no more data can be 
+		'** added to the digest until the init method is called
+		If Not digestFinished Then
+			Call Me.finish
+		End If
+		Dim result(15) As Integer
+		Dim i As Integer
+		For i = 0 To 15				
+			result(i) = BitRotRightL( state(i\4), 8*( i Mod 4)) And &h00FF				
+		Next
+		digestByteArray = result
+		
+	End Property	
+	
+	Property Get digestStr As String
+		'** This returns the message digest as a hex string
+		'** Once this method is called no more data can be 
+		'** added to the digest until the init method is called
+		Dim result As String
+		Forall byteval In Me.digestByteArray
+			result = result + Right( "00" & Hex(byteVal), 2)
+		End Forall
+		digestStr = result
+	End Property
+	
+	Sub reset
+		'** this initializes object to compute a new a hash
+		'** This must be called after finish is called before
+		'** a new hash can be computed
+		digestFinished = False
+		byteCount = 0
+		Dim i As Integer
+		For i = 0 To 15
+			x(i) = 0
+		Next
+		state(0) = &h67452301&
+		state(1) = &hEFCDAB89&
+		state(2) = &h98BADCFE&
+		state(3) = &h10325476&
+	End Sub
+	
+	Private Sub doBlock
+		'** this hashes a 64 byte block
+		'** this should be called every time the buffer
+		'** is completely filled
+		Const S11 = 7
+		Const S12 = 12
+		Const S13 = 17
+		Const S14 = 22
+		Const S21 = 5
+		Const S22 = 9
+		Const S23 = 14
+		Const S24 = 20
+		Const S31 = 4
+		Const S32 = 11
+		Const S33 = 16
+		Const S34 = 23
+		Const S41 = 6
+		Const S42 = 10
+		Const S43 = 15
+		Const S44 = 21
+		
+		Dim a As Long, b As Long, c As Long, d As Long
+		a = state(0)
+		b = state(1)
+		c = state(2)
+		d = state(3)	
+ ' Round 1
+		Call FF (a, b, c, d, x( 0), S11, &hd76aa478) ' 1 
+		Call FF (d, a, b, c, x( 1), S12, &he8c7b756) ' 2 
+		Call FF (c, d, a, b, x( 2), S13, &h242070db) ' 3 
+		Call FF (b, c, d, a, x( 3), S14, &hc1bdceee) ' 4 
+		Call FF (a, b, c, d, x( 4), S11, &hf57c0faf) ' 5 
+		Call FF (d, a, b, c, x( 5), S12, &h4787c62a) ' 6 
+		Call FF (c, d, a, b, x( 6), S13, &ha8304613) ' 7 
+		Call FF (b, c, d, a, x( 7), S14, &hfd469501) ' 8 
+		Call FF (a, b, c, d, x( 8), S11, &h698098d8) ' 9 
+		Call FF (d, a, b, c, x( 9), S12, &h8b44f7af) ' 10 
+		Call FF (c, d, a, b, x(10), S13, &hffff5bb1) ' 11 
+		Call FF (b, c, d, a, x(11), S14, &h895cd7be) ' 12 
+		Call  FF (a, b, c, d, x(12), S11, &h6b901122) ' 13 
+		Call  FF (d, a, b, c, x(13), S12, &hfd987193) ' 14 
+		Call  FF (c, d, a, b, x(14), S13, &ha679438e) ' 15 
+		Call  FF (b, c, d, a, x(15), S14, &h49b40821) ' 16 
+		
+ ' Round 2 
+		Call GG (a, b, c, d, x( 1), S21, &hf61e2562) ' 17 
+		Call GG (d, a, b, c, x( 6), S22, &hc040b340) ' 18 
+		Call GG (c, d, a, b, x(11), S23, &h265e5a51) ' 19 
+		Call GG (b, c, d, a, x( 0), S24, &he9b6c7aa) ' 20 
+		Call GG (a, b, c, d, x( 5), S21, &hd62f105d) ' 21 
+		Call GG (d, a, b, c, x(10), S22,  &h2441453) ' 22 
+		Call GG (c, d, a, b, x(15), S23, &hd8a1e681) ' 23 
+		Call GG (b, c, d, a, x( 4), S24, &he7d3fbc8) ' 24 
+		Call GG (a, b, c, d, x( 9), S21, &h21e1cde6) ' 25 
+		Call GG (d, a, b, c, x(14), S22, &hc33707d6) ' 26 
+		Call GG (c, d, a, b, x( 3), S23, &hf4d50d87) ' 27 
+		Call GG (b, c, d, a, x( 8), S24, &h455a14ed) ' 28 
+		Call GG (a, b, c, d, x(13), S21, &ha9e3e905) ' 29 
+		Call GG (d, a, b, c, x( 2), S22, &hfcefa3f8) ' 30 
+		Call GG (c, d, a, b, x( 7), S23, &h676f02d9) ' 31 
+		Call GG (b, c, d, a, x(12), S24, &h8d2a4c8a) ' 32 
+		
+  ' Round 3 
+		Call HH (a, b, c, d, x( 5), S31, &hfffa3942) ' 33 
+		Call HH (d, a, b, c, x( 8), S32, &h8771f681) ' 34 
+		Call HH (c, d, a, b, x(11), S33, &h6d9d6122) ' 35 
+		Call HH (b, c, d, a, x(14), S34, &hfde5380c) ' 36 
+		Call HH (a, b, c, d, x( 1), S31, &ha4beea44) ' 37 
+		Call HH (d, a, b, c, x( 4), S32, &h4bdecfa9) ' 38 
+		Call HH (c, d, a, b, x( 7), S33, &hf6bb4b60) ' 39 
+		Call HH (b, c, d, a, x(10), S34, &hbebfbc70) ' 40 
+		Call HH (a, b, c, d, x(13), S31, &h289b7ec6) ' 41 
+		Call HH (d, a, b, c, x( 0), S32, &heaa127fa) ' 42 
+		Call HH (c, d, a, b, x( 3), S33, &hd4ef3085) ' 43 
+		Call HH (b, c, d, a, x( 6), S34,  &h4881d05) ' 44 
+		Call HH (a, b, c, d, x( 9), S31, &hd9d4d039) ' 45 
+		Call HH (d, a, b, c, x(12), S32, &he6db99e5) ' 46 
+		Call HH (c, d, a, b, x(15), S33, &h1fa27cf8) ' 47 
+		Call HH (b, c, d, a, x( 2), S34, &hc4ac5665) ' 48 
+		
+  ' Round 4 
+		Call II (a, b, c, d, x( 0), S41, &hf4292244) ' 49 
+		Call II (d, a, b, c, x( 7), S42, &h432aff97) ' 50 
+		Call II (c, d, a, b, x(14), S43, &hab9423a7) ' 51 
+		Call II (b, c, d, a, x( 5), S44, &hfc93a039) ' 52 
+		Call II (a, b, c, d, x(12), S41, &h655b59c3) ' 53 
+		Call  II (d, a, b, c, x( 3), S42, &h8f0ccc92) ' 54 
+		Call  II (c, d, a, b, x(10), S43, &hffeff47d) ' 55 
+		Call II (b, c, d, a, x( 1), S44, &h85845dd1) ' 56 
+		Call  II (a, b, c, d, x( 8), S41, &h6fa87e4f) ' 57 
+		Call II (d, a, b, c, x(15), S42, &hfe2ce6e0) ' 58 
+		Call II (c, d, a, b, x( 6), S43, &ha3014314) ' 59 
+		Call II (b, c, d, a, x(13), S44, &h4e0811a1) ' 60 
+		Call II (a, b, c, d, x( 4), S41, &hf7537e82) ' 61 
+		Call  II (d, a, b, c, x(11), S42, &hbd3af235) ' 62 
+		Call II (c, d, a, b, x( 2), S43, &h2ad7d2bb) ' 63 
+		Call II (b, c, d, a, x( 9), S44, &heb86d391) ' 64 
+		
+		state(0) = AddL( state(0) , a)
+		state(1) = AddL( state(1) , b)
+		state(2) = AddL( state(2), c)
+		state(3) = AddL( state(3) , d)
+		
+		'clear the x array for the next use
+		Dim i As Integer
+		For i = 0 To 15
+			x(i) = 0
+		Next
+		
+	End Sub
+	
+	Function isEqualByteArray( digest As Variant) As Integer
+		'** Compares a digest to the current objects digest and 
+		'** returns true if they are equivelent
+		
+		If digestFinished And Typename(digest) = "INTEGER( )" Then
+			If Ubound(digest) = 15 Then
+				Dim i As Integer
+				Dim thisDigest As Variant
+				thisDigest = Me.digestByteArray()
+				For i = 0 To 15
+					If thisDigest(i) <> digest(i) Then
+						Exit Function ' exit with false
+					End If
+				Next
+				isEqualByteArray = True
+			End If
+		End If		
+	End Function
+	
+	Function isEqualString( digest As String) As Integer
+		'** Compares a digest string tot he current object's
+		'** digest and returns true if they are the same
+		If Ucase(digest) = Ucase( Me.digestStr) Then
+			isEqualString = True
+		End If
+	End Function
+	
+	Function isEqualMD5( md5 As MD5) As Integer
+		'** Compares a MD5 object to the current object
+		'** and returns true if they have equivelent digests
+		If Not digestFinished Then
+			Call Me.finish
+		End If
+		If Not md5.digestFinished Then
+			Call Me.finish
+		End If
+		Dim i As Integer
+		For i = 0 To 3
+			If md5.state(i) <> Me.state(i) Then
+				Exit Function
+			End If
+		Next
+		isEqualMD5 = True
+	End Function
+	
+	Sub addByte( byteVal As Integer)
+		'** Adds a byte value to the current digest
+		'** Only the 8 least significant bits are used
+		Dim index As Integer
+		index = (byteCount\4) Mod 16
+		x(index) = x(index) Or BitShiftLeftL( byteVal And &hFF&, 8*(byteCount Mod 4))
+		byteCount = byteCount + 1
+		
+		If (byteCount) Mod 64 = 0 Then
+			Call doBlock()
+		End If
+	End Sub
+	
+	Sub addLong( Byval longVal As Long)
+		'** Adds a long value to the current digest
+		If False And byteCount Mod 4 = 0 Then
+			'If the length already added is on a 4 byte boundary,
+			' then add directly because of less bit shift operations
+			'Otherwise add individual bytes
+			Dim index As Integer
+			index = (byteCount\4) Mod 16
+			x(index) = longVal
+			byteCount = byteCount + 4
+			
+			If (byteCount) Mod 64 = 0 Then
+				Call doBlock()
+			End If
+		Else
+			'note, because we are going from a long to an int,
+			'we must mask out the bits that might cause overflow
+			Call addByte( longVal And &h000000FF&) 
+			Call addByte( BitShiftRightL( longVal And &h0000FF00&, 8))
+			Call addByte( BitShiftRightL( longVal And &h00FF0000&, 16))
+			Call addByte( BitShiftRightL( longVal And &hFF000000&, 24))
+		End If
+		
+	End Sub	
+	
+	Sub addInteger( Byval intVal As Integer)
+		'** Adds an integer value to the current digest
+		Call addByte( intVal)
+		Call addByte( BitShiftRightL( intVal, 8))
+	End Sub
+	
+	Sub addAsciiStr( strVal As String)
+		'** Adds a string to the current digest
+		'** unicode characters are truncated to an 8 bit value
+		Dim strlen As Long
+		Dim i As Long
+		strlen = Len( strVal)
+		i = 1
+		'Note, the code below is optimized
+		'When byteCount is on a 4 byte boundary and there is at least 4 chars left
+		'then the char are combined into long value and added
+		Do While i <= strLen And  byteCount Mod 4 <> 0
+			Call addByte( Asc( Mid( strVal, i, 1)))
+			i = i + 1
+			Print i
+		Loop
+		
+		Do While i <= strLen And strLen - i > 3
+			Call addLong( Asc( Mid( strVal, i, 1)) _ 
+			Or BitShiftLeftL(Asc( Mid( strVal, i + 1, 1)), 8)_
+			Or BitShiftLeftL(Asc( Mid( strVal, i + 2, 1)), 16)_
+			Or BitShiftLeftL(Asc( Mid( strVal, i + 3, 1)), 24))
+			i = i + 4
+		Loop
+		
+		Do While i <= strLen
+			Call addByte( Asc( Mid( strVal, i, 1)))
+			i = i + 1
+		Loop
+		
+	End Sub
+	
+	Sub addUnicodeStr( strVal As String)
+		'** Adds a unicode string to the current digest
+		Dim strlen As Long
+		Dim i As Long
+		strlen = Len( strVal)
+		i = 1
+		Do While i <= strLen
+			Call addInteger( Uni( Mid( strVal, i, 1)))
+			i = i + 1
+		Loop
+		
+	End Sub
+	
+	Private Sub finish
+		'** this is called once all bytes have been added to the digest
+		Dim padLen As Integer
+		Dim saveByteCount As Long
+		saveByteCount = byteCount
+		If byteCount Mod 64 < 56 Then
+			padLen = 56 - byteCount Mod 64
+		Else
+			padlen = 120 - byteCount Mod 64
+		End If
+		addByte( &h0080)
+		padlen = padlen - 1
+		' below is an optimization.  If the padding is a multiple
+		'of four, add longs because there will be far less bit operations
+		Do While padlen > 0 And padlen Mod 4
+			addByte(0)
+			padlen = padlen - 1
+		Loop
+		
+		Do While padlen > 0
+			addLong(0)
+			padlen = padlen - 4
+		Loop
+		
+		addLong( saveByteCount*8)
+		addLong( 0)
+		digestFinished = True
+	End Sub
+	
+	Private Sub FF( a As Long, b As Long, c As Long, d As Long, x As Long, s As Integer, t As Long)
+		a = AddL( b,  BitRotLeftL( AddL( a, AddL(  (b And c) Or (Not (b) And d), AddL(  x , t ))), s))
+	End Sub
+	
+	Private Sub GG( a As Long, b As Long, c As Long, d As Long, x As Long, s As Integer, t As Long)
+		a = AddL( b,  BitRotLeftL( AddL( a, AddL(  (b And d) Or (c And Not( d)), AddL(  x , t ))), s))
+	End Sub
+	
+	Private Sub HH( a As Long, b As Long, c As Long, d As Long, x As Long, s As Integer, t As Long)
+		a = AddL( b,  BitRotLeftL( AddL( a, AddL(  (b Xor c) Xor d, AddL(  x , t ))), s))
+	End Sub
+	
+	Private Sub II( a As Long, b As Long, c As Long, d As Long, x As Long, s As Integer, t As Long)
+		a = AddL( b,  BitRotLeftL( AddL( a, AddL( c Xor ( b Or Not(d)), AddL(  x , t ))), s))
+	End Sub
+	
+End Class

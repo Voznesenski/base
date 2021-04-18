@@ -1,0 +1,364 @@
+'++LotusScript Development Environment:2:5:(Options):0:74
+Option Public
+Option Declare
+
+Use "fbyte"
+Use "tps.common"
+Use "DWFAppLib"
+
+'++LotusScript Development Environment:2:5:(Forward):0:1
+Declare Public Class TPS_Timetables_ApprovalService As FBase_Abstract_Service
+Declare Public Class TPS_Timetables_Approval_CardAgree As FBase_Abstract_Object_Doc
+Declare Public Class TPS_Timetables_Approval_AddDoc As FBase_Abstract_Object_Doc
+
+'++LotusScript Development Environment:2:5:(Declarations):0:10
+Private Const DATABASE_KEY = "tps.timetables.approval"
+
+Const DOMAIN_TPS_TIMETABLES_APRVL_CARDAGREE = "tps.timetables.approval.cardagree"
+'======================================================================================================================================
+'	CLASS TPS_Timetables_ApprovalService
+'======================================================================================================================================
+Public Class TPS_Timetables_ApprovalService As FBase_Abstract_Service
+	Private m_db As NotesDatabase
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Private Function getId( in_key As Variant ) As String
+		On Error Goto error_point
+		Call Me.log.enter( Typename( Me ) & "." & Getthreadinfo(1))
+		
+		Dim key As String
+		If ( Lcase( Typename( in_key )) = "objectlink" ) Then
+			key = in_key.id 
+		Elseif Isscalar( in_key ) Then 
+			key = in_key
+		Else
+			Error 1001, "The type of data of parameter 'in_key' is '" & Typename( in_key ) & "'. It is not supported"
+		End If
+		
+		getId = key
+		
+		Call Me.log.trace( "result: " & getId )
+		Call Me.log.exit( Typename( Me ) & "." & Getthreadinfo(1))
+		Exit Function
+		
+error_point:
+		On Error Goto 0
+		Error Err, Typename( Me ) & "." & Getthreadinfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Function
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	'	PUBLIC:
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Sub New( in_ps As Variant )
+	End Sub
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Property Get db As NotesDatabase
+		On Error Goto error_point
+		Call Me.log.enter( Typename( Me ) & "." & Getthreadinfo(1))
+		
+		If( m_db Is Nothing )Then
+			Set m_db = Me.sm.base.databases.get( DATABASE_KEY )
+		End If
+		Set db = m_db
+		
+		Call Me.log.traceObject( "result", db )		
+		Call Me.log.exit( Typename( Me ) & "." & Getthreadinfo(1))
+		Exit Property
+		
+error_point:
+		On Error Goto 0
+		Error Err, Typename( Me ) & "." & Getthreadinfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Property
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Property Set db As NotesDatabase
+		On Error GoTo error_point
+		Call Me.log.enter( TypeName( Me ) & "." & GetThreadInfo(1))
+		
+		Set m_db = db
+		
+		Exit Property
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Property
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Function getObject( in_link As Variant ) As Variant
+		On Error Goto error_point
+		Call Me.log.enter( Typename( Me ) & "." & Getthreadinfo(1))
+		
+		Select Case in_link.domain
+		Case DOMAIN_TPS_TIMETABLES_APRVL_CARDAGREE:
+			Set getObject = Me.getCardAgree( in_link )
+		Case Else
+			Error 1001, "The data of type '" & in_link.domain & "' of parameter 'in_link.domain' is not supported"
+		End Select
+		
+		Call Me.log.traceObject( "result", getObject )
+		Call Me.log.exit( Typename( Me ) & "." & Getthreadinfo(1))
+		Exit Function
+		
+error_point:
+		On Error Goto 0
+		Error Err, Typename( Me ) & "." & Getthreadinfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Function
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------	
+	Function getDocObject( in_doc As NotesDocument ) As Variant
+		On Error Goto error_point
+		Call Me.log.enter( Typename( Me ) & "." & Getthreadinfo(1))
+		
+		Select Case LCase(in_doc.form(0))
+		Case LCase("F01"):
+			Set getDocObject =  New TPS_Timetables_Approval_CardAgree( in_doc, Me.Me_variant )
+		Case LCase("AddDoc"):
+			Set getDocObject =  New TPS_Timetables_Approval_AddDoc( in_doc, Me.Me_variant )
+		Case Else:
+			Error 1001, "Форма '" & in_doc.form(0) & "' не поддерживается"
+		End Select
+		
+		'Call Me.log.traceObject( "result", getDocObject )
+		Call Me.log.exit( Typename( Me ) & "." & Getthreadinfo(1))
+		Exit Function
+		
+error_point:
+		On Error Goto 0
+		Error Err, Typename( Me ) & "." & Getthreadinfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Function
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Function getCardAgree( in_key As Variant ) As Variant
+		On Error Goto error_point
+		Call Me.log.enter( Typename( Me ) & "." & Getthreadinfo(1))
+		
+		Dim key As String, doc As NotesDocument
+		key = Me.getId( in_key )
+		On Error 4091 Resume Next 'bad unid
+		Set doc = Me.m_db.getdocumentbyunid( key )
+		If ( doc Is Nothing ) Then
+			Error 1001, "In database '" & Me.db.Title & "' ( path: " & Me.db.FilePath & " ) not found document  by key '" & in_key & "'"
+		Else
+			Set Me.getCardAgree = Me.getDocObject( doc )
+		End If
+		
+		Call Me.log.traceObject( "result", getCardAgree )
+		Call Me.log.exit( Typename( Me ) & "." & Getthreadinfo(1))
+		Exit Function
+		
+error_point:
+		On Error Goto 0
+		Error Err, Typename( Me ) & "." & Getthreadinfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$ 
+	End Function
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Function createNew( in_initObj As Variant ) As TPS_Timetables_Approval_CardAgree
+		On Error GoTo error_point
+		Call Me.log.enter( "<" & TypeName( Me ) & "." & GetThreadInfo(1) & ">" )
+		
+		Dim dbPC As NotesDatabase
+		Set dbPC = Me.sm.base.databases.get( "tps.core.process_center" )
+		If ( dbPC Is Nothing ) Then
+			Set dbPC = Me.sm.base.databases.get( "tps.systems.process_center" )
+			If ( dbPC Is Nothing ) Then
+				Error 1001, "Не удалось получить БД 'tps.core.process_center'"
+			End If
+		End If
+		
+		Dim session As New NotesSession
+		Dim docMail As NotesDocument
+		
+		Set docMail = dbPC.CreateDocument
+		docMail.Form 		= "Task"
+		docMail.Action 		= "InitProcess"
+		docMail.InitServer 	= Me.db.Server
+		docMail.AppPath 	= Me.db.FilePath
+		docMail.UserName 	= session.UserName
+		docMail.ProcessID 	= in_initObj.processID
+		docMail.InitPosID 	= in_initObj.initPositionID 
+		docMail.InitObjID 	= in_initObj.initObjID
+		
+		Call docMail.Save(True, True)
+		If ( DWFAAskForAction( docMail ) <> 1 ) Then
+			
+		ElseIf ( docMail.Error(0) <> "" ) Then
+			Error 1001, docMail.Error(0)
+		Else
+			Dim docMain As NotesDocument
+			Set docMain = Me.db.GetDocumentByUNID( docMail.docMainUNID(0))
+			If ( docMain Is Nothing ) Then
+				Error 1001, {Ошибка при инициации процесса: docMain Is Nothing}
+			Else
+				Call docMain.ReplaceItemvalue("Form", "F01" )
+				Call docMain.ReplaceItemvalue("domain", DOMAIN_TPS_TIMETABLES_APRVL_CARDAGREE )
+				Call docMain.ReplaceItemvalue("id", 	docMain.UniversalID )
+				
+				Set createNew = Me.getDocObject( docMain )
+			End If
+		End If
+		
+		Call Me.log.exit( "</" & TypeName( Me ) & "." & GetThreadInfo(1) & ">" )
+		Exit Function
+		
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Function
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Function addAddDoc( in_initObj As Variant, in_docMain As NotesDocument ) As TPS_Timetables_Approval_AddDoc
+		On Error GoTo error_point
+		Call Me.log.enter( "<" & TypeName( Me ) & "." & GetThreadInfo(1) & ">" )
+		
+		Dim dbPC As NotesDatabase
+		Set dbPC = Me.sm.base.databases.get( "tps.core.process_center" )
+		If ( dbPC Is Nothing ) Then
+			Set dbPC = Me.sm.base.databases.get( "tps.systems.process_center" )
+			If ( dbPC Is Nothing ) Then
+				Error 1001, "Не удалось получить БД 'tps.core.process_center'"
+			End If
+		End If
+		
+		Dim session As New NotesSession
+		Dim docMail As NotesDocument
+		
+		Dim docStage As NotesDocument
+		Dim addDocStoreUI As AdditionalDocumentStoreUI
+		Dim AddDocID As String
+		
+		On Error 4091 Resume Next 'bad unid
+		Set docStage = Me.db.GetDocumentByUNID(in_docMain.StageID(0))
+		If (docStage Is Nothing) Then
+			MsgBox {Не найден документ стадии (docStage Is Nothing)}, 48, ERR_MSG_TITLE
+			Exit Function	
+		End If
+		
+		AddDocID = "44257C6A003E5A5444257B26002CD1C6"
+		Set docMail = dbPC.CreateDocument
+		docMail.Form 			= "Task"
+		docMail.Action 			= "AddDocAdd"
+		docMail.InitServer 		= db.Server
+		docMail.AppPath 		= db.FilePath
+		docMail.ProcessID 		= in_docMain.GetItemValue("PROCESSID")(0)
+		docMail.docMainID 		= in_docMain.UniversalID
+		docMail.UserName 		= session.UserName
+		docMail.UserPosID 		= in_initObj.initObjID
+		docMail.AddAsObjID 		= in_initObj.initObjID
+		docMail.AddDocID		= AddDocID
+		
+		Call docMail.Save(True, True)
+		If (DWFAAskForAction(docMail) <> 1) Then
+			Exit Function	
+		End If
+		If (docMail.Error(0) <> "") Then
+			Error 4001, docMail.Error(0)
+		End If
+		
+		On Error 4091 Resume Next 'bad unid
+		Dim docAddDoc As NotesDocument
+		Set docAddDoc = db.GetDocumentByUNID(docMail.docAddDocUNID(0))
+		If (docAddDoc Is Nothing) Then
+			Error 4001, {Ошибка при попытке создать дополнительный документ: docAddDoc Is Nothing}
+		Else
+			Set addAddDoc = Me.getDocObject( docAddDoc )
+		End If
+		
+		
+		Call Me.log.exit( "</" & TypeName( Me ) & "." & GetThreadInfo(1) & ">" )
+		Exit Function
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Function
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	
+End Class
+'======================================================================================================================================
+'	CLASS TPS_Timetables_Approval_CardAgree
+'======================================================================================================================================
+Public Class TPS_Timetables_Approval_CardAgree As FBase_Abstract_Object_Doc
+	
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	'	PUBLIC:
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Sub New( in_doc As NotesDocument, in_ps As Variant )
+	End Sub
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Property Get title As String
+		On Error Goto error_point
+		Call Me.log.enter( Typename( Me ) & "." & Getthreadinfo(1))
+		
+		title = "№" & Me.nd.NAMBERTOTAL(0) & ",  " &  Me.nd.Company(0)
+		
+		Call Me.log.trace( "result: " & title )
+		Call Me.log.exit( Typename( Me ) & "." & Getthreadinfo(1))
+		Exit Property
+		
+error_point:
+		On Error Goto 0
+		Error Err, Typename( Me ) & "." & Getthreadinfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Property
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------	
+	
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------	
+	
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------	
+	
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------	
+		
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------	
+	
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------	
+	
+End Class
+'======================================================================================================================================
+'	CLASS TPS_Timetables_Approval_AddDoc
+'======================================================================================================================================
+Public Class TPS_Timetables_Approval_AddDoc As FBase_Abstract_Object_Doc
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	'	PUBLIC:
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Sub New( in_doc As NotesDocument, in_ps As Variant )
+	End Sub
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Property Get title As String
+		On Error GoTo error_point
+		Call Me.log.enter( TypeName( Me ) & "." & GetThreadInfo(1))
+		
+		title = "№" & Me.nd.NUMBERTOTAL(0) & ",  " &  Me.nd.Company(0)
+		
+		Call Me.log.trace( "result: " & title )
+		Call Me.log.exit( TypeName( Me ) & "." & GetThreadInfo(1))
+		Exit Property
+		
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Property
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------	
+	
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------	
+	
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------	
+	
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------	
+		
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------	
+	
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------	
+	
+End Class

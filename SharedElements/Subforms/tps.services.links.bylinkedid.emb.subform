@@ -1,0 +1,39 @@
+<?xml version='1.0' encoding='utf-8'?>
+<note class='form' xmlns='http://www.lotus.com/dxl' version='10.0' maintenanceversion='1.0'
+ replicaid='44257D5C002A4928'>
+<noteinfo noteid='1b0e' unid='11AB66D30CD77239432583CC002915BD' sequence='20'>
+<created><datetime>20190329T102845,41+03</datetime></created>
+<modified><datetime>20210418T115616,61+03</datetime></modified>
+<revised><datetime>20210204T181625,04+03</datetime></revised>
+<lastaccessed><datetime>20210418T115616,60+03</datetime></lastaccessed>
+<addedtofile><datetime>20210418T115616,60+03</datetime></addedtofile></noteinfo>
+<updatedby><name>CN=Dmitrii Baryshnikov/O=tps</name></updatedby>
+<wassignedby><name>CN=Dmitrii Baryshnikov/O=tps</name></wassignedby>
+<item name='$TITLE' sign='true'><text>tps.services.links.bylinkedid.emb</text></item>
+<item name='$DesignerVersion'><text>8.5.3</text></item>
+<item name='$Body' sign='true'>
+<rawitemdata type='1'>
+gQKC/1oAAQAAAAAAAAAAAKAFAACgBQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+AAAAAAAAAACBAAAAAJWHAAAAAAAAAAAAAAAAAQAAAAYAAACDBAEA3QYAAIX/hf8ZAAEAAggtLSBo
+aWRkZW4gbGluZSAtLQDSCAEA/wAAAN4GAACF/4ECgv9aAAIAAAAAAAAAAACgBQAAoAUAAAAAAAAA
+AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAQAAAACUhwAAAAAAAAAAAAAAAAEA
+AAAEAAAAgwQCAN0GAACF/4X/CAABAAII0ggBAP8AAADeBgAAhf/dBgAArf9x/0MAAAAAAAMAAgAh
+AAAAAAAAAAAAAAAAAESETABSgyVDdHBzLnNlcnZpY2VzLmxpbmtzLmJ5bGlua2VkaWQuZW1iP63/
+LgATAAgAAAAiAHRwcy5zZXJ2aWNlcy5saW5rcy5ieWxpbmtlZGlkLmVtYgDq/z4AEwAJRAAAZAAT
+CwEAAAoAAAAAAAAAAAEAAAoBAAAKAAAFAP///wABAAAAAAAAAAAAAAAAAAAAAAAAAO3/PAACAAAA
+AAAAABwAAAAAAAAAAAAAAAAAAAAAAAAAHAAAAA4ABQACAGlkVgEDAAcADAAFAAkyUzNTAK4C3gYA
+AK4A3QYAAIX/hf8IAAEAAgjSCAEA/wAAAN4GAACF/4ECgwQBAN0GAACF/4X/GQABAAIILS0gaGlk
+ZGVuIGxpbmUgLS0A0ggBAP8AAADeBgAAhf8=
+</rawitemdata></item>
+<item name='$$ScriptName' summary='false' sign='true'><text>tps.services.links.bylinkedid.emb</text></item>
+<item name='$HTMLCode' sign='true'>
+<rawitemdata type='1'>
+X/8QAAIADwAHAAAAAAAAAA==
+</rawitemdata></item>
+<item name='$Info' sign='true'>
+<rawitemdata type='1'>
+hhgBAIAAAAAAgAAAAQABAP///wAQAAAA
+</rawitemdata></item>
+<item name='$Flags'><text>CU3xAP</text></item>
+<item name='$Fields'><textlist/></item></note>
+

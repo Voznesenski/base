@@ -1,0 +1,47 @@
+<?xml version='1.0' encoding='utf-8'?>
+<note class='form' xmlns='http://www.lotus.com/dxl' version='10.0' maintenanceversion='1.0'
+ replicaid='44257D5C002A4928'>
+<noteinfo noteid='49a' unid='8821345DB7D4EF13C32577D600528266' sequence='49'>
+<created><datetime dst='true'>20101109T190113,34+04</datetime></created>
+<modified><datetime>20210418T115556,77+03</datetime></modified>
+<revised><datetime>20201118T171317,93+03</datetime></revised>
+<lastaccessed><datetime>20210418T115556,76+03</datetime></lastaccessed>
+<addedtofile><datetime>20210418T115556,76+03</datetime></addedtofile></noteinfo>
+<updatedby><name>CN=Tambiev/O=tps</name><name>CN=zeos/O=tps</name><name>CN=Tambiev/O=tps</name><name
+>CN=zeos/O=tps</name><name>CN=Tambiev/O=tps</name><name>CN=zeos/O=tps</name><name
+>CN=Salpagarov/O=tps</name><name>CN=zeos/O=tps</name><name>CN=Tambiev/O=tps</name><name
+>CN=zeos/O=tps</name><name>CN=Tambiev/O=tps</name><name>CN=zeos/O=tps</name><name
+>CN=Tambiev/O=tps</name><name>CN=zeos/O=tps</name><name>CN=Tambiev/O=tps</name><name
+>CN=zeos/O=tps</name><name>CN=Tambiev/O=tps</name><name>CN=zeos/O=tps</name><name
+>CN=Tambiev/O=tps</name><name>CN=zeos/O=tps</name><name>CN=Tambiev/O=tps</name><name
+>CN=zeos/O=tps</name><name>CN=Tambiev/O=tps</name><name>CN=zeos/O=tps</name><name
+>CN=develop/O=tps</name><name>CN=Tambiev/O=tps</name><name>CN=Salpagarov/O=tps</name><name
+>CN=Tambiev/O=tps</name><name>CN=Salpagarov/O=tps</name><name>CN=Tambiev/O=tps</name><name
+>CN=Salpagarov/O=tps</name><name>CN=Tambiev/O=tps</name><name>CN=Salpagarov/O=tps</name></updatedby>
+<wassignedby><name>CN=Salpagarov/O=tps</name></wassignedby>
+<item name='OriginalModTime' sign='true'><datetime dst='true'>20101109T190545,55+04</datetime></item>
+<item name='$HTMLCode' sign='true'>
+<rawitemdata type='1'>
+X/8QAAIADwAHAAAAAAAAAA==
+</rawitemdata></item>
+<item name='$TITLE'><text>bottom</text></item>
+<item name='$Info' sign='true'>
+<rawitemdata type='1'>
+hhgBAIAAAAAAgAAALwABAPf39wAQAAAA
+</rawitemdata></item>
+<item name='$Flags'><text>C34WQ</text></item>
+<item name='$DesignerVersion' sign='true'><text>6.5</text></item>
+<item name='$Fonts'>
+<rawitemdata type='1'>
+i/8oAAEABSZBcmlhbAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==
+</rawitemdata></item>
+<item name='$$ScriptName' summary='false' sign='true'><text>bottom</text></item>
+<item name='$Body' sign='true'>
+<rawitemdata type='1'>
+gQKC/1oAAQADAAAAAAAAAKAFAACgBQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+AAAAAAAAAAABAAAAAJSHAAAAAAAAAAAAAAAAAQAAAAQAAACDBAEAhf8IAAEAAArdBgAArf+p/5AA
+AQAYAAQAhACEAAEAGgADAHNlcgCLAAAAAAAAAAAA8D9rAgMABwAKAAMACTJTAAAATAAFAAMAc2Vy
+AAEAAAAKAq8ANgAaAAEAEAAF6wXuBeoF4AXrBfwF7QXurgAcAAIABQAAAAAAAAAFAAMAc2VyALQC
+rgAEALUDAwAHABIACwAJMFI2UzExUzEyUwCF/wgABQAACKoC3gYAAK4Ahf8IAAEAAAo=
+</rawitemdata></item></note>
+

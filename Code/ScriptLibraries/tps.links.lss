@@ -1,0 +1,342 @@
+'++LotusScript Development Environment:2:5:(Options):0:74
+Option Public
+Option Declare
+
+Use "fbyte"
+
+'++LotusScript Development Environment:2:5:(Forward):0:1
+Declare Class TPS_Links_Service As FBase_Abstract_Service
+Declare Public Class TPS_Links_Link As FBase_Abstract_Object_Doc
+Declare Public Class TPS_Links_Link_Document
+
+'++LotusScript Development Environment:2:5:(Declarations):0:10
+Private Const DATABASE_KEY = "tps.services.links"
+
+Public Const DOMAIN_TPS_LINKS_LINK = "tps.services.links.link"
+
+Public Type TPS_Links_Link_Document_Database
+	serverName As String
+	filePath As String
+	title As String
+End Type
+
+Public Type TPS_Links_Link_Document_Description
+	unid As String
+	title As String
+End Type
+'======================================================================================================================================
+'	tps.services.links
+'======================================================================================================================================
+Class TPS_Links_Service As FBase_Abstract_Service
+	Private m_db As NotesDatabase
+	'----------------------------------------------------------------------------------------------------------------------------------
+	Sub New( in_parentService As Variant )
+	End Sub
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Property Get db As NotesDatabase
+		On Error GoTo error_point
+		Call Me.log.enter( TypeName( Me ) & "." & GetThreadInfo(1))
+		
+		If ( m_db Is Nothing )Then
+			Set m_db = Me.sm.base.databases.get( DATABASE_KEY )
+			If ( m_db Is Nothing )Then
+				Call Me.log.warn( "Database '" & DATABASE_KEY & "' has not defined" )		
+			End If
+		End If
+		Set db = m_db
+		
+		Call Me.log.traceObject( "result", db )		
+		Call Me.log.exit( TypeName( Me ) & "." & GetThreadInfo(1))
+		Exit Property
+		
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Property
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Function saveObject( in_object As Variant ) As Variant
+		On Error GoTo error_point
+		
+		If ( in_object.domain = DOMAIN_TPS_LINKS_LINK ) Then
+			Dim tLink As TPS_Links_Link
+			Set tLink = in_object
+			Call tLink.nd.Save( True, True )
+			
+			Dim noteId As String
+			noteId = tLink.nd.Noteid
+			'MsgBox noteId
+			
+			Dim nAgent As NotesAgent
+			Set nAgent = Me.db.Getagent( "tps.services.links.v1_converter" )
+			'Call nAgent.RunOnServer( noteId )
+			Call nAgent.Run( noteId )
+			
+			
+			Dim docLink As NotesDocument
+			Set docLink = tLink.nd
+			
+			Dim unid As String
+			unid = docLink.Universalid
+			Delete tLink
+			Delete docLink
+			
+			Set docLink = Me.db.getDocumentbyUNID( unid )
+			If ( docLink.hasItem( "v1_converter_error" )) Then
+				Error 1001, "Не удалось создать связь с документом: " & docLink.getItemValue( "v1_converter_error" )(0)
+			End If
+		Else
+			Error 1001, "The package for object '" & in_object.domain & "' from parameter 'in_object.domain' is not registered"
+		End If
+		Exit Function
+		
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Function
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Function getDocObject( in_doc As NotesDocument ) As Variant
+		On Error GoTo error_point
+		Call Me.log.enter( TypeName( Me ) & "." & GetThreadInfo(1))
+		Call Me.log.parameter( "in_doc", in_doc )
+		
+		Select Case LCase( in_doc.form(0))
+			Case DOMAIN_TPS_LINKS_LINK:
+				Set getDocObject = New TPS_Links_Link( in_doc, Me.Me_Variant )
+			Case Else:
+				Error 1001, "Форма '" & in_doc.form(0) & "' не поддерживается"
+		End Select
+		
+		Call Me.log.traceObject( "result", getDocObject )
+		Call Me.log.exit( TypeName( Me ) & "." & GetThreadInfo(1))
+		Exit Function
+		
+error_point:
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Function
+	'----------------------------------------------------------------------------------------------------------------------------------
+	Function addLink As TPS_Links_Link
+		On Error GoTo error_point
+		Call Me.log.enter( TypeName( Me ) & "." & GetThreadInfo(1))
+		
+		Dim doc As New NotesDocument( Me.db )
+		Call doc.ReplaceItemValue( "form", DOMAIN_TPS_LINKS_LINK )
+		Call doc.ReplaceItemValue( "domain", DOMAIN_TPS_LINKS_LINK )
+		Call doc.ReplaceItemValue( "id", doc.Universalid )
+		Call doc.ReplaceItemValue( "status_id", "active" )
+		
+		Dim s As New NotesSession, nn As New NotesName( s.UserName ), nItem As NotesItem
+		Set nItem = doc.ReplaceItemValue( "DWF$Authors", nn.Canonical )
+		nItem.Isauthors = True
+		
+		Set addLink = Me.getDocObject( doc )
+		
+		Call Me.log.traceObject( "result", addLink )
+		Call Me.log.exit( TypeName( Me ) & "." & GetThreadInfo(1))
+		Exit Function
+		
+error_point:
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Function
+	'----------------------------------------------------------------------------------------------------------------------------------
+	Function getLinkDocumentByNotesDocument( in_doc As NotesDocument ) As TPS_Links_Link_Document
+		On Error GoTo error_point
+		Call Me.log.enter( TypeName( Me ) & "." & GetThreadInfo(1))
+		
+		Dim tLinkDoc As New TPS_Links_Link_Document
+		tLinkDoc.db.serverName = in_doc.ParentDatabase.Server
+		tLinkDoc.db.filePath = in_doc.ParentDatabase.FilePath
+		tLinkDoc.db.title = in_doc.ParentDatabase.Title
+		
+		tLinkDoc.document.unid = in_doc.UniversalID
+		tLinkDoc.document.title = "[Не удалось вычислить заголовок документа. Обратитесь к администратору]"
+		
+		Set getLinkDocumentByNotesDocument = tLinkDoc
+		
+		Call Me.log.traceObject( "result", getLinkDocumentByNotesDocument )
+		Call Me.log.exit( TypeName( Me ) & "." & GetThreadInfo(1))
+		Exit Function
+		
+error_point:
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Function
+	'----------------------------------------------------------------------------------------------------------------------------------
+	Function dialogSelectLinkDocuments( in_isMulty As Boolean ) As MixCollection
+		On Error GoTo error_point
+		Call Me.log.enter( TypeName( Me ) & "." & GetThreadInfo(1))
+		Call Me.Log.parameter( "in_isMulty", in_isMulty)
+		
+		Dim fArrayResult As New MixCollection
+		Set dialogSelectLinkDocuments = fArrayResult
+
+		Dim docDialog As NotesDocument
+		Set docDialog = Me.db.Createdocument()
+		
+		Dim ws As New NotesUIWorkspace
+		If ws.dialogbox("tps.services.links.wizard.v1", True, True, True, False, False, False, "Добавить ссылки на документы", docDialog, True, True, True) Then
+			Dim serverName As String, filePath As String, appTitle As String, unids As Variant, titles As Variant
+			serverName = docDialog.application_server_name(0)
+			filePath = docDialog.application_file_path(0)
+			
+			appTitle = docDialog.application_title(0)
+			unids = docDialog.documents_unid
+			titles = docDialog.documents_title
+			
+			Dim fServices As ServicesManager
+			Set fServices = Me.sm
+			
+			'//	Получаем сервис 'fbyte.core.cache'
+			Dim fCore As FCoreService, fCoreCache As FCore_Cache
+			Set fCore = fServices.Core
+			Set fCoreCache = fCore.cache
+			'---
+			
+			Dim i As Integer
+			For i=0 To UBound( unids )
+				Dim unid As String, title As String
+				unid = unids(i)
+				title = titles(i)
+				
+				Dim tLinkDocument As New TPS_Links_Link_Document
+				tLinkDocument.db.serverName = serverName
+				tLinkDocument.db.filePath = filePath
+				tLinkDocument.db.title = appTitle
+				
+				tLinkDocument.document.title = title
+				tLinkDocument.document.unid = unid
+				tLinkDocument.comments = docDialog.comments(0)
+				
+				Call fArrayResult.append( tLinkDocument )
+			Next				
+		End If
+		
+		Call Me.log.traceObject( "result", dialogSelectLinkDocuments )
+		Call Me.Log.exit( GetThreadInfo(0))
+		Exit Function
+		
+error_point:
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Function
+	
+End Class
+'======================================================================================================================================
+'	tps.links.link
+'======================================================================================================================================
+Public Class TPS_Links_Link As FBase_Abstract_Object_Doc
+	
+	'----------------------------------------------------------------------------------------------------------------------------------
+	'	PUBLIC:
+	'----------------------------------------------------------------------------------------------------------------------------------
+	Sub New( in_doc As NotesDocument, in_ps As Variant )
+	End Sub
+	'----------------------------------------------------------------------------------------------------------------------------------
+	Property Get domain As String
+		domain = DOMAIN_TPS_LINKS_LINK
+	End Property
+	'----------------------------------------------------------------------------------------------------------------------------------
+	Property Get from As TPS_Links_Link_Document
+		On Error GoTo error_point
+		Call Me.log.enter( TypeName( Me ) & "." & GetThreadInfo(1))
+		
+		Set Me.from = New TPS_Links_Link_Document
+		
+		Me.from.db.serverName = Me.nd.getItemvalue( "from_server_name" )(0)
+		Me.from.db.filePath = Me.nd.getItemvalue( "from_file_path" )(0)
+		Me.from.db.title = Me.nd.getItemvalue( "from_file_title" )(0)
+		
+		Me.from.document.unid = Me.nd.getItemvalue( "from_document_unid" )(0)
+		Me.from.document.title = Me.nd.getItemvalue( "from_document_title" )(0)
+		
+		Call Me.log.traceObject( "result", Me.from )
+		Call Me.log.exit( TypeName( Me ) & "." & GetThreadInfo(1))
+		Exit Property
+		
+error_point:
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Property
+	'----------------------------------------------------------------------------------------------------------------------------------
+	Property Set from As TPS_Links_Link_Document
+		On Error GoTo error_point
+		Call Me.log.enter( TypeName( Me ) & "." & GetThreadInfo(1))
+		Call Me.log.parameter( "from", Me.from )
+		
+		Call Me.nd.replaceItemvalue( "from_server_name", Me.from.db.serverName )
+		Call Me.nd.replaceItemvalue( "from_file_path", Me.from.db.filePath )
+		Call Me.nd.replaceItemvalue( "from_file_title", Me.from.db.title )
+		
+		Call Me.nd.replaceItemvalue( "from_document_unid", me.from.document.unid )
+		Call Me.nd.replaceItemvalue( "from_document_title", Me.from.document.title )
+		
+		Call Me.log.exit( TypeName( Me ) & "." & GetThreadInfo(1))
+		Exit Property
+		
+error_point:
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Property
+	'----------------------------------------------------------------------------------------------------------------------------------
+	Property Get to As TPS_Links_Link_Document
+		On Error GoTo error_point
+		Call Me.log.enter( TypeName( Me ) & "." & GetThreadInfo(1))
+		
+		Set Me.to = New TPS_Links_Link_Document
+		
+		Me.to.db.serverName = Me.nd.getItemvalue( "to_server_name" )(0)
+		Me.to.db.filePath = Me.nd.getItemvalue( "to_file_path" )(0)
+		Me.to.db.title = Me.nd.getItemvalue( "to_file_title" )(0)
+		
+		Me.to.document.unid = Me.nd.getItemvalue( "to_document_unid" )(0)
+		Me.to.document.title = Me.nd.getItemvalue( "to_document_title" )(0)
+		
+		Call Me.log.traceObject( "result", Me.to )
+		Call Me.log.exit( TypeName( Me ) & "." & GetThreadInfo(1))
+		Exit Property
+		
+error_point:
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Property
+	'----------------------------------------------------------------------------------------------------------------------------------
+	Property Set to As TPS_Links_Link_Document
+		On Error GoTo error_point
+		Call Me.log.enter( TypeName( Me ) & "." & GetThreadInfo(1))
+		Call Me.log.parameter( "from", Me.to )
+		
+		Call Me.nd.replaceItemvalue( "to_server_name", Me.to.db.serverName )
+		Call Me.nd.replaceItemvalue( "to_file_path", Me.to.db.filePath )
+		Call Me.nd.replaceItemvalue( "to_file_title", Me.to.db.title )
+		
+		Call Me.nd.replaceItemvalue( "to_document_unid", Me.to.document.unid )
+		Call Me.nd.replaceItemvalue( "to_document_title", Me.to.document.title )
+		
+		Call Me.log.exit( TypeName( Me ) & "." & GetThreadInfo(1))
+		Exit Property
+		
+error_point:
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Property
+	'----------------------------------------------------------------------------------------------------------------------------------
+	Property Get comments As String
+		On Error GoTo error_point
+		
+		comments = Me.nd.comments(0)
+		Exit Property
+		
+error_point:
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Property
+	'----------------------------------------------------------------------------------------------------------------------------------
+	Property Set comments As String
+		On Error GoTo error_point
+		
+		Call Me.nd.replaceItemvalue( "comments", Me.comments )
+		Exit Property
+		
+error_point:
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$		
+	End Property
+End Class
+Public Class TPS_Links_Link_Document
+	Public db As TPS_Links_Link_Document_Database
+	Public document As TPS_Links_Link_Document_Description
+	Public comments As String
+End Class

@@ -1,0 +1,254 @@
+'++LotusScript Development Environment:2:5:(Options):0:74
+Option Public
+Option Declare
+
+Use "GlDec"
+
+
+
+
+'++LotusScript Development Environment:2:5:(Forward):0:1
+Declare Function DWFSGetODInfo(InObj As Variant, Info As String) As Integer
+Declare Sub dwfRemoveItem(doc As NotesDocument, itemPrefix As String, removeObjName As Boolean)
+Declare Function DWFSGetNameByODObjName(ODObjName As String, ErrorStr As String) As String
+Declare Function DWFSGetDatebaseOnServer(Server As String, dbInfo As String, dbGet As NotesDatabase) As Integer
+Declare Function DWFSGetDatebase(dbInfo As String, dbGet As NotesDatabase) As Integer
+Declare Function DWFSSetRefItem(_
+docParent As NotesDocument, docResponse As NotesDocument, ItemName As String,_
+ErrorStr As String) As Integer
+Declare Sub dwfReplaceItem(doc_in As NotesDocument, Prefix_In As String, doc_out As NotesDocument, Prefix_Out) 
+
+'++LotusScript Development Environment:2:5:(Declarations):0:10
+
+
+'++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+'>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+
+'++LotusScript Development Environment:2:1:DWFSGetODInfo:1:8
+Function DWFSGetODInfo(InObj As Variant, Info As String) As Integer
+	On Error Goto errh
+	
+'	Dim v As New ODBaseInfo(InObj)
+	
+'	If (v.Info = "") Then
+	Msgbox {Нет информации о базе Орг. директории}, 16, ERR_MSG_TITLE
+	DWFSGetODInfo = 0
+	Exit Function
+'	End If
+	
+'	Info = v.Info
+	DWFSGetODInfo = 1
+	
+	Exit Function
+errh:
+	DWFSGetODInfo = -1
+	Msgbox Error$ & {. Error # } & Cstr(Err) & { on line # } & Cstr(Erl) & { in (DWFSGetODInfo) "DWFSupportLib"}
+	Resume endh
+endh:
+End Function
+
+'++LotusScript Development Environment:2:2:dwfRemoveItem:5:8
+%REM
+	Sub dwfRemoveItem
+	Description: Удалить ObjAccess, ObjPath, ObjId и если removeObjName=True, то и ObjName
+%END REM
+Sub dwfRemoveItem(doc As NotesDocument, itemPrefix As String, removeObjName As Boolean)
+	Call doc.Removeitem(itemPrefix & "ObjAccess")
+	Call doc.Removeitem(itemPrefix & "ObjID")
+	Call doc.Removeitem(itemPrefix & "ObjPath")
+	If removeObjName Then
+		Call doc.Removeitem(itemPrefix & "ObjName")
+	Else
+		Call doc.ReplaceItemValue(itemPrefix & "ObjName", "")	
+	End If
+End Sub
+
+
+
+'++LotusScript Development Environment:2:1:DWFSGetNameByODObjName:1:8
+Function DWFSGetNameByODObjName(ODObjName As String, ErrorStr As String) As String
+	On Error Goto errh
+	
+	Dim sTemp As String
+	Dim iInstr As Integer
+	
+	iInstr  = Instr(ODObjName, {(}) 
+	Select Case iInstr
+	Case 0
+		sTemp = ODObjName
+	Case Else
+		sTemp = Strright(ODObjName, {(})
+		iInstr  = Instr(sTemp, {)}) 
+		Select Case iInstr
+		Case 0
+			'nothing
+		Case Else
+			sTemp = Strleft(sTemp, {)})
+		End Select
+	End Select
+	
+	
+	DWFSGetNameByODObjName = sTemp
+	
+	Exit Function
+errh:
+	ErrorStr = Error$ & {. Error # } & Cstr(Err) & { on line # } & Cstr(Erl) & { in (DWFSGetNameByODObjName) "DWFSupportLib"}
+	Resume endh
+endh:
+End Function
+
+'++LotusScript Development Environment:2:1:DWFSGetDatebaseOnServer:1:8
+Function DWFSGetDatebaseOnServer(Server As String, dbInfo As String, dbGet As NotesDatabase) As Integer
+	On Error Goto errh
+	
+	Dim session As New NotesSession
+	Dim db As NotesDatabase
+	
+	Set db = session.CurrentDatabase
+	
+	If (Server = "") Then
+		If (DWFSGetDatebase(Cstr(dbInfo), dbGet) <> 1)Then
+			DWFSGetDatebaseOnServer = 0
+			Exit Function	
+		End If
+	End If
+	
+	If (dbInfo = "") Then
+		DWFSGetDatebaseOnServer = 0
+		Msgbox {Нет инфомации о базе. }, 48, ERR_MSG_TITLE
+		Exit Function
+	End If
+	
+	Set dbGet = New NotesDatabase("", "")
+	On Error Goto err_GetByReplicaID
+	If dbGet.OpenByReplicaID(Server, dbInfo) Then 'get by replicaID
+		DWFSGetDatebaseOnServer = 1
+		Exit Function
+	End If
+	
+GetByPath:
+	On Error GoTo errh
+	Set dbGet = session.GetDatabase(Server, dbInfo) 'get by file path
+	If (dbGet Is Nothing) Then
+		DWFSGetDatebaseOnServer = 0
+		Msgbox {Не найдена база "} & dbInfo & {"}, 48, ERR_MSG_TITLE
+		Exit Function
+	End If
+	If (Not (dbGet.IsOpen)) Then
+		DWFSGetDatebaseOnServer = 0
+		Msgbox {Отказ при обращении к базе "} & dbInfo & {"}, 48, ERR_MSG_TITLE
+		Exit Function
+	End If
+	
+	DWFSGetDatebaseOnServer = 1
+	
+	Exit Function
+err_GetByReplicaID:
+	Resume GetByPath
+	
+	Exit Function
+errh:
+	DWFSGetDatebaseOnServer = -1
+	Msgbox Error$ & {. Error # } & Cstr(Err) & { on line # } & Cstr(Erl) & { in (DWFSGetDatebaseOnServer) "DWFSupportLib"}
+	Resume endh
+endh:
+End Function
+
+'++LotusScript Development Environment:2:1:DWFSGetDatebase:1:8
+Function DWFSGetDatebase(dbInfo As String, dbGet As NotesDatabase) As Integer
+	On Error Goto errh
+	
+	Dim session As New NotesSession
+	Dim db As NotesDatabase
+	
+	Set db = session.CurrentDatabase
+	
+	
+	If (dbInfo = "") Then
+		DWFSGetDatebase = 0
+		Msgbox {Нет инфомации о базе. }, 48, ERR_MSG_TITLE
+		Exit Function
+	End If
+	
+	Set dbGet = New NotesDatabase("", "")
+	On Error Goto err_GetByReplicaID
+	If dbGet.OpenByReplicaID(db.Server, dbInfo) Then 'get by replicaID
+		DWFSGetDatebase = 1
+		Exit Function
+	End If
+	
+GetByPath:
+	On Error GoTo errh
+	Set dbGet = session.GetDatabase(db.Server, dbInfo) 'get by file path
+	If (dbGet Is Nothing) Then
+		DWFSGetDatebase = 0
+		Msgbox {Не найдена база "} & dbInfo & {"}, 48, ERR_MSG_TITLE
+		Exit Function
+	End If
+	If (Not (dbGet.IsOpen)) Then
+		DWFSGetDatebase = 0
+		Msgbox {Отказ при обращении к базе "} & dbInfo & {"}, 48, ERR_MSG_TITLE
+		Exit Function
+	End If
+	
+	DWFSGetDatebase = 1
+	
+	Exit Function
+err_GetByReplicaID:
+	Resume GetByPath
+	
+	Exit Function
+errh:
+	DWFSGetDatebase = -1
+	Msgbox Error$ & {. Error # } & Cstr(Err) & { on line # } & Cstr(Erl) & { in (DWFSGetDatebase) "DWFSupportLib"}
+	Resume endh
+endh:
+End Function
+
+
+'++LotusScript Development Environment:2:1:DWFSSetRefItem:3:8
+Function DWFSSetRefItem(_
+docParent As NotesDocument, docResponse As NotesDocument, ItemName As String,_
+ErrorStr As String) As Integer
+	On Error Goto errh
+	
+	Dim db As NotesDatabase
+	Dim docTemp As NotesDocument
+	Dim ItemRef As NotesItem
+	
+	If (ItemName = "") Then
+		ErrorStr = {Не указано название для $Ref-поля}
+		Exit Function
+	End If
+	Set db = docParent.ParentDatabase
+	Set docTemp = db.CreateDocument
+	Call docTemp.MakeResponse(docParent)
+	Set ItemRef = docTemp.GetFirstItem("$Ref")
+	If (ItemRef Is Nothing) Then
+		ErrorStr = {Не сформировано поле "$Ref"}
+		Exit Function
+	End If
+	Call ItemRef.CopyItemToDocument(docResponse, ItemName)
+	
+	DWFSSetRefItem = 1
+	
+	Exit Function
+errh:
+	ErrorStr = Error$ & {. Error # } & Cstr(Err) & { on line # } & Cstr(Erl) & { in (DWFSSetRefItem) "DWFSupportLib"}
+	Resume endh
+endh:
+End Function
+
+
+
+'++LotusScript Development Environment:2:2:dwfReplaceItem:5:8
+%REM
+	Sub dwfReplaceItem
+	Description: заменить dwf поля в doc_out из doc_in
+%END REM
+Sub dwfReplaceItem(doc_in As NotesDocument, Prefix_In As String, doc_out As NotesDocument, Prefix_Out) 
+	Call doc_out.ReplaceItemValue(Prefix_Out & "ObjAccess",	doc_in.GetItemValue(Prefix_In & "ObjAccess"))
+	Call doc_out.ReplaceItemValue(Prefix_Out & "ObjID", 	doc_in.GetItemValue(Prefix_In & "ObjID"))
+	Call doc_out.ReplaceItemValue(Prefix_Out & "ObjName", 	doc_in.GetItemValue(Prefix_In & "ObjName"))
+	doc_out.ReplaceItemValue(Prefix_Out & "ObjPath", 	doc_in.GetItemValue(Prefix_In & "ObjPath")).Issummary = False
+End Sub

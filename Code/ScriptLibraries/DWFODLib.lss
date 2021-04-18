@@ -1,0 +1,1327 @@
+'++LotusScript Development Environment:2:5:(Options):0:74
+Option Public
+Option Declare
+
+Use "DWFSupportLib"
+
+
+
+
+
+
+
+'++LotusScript Development Environment:2:5:(Forward):0:1
+Declare Class ODStore
+Declare Class ODObj
+Declare Class ODBaseInfo
+
+'++LotusScript Development Environment:2:5:(Declarations):0:10
+
+
+
+Class ODStore
+	Public db As NotesDatabase
+	Public ViewID As NotesView
+	
+	Sub new(dbInfo As String, ErrorStr As String)
+		ErrorStr = ""
+		If (dbInfo = "") Then
+			ErrorStr = {ODStore.Init() - Нет информации об Орг. директории}
+			Exit Sub
+		End If
+		If (DWFSGetDatebase(Cstr(dbInfo), db) <> 1)Then
+			ErrorStr = {Не найдена база Орг. директории}
+			Exit Sub	
+		End If
+		Set ViewID = db.GetView("(UNID)")
+		If (ViewID Is Nothing) Then
+			ErrorStr = {В базе Орг. директории не найдено представление "(UNID)"}
+			Exit Sub
+		End If
+		Call ViewID.Refresh
+		ViewID.AutoUpdate = False
+		
+	End Sub
+	
+	Function GetObjByValue(key As String, ErrorStr As String) As ODObj
+		On Error Goto errh
+		
+		Dim col As NotesDocumentCollection
+		Dim doc As NotesDocument
+		
+		ErrorStr = ""
+		Set col = Me.ViewID.GetAllDocumentsByKey(key, True )  '// 2019.04.23 Ramazan Salpagarov: Добавил параметр TRUE, так как стали возникать ошибки с однофамильцами в SVO и SVOAB (в частности, CN=Elena V Morozova/O=SVOAB и CN=Elena V Morozova/O=SVO)
+		If (col.Count = 0) Then
+			ErrorStr = {Орг. директория. Не найдено документов по ключу "} & key & {"}
+			Exit Function	
+		End If
+		If (col.Count > 1) Then
+			ErrorStr = {Орг. директория. Количество документов по ключу "} & key & {" : } & Cstr(col.Count)
+			Exit Function
+		End If
+		
+		Set doc = col.GetFirstDocument
+		
+		Dim Obj As New ODObj
+		Call Obj.Init(doc, ErrorStr)
+		If (ErrorStr <> "") Then
+			Exit Function
+		End If
+		Set GetObjByValue = Obj
+		
+		
+		Exit Function
+errh:
+		ErrorStr = Error$ & {. Error # } & Cstr(Err) & { on line # } & Cstr(Erl) & { in (GetObjByValue) "ODStore" class }
+		Resume endh
+endh:
+	End Function
+	
+	
+	Function ClearItem(doc As NotesDocument, ItemPrefix As String, ErrorStr As String) As Integer
+		On Error Goto errh
+		
+		ErrorStr = ""
+		Call doc.RemoveItem(ItemPrefix & "ObjAccess")
+		Call doc.RemoveItem(ItemPrefix & "ObjID")
+		Call doc.RemoveItem(ItemPrefix & "ObjName")
+		Call doc.RemoveItem(ItemPrefix & "ObjPath")	
+		
+		ClearItem = 1
+		Exit Function
+errh:
+		ErrorStr = Error$ & {. Error # } & Cstr(Err) & { on line # } & Cstr(Erl) & { in (ClearItem) "ODStore" class }
+		Resume endh
+endh:
+	End Function
+	
+	Sub delete()
+	End Sub
+End Class
+
+
+Class ODObj
+	Public db As NotesDatabase
+	Public doc As NotesDocument
+	Public myType_ As String
+	
+	Public ObjAccess_ As String
+	Public ObjID_ As String
+	Public ObjName_ As String
+	Public ObjPath_ As String
+	Public ObjServer_ As String
+	'Public ObjMailServer_ As String
+	
+	Private session As NotesSession
+	
+	
+	Sub new()
+		Set session = New NotesSession
+	End Sub
+	
+	Function Init(doc As NotesDocument, ErrorStr As String) As Integer
+		ErrorStr = ""
+		Set Me.db = doc.ParentDatabase
+		Set Me.doc = doc
+		
+		Me.ObjID = doc.UniversalID
+		
+		Select Case doc.Form(0)
+		Case "DWF01"
+			Me.myType = "Comp"
+			Me.ObjAccess = doc.GroupName(0)
+			If (Me.ObjAccess = "") Then Me.ObjAccess = "-"
+			Me.ObjName = {<Комп.> } & doc.Name(0)
+			Me.ObjPath = Join(doc.FullPathWithCode, {/})
+			Me.ObjServer = "-"
+			'Me.ObjMailServer = "-"
+		Case "DWF02"
+			Me.myType = "Dep"
+			Me.ObjAccess = doc.GroupName(0)
+			If (Me.ObjAccess = "") Then Me.ObjAccess = "-"
+			Me.ObjName = {<Подр.> } & doc.Name(0)
+			Me.ObjPath = Join(doc.FullPathWithCode, {/})
+			Me.ObjServer = "-"
+			'Me.ObjMailServer = "-"
+		Case "DWF03"
+			Me.myType = "Pos"
+			Me.ObjAccess = doc.GroupName(0)
+			If (Me.ObjAccess = "") Then Me.ObjAccess = "-"
+			Me.ObjName = {<Долж.> } & doc.Name(0) & { (} & doc.PersonName(0) & {)}
+			Me.ObjPath = Join(doc.FullPathWithCode, {/})
+			Me.ObjServer = doc.UserServer(0)
+			If (Me.ObjServer = "") Then Me.ObjServer = "-"
+			'Me.ObjMailServer = doc.UserMailServer(0)
+			'If (Me.ObjMailServer = "") Then Me.ObjMailServer = "-"
+		Case "DWF04"
+			Me.myType = "User"
+			Me.ObjAccess = doc.LotusAddress(0)
+			If (Me.ObjAccess = "") Then Me.ObjAccess = "-"
+			Me.ObjName = {<Польз.> } & doc.FullName(0)
+			Me.ObjPath = {<Польз.> } & doc.FullName(0)
+			Me.ObjServer = doc.UserServer(0)
+			If (Me.ObjServer = "") Then Me.ObjServer = "-"
+			'Me.ObjMailServer = doc.UserMailServer(0)
+			'If (Me.ObjMailServer = "") Then Me.ObjMailServer = "-"
+		Case Else
+			Me.myType = "Group"
+			Me.ObjAccess = doc.GroupName(0)
+			If (Me.ObjAccess = "") Then Me.ObjAccess = "-"
+			Me.ObjName = {<Ф.гр.> } & doc.Name(0)
+			Me.ObjPath = {<Ф.гр.> } & doc.Name(0)
+			Me.ObjServer = "-"
+			'Me.ObjMailServer = "-"
+		End Select
+		
+%REM
+		If (Me.ObjServer = "-") Then
+			ErrorStr = {Сбой: }	& Me.ObjName & { - не указан сервер}
+			Exit Function
+		End If
+%END REM		
+		
+		Init = 1
+		Exit Function
+errh:
+		ErrorStr = Error$ & {. Error # } & Cstr(Err) & { on line # } & Cstr(Erl) & { in (Init) "ODObj" class }
+		Resume endh
+endh:
+	End Function
+	
+	
+	Function WriteInReplace(doc As NotesDocument, ItemPrefix As String, ErrorStr As String) As Integer
+		On Error Goto errh
+		
+		ErrorStr = ""
+		Call doc.ReplaceItemValue(ItemPrefix & "ObjAccess", 	Me.ObjAccess)
+		Call doc.ReplaceItemValue(ItemPrefix & "ObjID", 		Me.ObjID)
+		Call doc.ReplaceItemValue(ItemPrefix & "ObjName", 	Me.ObjName)
+		' <TLD-5138 Исправить проблему переполнения атрибута StageOwnerObjPath>
+		'Call doc.ReplaceItemValue(ItemPrefix & "ObjPath", 	Me.ObjPath)
+		doc.ReplaceItemValue(ItemPrefix & "ObjPath", 	Me.ObjPath).Issummary = False
+		' </TLD-5138>
+		
+		WriteInReplace =1
+		
+		Exit Function
+errh:
+		ErrorStr = Error$ & {. Error # } & Cstr(Err) & { on line # } & Cstr(Erl) & { in (WriteInReplace) "ODObj" class }
+		Resume endh
+endh:
+	End Function
+	
+	Function WriteInAppend(doc As NotesDocument, ItemPrefix As String, ErrorStr As String) As Integer
+		On Error GoTo errh
+		
+		Dim Item As NotesItem, i As Integer
+		Dim vAccess As Variant, vID As Variant, vName As Variant, vPath As Variant, vDash() As Variant
+
+		ErrorStr = ""
+		vAccess = doc.GetItemValue(ItemPrefix & "ObjAccess")
+		ReDim vDash(UBound(vAccess))
+		For i=0 To UBound(vDash)
+			vDash(i) = "-"
+		Next i
+		
+		If (vAccess(0) <> "") Then 'TLD-1363
+			vID 	= doc.GetItemValue(ItemPrefix & "ObjID")
+			vName 	= doc.GetItemValue(ItemPrefix & "ObjName")
+			vPath 	= doc.GetItemValue(ItemPrefix & "ObjPath")
+			If vID(0) = "" Then 
+				vID = vDash
+			End If
+			If vName(0) = "" Then 
+				vName = vDash
+			End If
+			If vPath(0) = "" Then
+				vPath = vDash
+			End If
+			
+			For i=0 To UBound(vID)
+				If (LCase(vID(i)) = LCase(Me.ObjID)) Then
+					WriteInAppend = 1
+					Exit Function
+				End If
+			Next
+			
+			vAccess	= FullTrim(ArrayAppend(vAccess, Me.ObjAccess))
+			vID 	= FullTrim(ArrayAppend(vID, 	Me.ObjID))
+			vName 	= FullTrim(ArrayAppend(vName, 	Me.ObjName))
+			vPath 	= FullTrim(ArrayAppend(vPath, 	Me.ObjPath))
+			
+			Call doc.ReplaceItemValue(ItemPrefix & "ObjAccess", vAccess)
+			Call doc.ReplaceItemValue(ItemPrefix & "ObjID", 	vID)
+			Call doc.ReplaceItemValue(ItemPrefix & "ObjName", 	vName)
+			' <TLD-5138 Исправить проблему переполнения атрибута StageOwnerObjPath>
+			'Call doc.ReplaceItemValue(ItemPrefix & "ObjPath", 	vPath)
+			doc.ReplaceItemValue(ItemPrefix & "ObjPath", 	vPath).Issummary = False
+			' </TLD-5138>
+		Else
+			If (WriteInReplace(doc, ItemPrefix, ErrorStr) <> 1) Then
+				WriteInAppend = 0
+				Exit Function
+			End If
+		End If
+		
+		WriteInAppend = 1
+		
+		Exit Function
+errh:
+		ErrorStr = Error$ & {. Error # } & CStr(Err) & { on line # } & CStr(Erl) & { in (WriteInAppend) "ODObj" class }
+		Resume endh
+endh:
+	End Function
+	
+	
+	Function SetAsAuthor(doc As NotesDocument, ErrorStr As String) As Integer
+		On Error Goto errh
+		Dim ItemName As String
+		Dim Item As NotesItem
+		Dim v As Variant
+		Dim checkValue1 As Variant, checkValue2 As Variant
+		Dim hasMatch As Integer
+		
+		ItemName = "DWF$Authors"
+		
+		ErrorStr = ""
+		If (Me.ObjAccess = "-") Then
+			Exit Function
+			SetAsAuthor = 1
+		End If
+		
+		Set item = doc.GetFirstItem(ItemName)
+		If (Item Is Nothing) Then
+			Redim v(0) As String
+			v(0) = Me.ObjAccess
+		Else
+			v = Item.Values
+			checkValue1 = Evaluate({@Name([CANONICALIZE];"} & Me.ObjAccess & {")})
+			Forall Value In v
+				checkValue2 = Evaluate({@Name([CANONICALIZE];"} & Value & {")})
+				If (Lcase(checkValue1(0))=Lcase(checkValue2(0))) Then
+					hasMatch = 1
+					Exit Forall
+				End If				
+			End Forall
+			If (hasMatch = 0) Then
+				If (v(0) <> "") Then
+					Redim Preserve v(Ubound(v)+1) As String
+				End If
+				v(Ubound(v)) = Me.ObjAccess
+			End If
+		End If
+		If (hasMatch = 0) Then
+			doc.ReplaceItemValue(ItemName, v).IsAuthors = True
+		End If
+		
+		If (Me.SetServer(doc, ErrorStr) <>1) Then
+			Exit Function
+		End If
+		
+		SetAsAuthor = 1
+		Exit Function
+errh:
+		ErrorStr = Error$ & {. Error # } & Cstr(Err) & { on line # } & Cstr(Erl) & { in (SetAsAuthor) "ODObj" class }
+		Resume endh
+endh:
+	End Function
+	
+	
+	Function SetAsReader(doc As NotesDocument, ErrorStr As String) As Integer
+		On Error Goto errh
+		Dim ItemName As String
+		Dim Item As NotesItem
+		Dim v As Variant
+		Dim checkValue1 As Variant, checkValue2 As Variant
+		Dim hasMatch As Integer
+		
+		ErrorStr = ""
+		ItemName = "DWF$Readers"
+		
+		If (Me.ObjAccess = "-") Then
+			Exit Function
+			SetAsReader = 1
+		End If
+		
+		Set item = doc.GetFirstItem(ItemName)
+		If (Item Is Nothing) Then
+			Redim v(2) As String
+			v(0) = "[Admin]"
+			v(1) = "[SuperVisor]"
+			v(2) = Me.ObjAccess
+		Else
+			v = Item.Values
+			checkValue1 = Evaluate({@Name([CANONICALIZE];"} & Me.ObjAccess & {")})
+			Forall Value In v
+				checkValue2 = Evaluate({@Name([CANONICALIZE];"} & Value & {")})
+				If (Lcase(checkValue1(0))=Lcase(checkValue2(0))) Then
+					hasMatch = 1
+					Exit Forall
+				End If
+			End Forall
+			If (hasMatch = 0) Then
+				If (v(0) <> "") Then
+					Redim Preserve v(Ubound(v)+1) As String
+				End If
+				v(Ubound(v)) = Me.ObjAccess
+			End If
+		End If
+		If (hasMatch = 0) Then
+			doc.ReplaceItemValue(ItemName, v).IsReaders = True
+		End If
+		
+		If (Me.SetServer(doc, ErrorStr) <>1) Then
+			Exit Function
+		End If
+		
+		
+		SetAsReader = 1
+		Exit Function
+errh:
+		ErrorStr = Error$ & {. Error # } & Cstr(Err) & { on line # } & Cstr(Erl) & { in (SetAsReader) "ODObj" class }
+		Resume endh
+endh:
+	End Function
+	
+	
+	Function SetServer(doc As NotesDocument, ErrorStr As String) As Integer
+		On Error Goto errh
+		Dim ItemName As String
+		Dim Item As NotesItem
+		Dim v As Variant
+		Dim checkValue1 As Variant, checkValue2 As Variant
+		Dim hasMatch As Integer
+		
+		ErrorStr = ""
+		ItemName = "DWF$Server"
+		
+		If (Me.ObjServer = "-") Then
+			SetServer = 1
+			Exit Function
+		End If
+		
+		Set item = doc.GetFirstItem(ItemName)
+		If (Item Is Nothing) Then
+			Redim v(0) As String
+			v(0) = Me.ObjServer
+		Else
+			v = Item.Values
+			checkValue1 = Evaluate({@Name([CANONICALIZE];"} & Me.ObjServer & {")})
+			Forall Value In v
+				checkValue2 = Evaluate({@Name([CANONICALIZE];"} & Value & {")})
+				If (Lcase(checkValue1(0))=Lcase(checkValue2(0))) Then
+					hasMatch = 1
+					Exit Forall
+				End If
+			End Forall
+			If (hasMatch = 0) Then
+				If (v(0) <> "") Then
+					Redim Preserve v(Ubound(v)+1) As String
+				End If
+				v(Ubound(v)) = Me.ObjServer
+			End If
+		End If
+		If (hasMatch = 0) Then
+			doc.ReplaceItemValue(ItemName, v).IsReaders = True
+		End If
+		
+		SetServer = 1
+		Exit Function
+errh:
+		ErrorStr = Error$ & {. Error # } & Cstr(Err) & { on line # } & Cstr(Erl) & { in (SetServer) "ODObj" class }
+		Resume endh
+endh:
+	End Function
+	
+	
+	
+	Function RemoveFromItem(doc As NotesDocument, ItemPrefix As String, ErrorStr As String) As Integer
+		On Error Goto errh
+		
+		ErrorStr = ""
+		Dim ObjAccess As Variant, ObjID As Variant, ObjName As Variant, ObjPath As Variant
+		Dim i As Integer
+		Dim Item As NotesItem
+		Dim v As Variant
+		
+		If (ItemPrefix = "") Then
+			Print "Не задан префикс поля со значением"
+			RemoveFromItem = -1
+			Exit Function
+		End If
+		
+		If doc.HasItem(ItemPrefix & "ObjAccess") Then
+			v = doc.GetFirstItem(ItemPrefix & "ObjAccess").Values
+			If (v(0) = "") Then
+				Exit Function
+			End If
+			ObjAccess = v
+		Else
+			Exit Function
+		End If
+		
+		If doc.HasItem(ItemPrefix & "ObjID") Then
+			v = doc.GetFirstItem(ItemPrefix & "ObjID").Values
+			If (v(0) = "") Then
+				Exit Function
+			End If
+			ObjID = v
+		Else
+			Exit Function
+		End If
+		
+		If doc.HasItem(ItemPrefix & "ObjName") Then
+			v = doc.GetFirstItem(ItemPrefix & "ObjName").Values
+			If (v(0) = "") Then
+				Exit Function
+			End If
+			ObjName = v
+		Else
+			Exit Function
+		End If
+		
+		If doc.HasItem(ItemPrefix & "ObjPath") Then
+			v = doc.GetFirstItem(ItemPrefix & "ObjPath").Values
+			If (v(0) = "") Then
+				Exit Function
+			End If
+			ObjPath = v
+		Else
+			Exit Function
+		End If
+		
+		For i=0 To Ubound(ObjID)
+			If (Lcase(Me.ObjID) = Lcase(ObjID(i))) Then
+				ObjAccess(i)	= ""
+				ObjID(i) 		= ""
+				ObjName(i) 	= ""
+				ObjPath(i) 	= ""
+			End If
+		Next
+		
+		ObjAccess	= Fulltrim(ObjAccess)
+		ObjID 	= Fulltrim(ObjID)
+		ObjName 	= Fulltrim(ObjName)
+		ObjPath 	= Fulltrim(ObjPath)
+		
+		If (ObjID(0) <> "") Then
+			Call doc.ReplaceItemValue(ItemPrefix & "ObjAccess", 	ObjAccess)
+			Call doc.ReplaceItemValue(ItemPrefix & "ObjID", 		ObjID)
+			Call doc.ReplaceItemValue(ItemPrefix & "ObjName", 	ObjName)
+			Call doc.ReplaceItemValue(ItemPrefix & "ObjPath", 	ObjPath)
+		Else
+			Call doc.RemoveItem(ItemPrefix & "ObjAccess")
+			Call doc.RemoveItem(ItemPrefix & "ObjID")
+			Call doc.RemoveItem(ItemPrefix & "ObjName")
+			Call doc.RemoveItem(ItemPrefix & "ObjPath")
+		End If
+		
+		
+		RemoveFromItem = 1
+		Exit Function
+errh:
+		ErrorStr = Error$ & {. Error # } & Cstr(Err) & { on line # } & Cstr(Erl) & { in (RemoveFromItem) "ODObj" class }
+		Resume endh
+endh:
+	End Function
+	
+	
+	
+	
+	
+	Property Set myType
+		myType_ = myType
+	End Property
+	Public Property Get myType
+		myType = myType_
+	End Property
+	
+	Property Set ObjAccess
+		ObjAccess_ = ObjAccess
+	End Property
+	Public Property Get ObjAccess
+		ObjAccess = ObjAccess_
+	End Property
+	
+	Property Set ObjID
+		ObjID_ = ObjID
+	End Property
+	Public Property Get ObjID
+		ObjID = ObjID_
+	End Property
+	
+	Property Set ObjName
+		ObjName_ = ObjName
+	End Property
+	Public Property Get ObjName
+		ObjName = ObjName_
+	End Property
+	
+	Property Set ObjPath
+		ObjPath_ = ObjPath
+	End Property
+	Public Property Get ObjPath
+		ObjPath = ObjPath_
+	End Property
+	
+	Property Set ObjServer
+		ObjServer_ = ObjServer
+	End Property
+	Public Property Get ObjServer
+		ObjServer = ObjServer_
+	End Property
+	
+	'Property Set ObjMailServer
+	'	ObjMailServer_ = ObjMailServer
+	'End Property
+	'Public Property Get ObjMailServer
+	'	ObjMailServer = ObjMailServer_
+	'End Property
+	
+	Function GetChief(ErrorStr As String) As ODObj		' функция скопирована из процесс центра 20191010. дополнено для корректной работы для подразделения
+		On Error GoTo error_point
+		On Error 4091 Resume Next ' bad UNID
+
+		Dim dbOD As NotesDatabase
+		Set dbOD = Me.doc.ParentDatabase
+		
+		Dim docChiefPosition As NotesDocument
+		
+		Dim parentUNID As String, docParent As NotesDocument
+		If me.myType = "Dep" Then
+			parentUNID = Me.doc.UniversalID
+		else
+			parentUNID = Me.doc.GetItemValue("ParentRef")(0)
+			If ( Me.doc.Chief(0) = "1" ) Then
+				Set docParent = dbOD.GetDocumentByUNID( parentUNID )
+				On Error 4091 GoTo error_point
+				If ( docParent Is Nothing ) Then
+					ErrorStr = {Сбой: Не найден родительский документ для "} & Me.ObjName & {"}
+					Exit Function
+				Else
+					parentUNID = docParent.GetItemValue( "ParentRef" )(0)
+				End If
+			End If
+		End If
+		
+		If ( parentUNID = "" ) Then
+			ErrorStr = {Сбой: Нет информации о родительском документе "} & Me.ObjName & {"}
+			Exit Function
+		Else
+			Dim docParentTemp As NotesDocument
+			Set docParentTemp = dbOD.GetDocumentByUNID( parentUNID )
+			If ( docParentTemp Is Nothing ) Then
+				ErrorStr = {Сбой: Не найден родительский документ для "} & Me.ObjName & {"}
+				Exit Function
+			ElseIf ( docParentTemp.form(0) = "DWF01" ) Then
+				parentUNID = docParent.Universalid
+			Else
+				Set docParent = docParentTemp
+			End If
+		End If
+		
+		Dim DepChiefUNID As String
+		DepChiefUNID = docParent.GetItemValue("DepChiefID")(0)
+		If ( DepChiefUNID = "" ) Then
+			Dim vw As NotesView
+			Set vw = db.Getview( "(PositionChiefByParentRef)" )
+			
+			Do While ( docChiefPosition Is Nothing )
+				Dim dcPos As NotesDocumentCollection
+				Set dcPos = vw.GetAllDocumentsByKey( parentUNID )
+				If ( dcPos.Count = 0 ) Then
+					Set docParent = dbOD.GetDocumentByUNID( parentUNID )
+					If ( docParent Is Nothing ) Then
+						ErrorStr = {Сбой: Не найден родительский по ключу "} & parentUNID & {"}
+						Exit Function
+					Else
+						DepChiefUNID = docParent.GetItemValue("DepChiefID")(0)
+						If ( DepChiefUNID = "" ) Then
+							parentUNID = docParent.GetItemValue("ParentRef")(0)
+						Else
+							Set docChiefPosition = dbOD.GetDocumentByUNID( DepChiefUNID )
+							If ( docChiefPosition Is Nothing ) Then
+								Print {ERROR!!! In document "} & Me.ObjName & {" (unid: } & Me.doc.Universalid & { ) bad link by UNID "} & DepChiefUNID & {"}
+							End If
+							Exit Do
+						End If
+					End If
+				ElseIf ( dcPos.Count = 1 ) Then
+					Set docChiefPosition = dcPos.GetFirstDocument
+				ElseIf ( dcPos.Count > 1 ) Then
+					ErrorStr = {Сбой: Найдено несколько прямых руководителей для "} & Me.ObjName & {"}
+					Exit Function
+				End If
+			Loop
+		Else
+			Set docChiefPosition = dbOD.GetDocumentByUNID( DepChiefUNID )
+		End If
+		
+		If ( docChiefPosition Is Nothing ) Then
+			ErrorStr = {Сбой: Не найден документ руководителя для "} & Me.ObjName & {"}
+			Exit Function
+		End If
+		
+		Dim ODObj As New ODObj
+		If (ODObj.Init( docChiefPosition, ErrorStr) <>1) Then Exit Function
+		Set GetChief = ODObj
+		Exit Function
+		
+error_point:
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Function
+	'--------------------------------------------------------------------------------------------------------------------------
+	
+	
+	Sub delete()
+	End Sub
+End Class
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+Class ODBaseInfo
+	Public Info As String
+	
+	Private session As NotesSession
+	Private doc As NotesDocument
+	
+	Sub new(InObj As Variant)
+		Set session = New NotesSession
+		Call GetInfoByObj(InObj)
+	End Sub
+	
+	Sub GetInfoByObj(InObj)
+		On Error Goto errh
+		Dim docType As String
+		Dim docProcess As NotesDocument
+		
+		If (InObj Is Nothing) Then
+			Msgbox {Не верный формат переданных данных. Обратитесь к администратору}, 48, ERR_MSG_TITLE
+			Exit Sub
+		End If
+		
+		If InObj Isa "NotesDocument" Then
+			Set doc = InObj
+			docType = GetDocType(doc)
+			Select Case docType
+			Case "docMain"
+				Info = doc.GetItemValue(Me.ODBaseItem)(0)
+			Case "docProcess"
+'				Dim PrObj As New ProcessObject
+'				Call PrObj.Init(doc)
+				Info = docProcess.GetItemValue("OrgDir")(0)
+			Case "other"
+				'пока ничего	2010.05.20		
+			End Select
+		Else
+			Msgbox {Не верный формат переданных данных. Обратитесь к администратору}, 48, ERR_MSG_TITLE
+		End If
+		
+		
+		Exit Sub
+errh:
+		Msgbox Error$ & {. Error # } & Cstr(Err) & { on line # } & Cstr(Erl) & { in (GetInfoByObj) "ODBaseInfo" class}
+		Resume endh
+endh:
+	End Sub
+	
+	Function GetDocType(doc As NotesDocument) As String
+		On Error Goto errh
+		
+		If doc.HasItem(Me.ODBaseItem) Then
+			GetDocType = "docMain"
+			Exit Function
+		End If
+		If doc.HasItem(Me.ProcessItem) Then
+			GetDocType = "docProcess"
+			Exit Function
+		End If
+		Select Case doc.Form(0)
+		Case Me.DWF01Form
+			GetDocType = "docProcess"			
+		Case Else
+			GetDocType = "other"
+		End Select
+		
+		
+		Exit Function
+errh:
+		Msgbox Error$ & {. Error # } & Cstr(Err) & { on line # } & Cstr(Erl) & { in (GetDocType) "ODBaseInfo" class}
+		Resume endh
+endh:
+	End Function
+	
+	
+	Property Get ODBaseItem
+		ODBaseItem = "ODBase"
+	End Property
+	Property Get ProcessItem
+		ProcessItem = "ProcessRef"
+	End Property
+	Property Get DWF01Form
+		DWF01Form = "DWF01"
+	End Property
+	
+	
+	Sub delete()
+	End Sub
+	
+End Class
+'++LotusScript Development Environment:2:1:ODGetObjectValue:0:8
+
+%REM
+
+
+
+Function ODGetObjectValue(Object As Variant, ObjID As Variant, ObjAccess As Variant, ObjName As Variant) As Integer
+	On Error Goto errh
+	
+	
+	Dim db As NotesDatabase
+	Dim col As NotesDocumentCollection
+	Dim doc As NotesDocument
+	
+	Redim ObjID(0) As String
+	Redim ObjAccess(0) As String
+	Redim ObjName(0) As String
+	
+	If Object Isa "NotesDocumentCollection" Then
+		Set col = Object
+		Set doc = col.GetFirstDocument
+		While (Not (doc Is Nothing))
+			
+			If (ObjID(0) <> "") Then
+				Redim Preserve ObjID(Ubound(ObjID)+1) As String
+				Redim Preserve ObjAccess(Ubound(ObjAccess)+1) As String
+				Redim Preserve ObjName(Ubound(ObjName)+1) As String
+			End If
+			
+			ObjID(Ubound(ObjID)) = doc.UniversalID
+			Select Case doc.Form(0)
+			Case "DWF01"
+				ObjAccess(Ubound(ObjAccess)) = doc.GroupName(0)
+				If (ObjAccess(Ubound(ObjAccess)) = "") Then ObjAccess(Ubound(ObjAccess)) = "-"
+				ObjName(Ubound(ObjName)) = {<Комп.> } & doc.Name(0)
+			Case "DWF02"
+				ObjAccess(Ubound(ObjAccess)) = doc.GroupName(0)
+				If (ObjAccess(Ubound(ObjAccess)) = "") Then ObjAccess(Ubound(ObjAccess)) = "-"
+				ObjName(Ubound(ObjName)) = {<Подр.> } & doc.Name(0)
+			Case "DWF03"
+				ObjAccess(Ubound(ObjAccess)) = doc.GroupName(0)
+				If (ObjAccess(Ubound(ObjAccess)) = "") Then ObjAccess(Ubound(ObjAccess)) = "-"
+				ObjName(Ubound(ObjName)) = {<Долж.> } & doc.Name(0) & { (} & doc.PersonName(0) & {)}
+			Case "DWF04"
+				ObjAccess(Ubound(ObjAccess)) = doc.LotusAddress(0)
+				If (ObjAccess(Ubound(ObjAccess)) = "") Then ObjAccess(Ubound(ObjAccess)) = "-"
+				ObjName(Ubound(ObjName)) = {<Польз.> } & doc.FullName(0)
+			Case Else
+				ObjAccess(Ubound(ObjAccess)) = doc.GroupName(0)
+				If (ObjAccess(Ubound(ObjAccess)) = "") Then ObjAccess(Ubound(ObjAccess)) = "-"
+				ObjName(Ubound(ObjName)) = doc.Name(0)
+			End Select
+			
+			Set doc = col.GetNextDocument(doc)
+		Wend	
+	Elseif Object Isa "NotesDocumentCollection" Then
+		Set doc = Object
+		ObjID(Ubound(ObjID)) = doc.UniversalID
+		Select Case doc.Form(0)
+		Case "DWF01"
+			ObjAccess(Ubound(ObjAccess)) = doc.GroupName(0)
+			If (ObjAccess(Ubound(ObjAccess)) = "") Then ObjAccess(Ubound(ObjAccess)) = "-"
+			ObjName(Ubound(ObjName)) = {<Комп.> } & doc.Name(0)
+		Case "DWF02"
+			ObjAccess(Ubound(ObjAccess)) = doc.GroupName(0)
+			If (ObjAccess(Ubound(ObjAccess)) = "") Then ObjAccess(Ubound(ObjAccess)) = "-"
+			ObjName(Ubound(ObjName)) = {<Подр.> } & doc.Name(0)
+		Case "DWF03"
+			ObjAccess(Ubound(ObjAccess)) = doc.GroupName(0)
+			If (ObjAccess(Ubound(ObjAccess)) = "") Then ObjAccess(Ubound(ObjAccess)) = "-"
+			ObjName(Ubound(ObjName)) = {<Долж.> } & doc.Name(0)
+		Case "DWF04"
+			ObjAccess(Ubound(ObjAccess)) = doc.LotusAddress(0)
+			If (ObjAccess(Ubound(ObjAccess)) = "") Then ObjAccess(Ubound(ObjAccess)) = "-"
+			ObjName(Ubound(ObjName)) = {<Польз.> } & doc.FullName(0)
+		Case Else
+			ObjAccess(Ubound(ObjAccess)) = doc.GroupName(0)
+			If (ObjAccess(Ubound(ObjAccess)) = "") Then ObjAccess(Ubound(ObjAccess)) = "-"
+			ObjName(Ubound(ObjName)) = doc.Name(0)
+		End Select
+	Else
+		ODGetObjectValue = -1
+		Exit Function
+	End If
+	
+	If (ObjID(0) = "") Then
+		ODGetObjectValue = -1
+		Exit Function
+	End If
+	
+	ODGetObjectValue = 1
+	
+	
+	Exit Function
+errh:
+	ODGetObjectValue = -1
+	Msgbox Error$ & {. Error # } & Cstr(Err) & { on line # } & Cstr(Erl) & { in (ODGetObjectValue) "DWFODLib"}
+	Resume endh
+endh:	
+End Function
+%END REM
+
+'++LotusScript Development Environment:2:1:ODGetHit:0:8
+
+%REM
+
+
+
+Function ODGetHit(Value1 As Variant, Value2 As Variant, Hit As Variant) As Integer
+	On Error Goto errh
+	
+	
+	Dim session As New NotesSession
+	Dim docTemp As NotesDocument
+	Dim v As Variant
+	
+	Set docTemp = session.CurrentDatabase.CreateDocument
+	docTemp.Value1 = Value1
+	docTemp.Value2 = Value2
+	v = Evaluate({@Trim(@ReplaceSubstring(@UpperCase(Value2); @Trim(@ReplaceSubstring(@UpperCase(Value2); @UpperCase(Value1); "")); ""))}, docTemp)
+	
+	Hit = v
+	ODGetHit = 1
+	
+	Exit Function
+errh:
+	ODGetHit = -1
+	Msgbox Error$ & {. Error # } & Cstr(Err) & { on line # } & Cstr(Erl) & { in (ODGetHit) "DWFODLib"}
+	Resume endh
+endh:
+End Function
+%END REM
+
+'++LotusScript Development Environment:2:1:ODUIGetUserPosition:0:8
+%REM
+
+
+Function ODUIGetUserPosition(LotusName As String, ViewID As NotesView, View As NotesView, PositionID As String) As Integer
+	On Error Goto errh
+	
+	
+	Dim col As NotesDocumentCollection
+	Dim docUser As NotesDocument
+	Dim docPos As NotesDocument
+	Dim v As Variant
+	Dim docTemp As NotesDocument
+	
+	
+	Set col = ViewID.GetAllDocumentsByKey(LotusName, True)
+	If (col.Count = 0) Then
+		Msgbox {Не найден документ пользователя "} & LotusName & {"}, 48, ERR_MSG_TITLE
+		ODUIGetUserPosition = 0
+		Exit Function
+	End If
+	If (col.Count > 1) Then
+		Msgbox {Найдено документов пользователя "} & LotusName & {":} & Cstr(col.Count) , 48, ERR_MSG_TITLE
+		ODUIGetUserPosition = 0
+		Exit Function
+	End If
+	Set docUser = col.GetFirstDocument
+	
+	Set col = View.GetAllDocumentsByKey(docUser.UniversalID, True)
+	If (col.Count = 0) Then
+		Msgbox {Не найдена должность пользователя "} & docUser.FullName(0) & {"}, 48, ERR_MSG_TITLE
+		ODUIGetUserPosition = 0
+		Exit Function
+	End If
+	
+	
+	Set docPos = col.GetFirstDocument
+	If (col.Count = 1) Then
+		PositionID  = docPos.UniversalID
+		ODUIGetUserPosition = 1
+		Exit Function
+	End If
+	
+	Redim v(0) As String
+	While (Not (docPos Is Nothing))
+		If (v(0) <> "") Then
+			Redim Preserve v(Ubound(v)+1) As String
+		End If
+		v(Ubound(v)) = docPos.Name(0) & {|} & docPos.UniversalID
+		Set docPos = col.GetNextDocument(docPos)
+	Wend
+	
+	Dim ws As New NotesUIWorkspace
+	Set docTemp = ws.CurrentDatabase.Database.CreateDocument
+	docTemp.Members = v
+	docTemp.Promt = "Выберите должность"
+	
+	If Not (ws.DialogBox("DWF101", True, True, False, False, False, False, ws.CurrentDatabase.Database.Title, docTemp, True, False, True)) Then
+		ODUIGetUserPosition = 0		
+		Exit Function
+	End If
+	
+	PositionID = docTemp.List(0)
+	
+	ODUIGetUserPosition = 1
+	
+	
+	Exit Function
+errh:
+	ODUIGetUserPosition = -1
+	Msgbox Error$ & {. Error # } & Cstr(Err) & { on line # } & Cstr(Erl) & { in (ODUIGetUserPosition) "DWFODLib"}
+	Resume endh
+endh:
+End Function
+
+%END REM
+
+'++LotusScript Development Environment:2:1:ODUIGetInitiatorObject:0:8
+%REM
+
+
+
+Function ODUIGetInitiatorObject(docProcess As NotesDocument, ViewID As NotesView, InitObjID As Variant) As Integer
+	On Error Goto errh
+	
+	'Если инициатор пустое значение, то по умолчанию инициируется от имени должности.
+	'InitObjIDs = <anybody>
+	
+	Dim ObjID As Variant, ObjAccess As Variant, ObjName As Variant
+	Dim v As Variant
+	Dim i As Integer, j As Integer
+	Dim docTemp As NotesDocument
+	Dim IsAnyBody As Integer
+	Dim MatchList As Variant
+	
+	
+	If (ODGetObjectByProcessEntry(docProcess, "ProcessInitiator", ViewID, ObjID, ObjAccess, ObjName, IsAnyBody) <> 1) Then
+		Msgbox {Сбой в процессе обработки данных (Инициатор процесса)}, 48, ERR_MSG_TITLE
+		ODUIGetInitiatorObject = 0
+		Exit Function
+	End If
+	
+	
+	If (ObjID(0) = "") Then
+		If (IsAnyBody = 1) Then
+			InitObjID = "<anybody>"
+			ODUIGetInitiatorObject = 1
+			Exit Function
+		End If
+	End If
+	
+	v = Evaluate({@UserNamesList})
+	If (ODGetHit(v, ObjAccess, MatchList) <> 1) Then
+		ODUIGetInitiatorObject = 0
+		Exit Function
+	End If
+	If (MatchList(0) = "") Then
+		Msgbox {Вы не можете инициировть процесс}, 48, ERR_MSG_TITLE
+		ODUIGetInitiatorObject = 0
+		Exit Function
+	End If
+	
+	Redim v(0) As String
+	For i=0 To Ubound(ObjAccess)
+		For j=0 To Ubound(MatchList)
+			If (Lcase(ObjAccess(i)) = Lcase(MatchList(j)) ) Then
+				If (v(0) <> "") Then
+					Redim Preserve v(Ubound(v)+1) As String
+				End If
+				v(Ubound(v)) = ObjName(i) & {|} & ObjID(i)
+			End If
+		Next
+	Next
+	
+	If (Ubound(v) = 0) Then
+		InitObjID = Strright(v(0), {|})
+		ODUIGetInitiatorObject = 1
+		Exit Function
+	End If
+	
+	Dim ws As New NotesUIWorkspace
+	Set docTemp = ws.CurrentDatabase.Database.CreateDocument
+	docTemp.Members = v
+	docTemp.Promt = "Выберите объект ОД, от имени которого хотите инициировать процесс"
+	
+	If Not (ws.DialogBox("DWF101", True, True, False, False, False, False, ws.CurrentDatabase.Database.Title, docTemp, True, False, True)) Then
+		ODUIGetInitiatorObject = 0		
+		Exit Function
+	End If
+	
+	InitObjID = docTemp.List(0)
+	
+	ODUIGetInitiatorObject = 1
+	
+	
+	
+	Exit Function
+errh:
+	ODUIGetInitiatorObject = -1
+	Msgbox Error$ & {. Error # } & Cstr(Err) & { on line # } & Cstr(Erl) & { in (ODUIGetInitiatorObject) "DWFODLib"}
+	Resume endh
+endh:
+End Function
+%END REM
+
+'++LotusScript Development Environment:2:1:ODGetObjectByProperty:0:8
+
+%REM
+
+
+Function ODGetObjectByProperty(_
+doc As NotesDocument, ViewID As NotesView,_
+ObjID As Variant, ObjAccess As Variant, ObjName As Variant) As Integer
+	On Error Goto errh
+	
+	Dim PropValueType As String
+	Dim ItemPrefix As String
+	
+	PropValueType = doc.ValueType(0)
+	Select Case PropValueType
+	Case "ODObj"
+		ItemPrefix = "OD"
+		ObjID 	= doc.GetItemValue(ItemPrefix & "ObjID")
+		ObjAccess	= doc.GetItemValue(ItemPrefix & "ObjAccess")
+		ObjName 	= doc.GetItemValue(ItemPrefix & "ObjName")
+	Case "relation1"
+		
+	End Select
+	
+	
+	
+	ODGetObjectByProperty = 1
+	
+	Exit Function
+errh:
+	ODGetObjectByProperty = -1
+	Msgbox Error$ & {. Error # } & Cstr(Err) & { on line # } & Cstr(Erl) & { in (ODGetObjectByProperty) "DWFODLib"}
+	Resume endh
+endh:
+End Function
+
+%END REM
+
+
+
+'++LotusScript Development Environment:2:1:ODGetObjectByProcessEntry:0:8
+
+%REM
+
+
+
+Function ODGetObjectByProcessEntry(_
+doc As NotesDocument, ItemPrefix As String,_ 
+ViewID As NotesView, ObjID As Variant, ObjAccess As Variant, ObjName As Variant, AnyBody As Integer) As Integer
+	On Error Goto errh
+	
+	Dim db As NotesDatabase
+	Dim Item As NotesItem
+	Dim vPEID As Variant, vPEType As Variant, vPEName As Variant
+	Dim vID As Variant, vAccess As Variant, vName As Variant
+	Dim i As Integer, j As Integer
+	Dim colOD As NotesDocumentCollection
+	Dim docProperty As NotesDocument
+	Dim n As Integer
+	
+	Redim ObjAccess(0) As String
+	Redim ObjID(0) As String
+	Redim ObjName(0) As String
+	
+	
+	Set db = doc.ParentDatabase
+	Set Item = doc.GetFirstItem(ItemPrefix & "ObjID")
+	If (Item Is Nothing) Then
+		AnyBody = 1
+		ODGetObjectByProcessEntry = 1
+		Exit Function
+	End If
+	
+	vPEID = Item.Values
+	If (Not Isarray(vPEID)) Then
+		Exit Function	
+	End If
+	If (Ubound(vPEID) = 0) Then
+		If (vPEID(0) = "") Then
+			AnyBody = 1
+			ODGetObjectByProcessEntry = 1
+			Exit Function	
+		End If
+	End If
+	
+	Set Item = doc.GetFirstItem(ItemPrefix & "ObjType")
+	vPEType = Item.Values
+	Set Item = doc.GetFirstItem(ItemPrefix & "ObjName")
+	vPEName = Item.Values
+	
+	For n=0 To Ubound(vPEID)
+		Select Case Lcase(vPEType(n))
+		Case "<odobj>"
+			Set colOD = ViewID.GetAllDocumentsByKey(vPEID(n))
+			If (colOD.Count <> 0) Then
+				If (ODGetObjectValue(colOD, vID, vAccess, vName)=1) Then
+					If (vID(0) <> "") Then
+						For i=0 To Ubound(ObjID)
+							For j=0 To Ubound(vID)
+								If (Lcase(ObjID(i)) = Lcase(vID(j))) Then
+									vID(j) 		= ""
+									vAccess(j) 	= ""
+									vName(j) 		= ""
+								End If
+							Next
+						Next
+						vID		= Fulltrim(vID)
+						vAccess 	= Fulltrim(vAccess)
+						vName 	= Fulltrim(vName)
+						ObjID 	= Fulltrim(Arrayappend(ObjID, vID))
+						ObjAccess	= Fulltrim(Arrayappend(ObjAccess, vAccess))
+						ObjName 	= Fulltrim(Arrayappend(ObjName, vName))
+					End If
+				End If
+			Else
+				Print {Внимание! Для документа процесса "} doc.UniversalID & {" не найден объект ОД "} & vPEName(n) & {"}
+			End If
+		Case "<property>"
+			On Error 4091 Resume Next 'bad unid
+			Set docProperty = db.GetDocumentByUNID(vPEID(n))
+			On Error Goto errh
+			If (Not (docProperty Is Nothing)) Then
+				If (ODGetObjectByProperty(docProperty, ViewID, vID, vAccess, vName)=1) Then
+					If (vID(0) <> "") Then
+						For i=0 To Ubound(ObjID)
+							For j=0 To Ubound(vID)
+								If (Lcase(ObjID(i)) = Lcase(vID(j))) Then
+									vID(j) 		= ""
+									vAccess(j) 	= ""
+									vName(j) 		= ""
+								End If
+							Next
+						Next
+						vID		= Fulltrim(vID)
+						vAccess 	= Fulltrim(vAccess)
+						vName 	= Fulltrim(vName)
+						ObjID 	= Fulltrim(Arrayappend(ObjID, vID))
+						ObjAccess	= Fulltrim(Arrayappend(ObjAccess, vAccess))
+						ObjName 	= Fulltrim(Arrayappend(ObjName, vName))
+					End If
+				End If
+			Else
+				Print {Внимание! Для документа процесса "} doc.UniversalID & {" не найден доп. признак "} & vPEName(n) & {"}
+			End If
+		End Select
+	Next
+	
+	
+	ODGetObjectByProcessEntry = 1
+	
+	
+	
+	Exit Function
+errh:
+	ODGetObjectByProcessEntry = -1
+	Msgbox Error$ & {. Error # } & Cstr(Err) & { on line # } & Cstr(Erl) & { in (ODGetObjectByProcessEntry) "DWFODLib"}
+	Resume endh
+endh:
+End Function
+%END REM
+
+'++LotusScript Development Environment:2:1:ODGetObjectValueByItem:0:8
+%REM
+
+
+Function ODGetObjectValueByItem(_
+doc As NotesDocument, ItemPrefix As String, ObjID As Variant, ObjAccess As Variant, ObjName As Variant) As Integer
+	On Error Goto errh
+	
+	Dim Item As NotesItem
+	Dim v As Variant
+	
+	If (ItemPrefix = "") Then
+		Print "Не задан префикс поля, с значением объекта Орг. директории"
+		ODGetObjectvalueByItem = -1
+		Exit Function
+	End If
+	
+	
+	Set Item = doc.GetFirstItem(ItemPrefix & "ObjID")
+	If Not (Item Is Nothing) Then
+		v = Item.Values
+		If (v(0) = "") Then
+			ODGetObjectvalueByItem = 0
+			Exit Function
+		End If
+		
+		ObjID = v
+	Else
+		ODGetObjectvalueByItem = 0
+		Exit Function
+	End If
+	
+	Set Item = doc.GetFirstItem(ItemPrefix & "ObjAccess")
+	If Not (Item Is Nothing) Then
+		v = Item.Values
+		If (v(0) = "") Then
+			ODGetObjectvalueByItem = 0
+			Exit Function
+		End If
+		
+		ObjAccess = v
+	Else
+		ODGetObjectvalueByItem = 0
+		Exit Function
+	End If
+	
+	Set Item = doc.GetFirstItem(ItemPrefix & "ObjName")
+	If Not (Item Is Nothing) Then
+		v = Item.Values
+		If (v(0) = "") Then
+			ODGetObjectvalueByItem = 0
+			Exit Function
+		End If
+		
+		ObjName = v
+	Else
+		ODGetObjectvalueByItem = 0
+		Exit Function
+	End If
+	
+	
+	
+	ODGetObjectvalueByItem = 1
+	
+	
+	Exit Function
+errh:
+	ODGetObjectvalueByItem = -1
+	Msgbox Error$ & {. Error # } & Cstr(Err) & { on line # } & Cstr(Erl) & { in (ODGetObjectvalueByItem) "DWFODLib"}
+	Resume endh
+endh:	
+End Function
+
+%END REM
+
+
+
+
+
+
+

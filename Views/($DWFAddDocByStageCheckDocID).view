@@ -1,0 +1,72 @@
+<?xml version='1.0' encoding='utf-8'?>
+<note class='view' xmlns='http://www.lotus.com/dxl' version='10.0' maintenanceversion='1.0'
+ replicaid='44257D5C002A4928'>
+<noteinfo noteid='266' unid='E26A77D5BF4B2C00C325776C0057B101' sequence='96'>
+<created><datetime dst='true'>20100726T195749,45+04</datetime></created>
+<modified><datetime>20210418T115554,25+03</datetime></modified>
+<revised><datetime>20201118T171320,86+03</datetime></revised>
+<lastaccessed><datetime>20210418T115554,24+03</datetime></lastaccessed>
+<addedtofile><datetime>20210418T115554,24+03</datetime></addedtofile></noteinfo>
+<updatedby><name>CN=Tambiev/O=tps</name><name>CN=zeos/O=tps</name><name>CN=Tambiev/O=tps</name><name
+>CN=zeos/O=tps</name><name>CN=Tambiev/O=tps</name><name>CN=zeos/O=tps</name><name
+>CN=Salpagarov/O=tps</name><name>CN=zeos/O=tps</name><name>CN=Tambiev/O=tps</name><name
+>CN=zeos/O=tps</name><name>CN=Tambiev/O=tps</name><name>CN=zeos/O=tps</name><name
+>CN=Tambiev/O=tps</name><name>CN=zeos/O=tps</name><name>CN=Tambiev/O=tps</name><name
+>CN=zeos/O=tps</name><name>CN=Tambiev/O=tps</name><name>CN=zeos/O=tps</name><name
+>CN=Tambiev/O=tps</name><name>CN=zeos/O=tps</name><name>CN=Tambiev/O=tps</name><name
+>CN=zeos/O=tps</name><name>CN=Tambiev/O=tps</name><name>CN=zeos/O=tps</name><name
+>CN=develop/O=tps</name><name>CN=Tambiev/O=tps</name><name>CN=Salpagarov/O=tps</name><name
+>CN=Tambiev/O=tps</name><name>CN=Salpagarov/O=tps</name><name>CN=Tambiev/O=tps</name><name
+>CN=Salpagarov/O=tps</name><name>CN=Tambiev/O=tps</name><name>CN=Salpagarov/O=tps</name></updatedby>
+<wassignedby><name>CN=Salpagarov/O=tps</name></wassignedby>
+<item name='$FormatNote' summary='true' sign='true'>
+<rawitemdata type='4'>
+AQCmJ7dNOjr7uNZsLQALdyXD
+</rawitemdata></item>
+<item name='$FormulaClass' sign='true'><text>1</text></item>
+<item name='$TITLE' sign='true'><text>($DWFAddDocByStageCheckDocID)</text></item>
+<item name='$Index' sign='true'><text/></item>
+<item name='$Formula' summary='true' sign='true'><formula compiled='true'>
+wAACAGwAAgAkMAUADwBTdGFnZUNoZWNrRG9jSUQAVgEBAAAACwKvAEQAHAAFAA8AU3RhZ2VDaGVj
+a0RvY0lEAFYBrgAoAAEAGwA8Be0F5SAF7gXvBfAF5QXkBeUF6wXlBe0F7j4ArgAEALUDAwAFACQA
+HwAEAAIABAAJAAQAJDBOYW1lJENvbmZsaWN0JFJFRgAEAAQAAAAcAAUABABGb3JtAQAFAERXRjA1
+AAoCBAADAAcADgAIAAlMMVMzUzRT
+</formula></item>
+<item name='$Collation' summary='true'>
+<rawitemdata type='2'>
+DwABAABECGYHAAACACQw
+</rawitemdata></item>
+<item name='$ViewFormat' summary='true' sign='true'>
+<rawitemdata type='5'>
+AQACAAYACEAAAFZDAwQCAAcAfgAAAFoABAAACAABAAAAAAAAAAICAAAAVkMABAQAGAAAAAAA+wAB
+AAAKAAAAAAAAAAAAAgIAAAAkMFN0YWdlSUR+AAIAbAACACQwBQAPAFN0YWdlQ2hlY2tEb2NJRABW
+AQEAAAALAq8ARAAcAAUADwBTdGFnZUNoZWNrRG9jSUQAVgGuACgAAQAbADwF7QXlIAXuBe8F8AXl
+BeQF5QXrBeUF7QXuPgCuAAQAtQMDAAcAEAAKAAk2UzdTOVMxNFNOYW1lBc0F4AXoBewF5QXtBe4F
+4gXgBe0F6AXlJgABAAAAAQEACQEAAAoBAQ4KAAABAK0rAQABAAEAAAAAAAAAAABXQwQBAAgAAAAA
+AAAAAAAAAAAAAAAAAQAAAAAAAAD//wAAAAAAAAAAAAAAAAAAV0MEAQAJAAAAAAAAAAAAAAAAAAAA
+AAAABAAAAAAA//8AAAAAAAAAAAAAAAAAAEIAEAAAAAEA////AAUA////AAEAAAAAAAAAAAAAAAAA
+AQD///8AAQD///8AAAABAAAAAAABAAAAAAAAAAAAAAAAAAgAAAAAAAEA
+</rawitemdata></item>
+<item name='$Comment' sign='true'><text/></item>
+<item name='$Flags'><text>Y</text></item>
+<item name='$DesignerVersion' sign='true'><text>6.5</text></item>
+<item name='$V5ACTIONS' sign='true'>
+<rawitemdata type='1'>
+vRwRAAAAAQABAAAAAQAAAAAAAAAAAAAACAACAHn/bAABAOzp2AABAAAAAAAJAAAAAAABAOzp2AAA
+AB8AAAAAAAAAAAADAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+AAAAAAAAAAAAAAAAAAAAAAAAAAAAAPz/OgAAAAAAAQAAAAAAAQAAAAAAAAAAAAAAAAAAAAAAAAAA
+AAAAAAAAAAEAAAAAAAAAAAAAAAAAAAC+/yYAAAAFAAAAnQEAAAsAAAAAAAAAQ2F0ZWdvcmlfemUA
+AQBOfL7/KAAAAAUAAACdAQAADgAAAAAAAABfRWRpdCBEb2N1bWVudAIAAgq+/ygAAAAFAAAAnQEA
+AA4AAAAAAAAAX1NlbmQgRG9jdW1lbnQDAAMKvv8iAAAABQAAAJ0BAAAIAAAAAAAAAF9Gb3J3YXJk
+BAAECr7/LAAAAAUAAACdAQAAEgAAAAAAAABfTW92ZSBUbyBGb2xkZXIuLi4FAD18vv8uAAAABQAA
+AJ0BAAATAAAAAAAAAF9SZW1vdmUgRnJvbSBGb2xkZXIABgA+fA==
+</rawitemdata></item>
+<item name='$ACTIONS' sign='true'>
+<rawitemdata type='1'>
+vRwRAAAAAQABAAAAAQAAAAAAAAAAAAAACAACAL7/JgAAAAUAAACdAQAACwAAAAAAAABDYXRlZ29y
+aV96ZWwBAE58vv8oAAAABQAAAJ0BAAAOAAAAAAAAAF9FZGl0IERvY3VtZW50AgACCr7/KAAAAAUA
+AACdAQAADgAAAAAAAABfU2VuZCBEb2N1bWVudAMAAwq+/yIAAAAFAAAAnQEAAAgAAAAAAAAAX0Zv
+cndhcmQEAAQKvv8sAAAABQAAAJ0BAAASAAAAAAAAAF9Nb3ZlIFRvIEZvbGRlci4uLgUAPXy+/y4A
+AAAFAAAAnQEAABMAAAAAAAAAX1JlbW92ZSBGcm9tIEZvbGRlcgAGAD58
+</rawitemdata></item></note>
+

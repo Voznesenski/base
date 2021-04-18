@@ -1,0 +1,315 @@
+'++LotusScript Development Environment:2:5:(Options):0:74
+Option Declare
+
+Use "DWFAppLib"
+Use "fbyte"
+
+'++LotusScript Development Environment:2:5:(Forward):0:1
+Declare Public Class TPS_Legal_ClaimsService As FBase_Abstract_Service
+Declare Public Class TPS_Legal_ClaimRequest As Fbase_abstract_object_doc
+
+'++LotusScript Development Environment:2:5:(Declarations):0:10
+
+Private Const DATABASE_KEY = "tps.legal.claims"
+
+
+Public Const DOMAIN_TPS_LEGAL_CLAIMS_REQUEST = "tps.legal.claims.request"
+
+
+Public Class TPS_Legal_ClaimsService As FBase_Abstract_Service
+	Private m_approval As Variant
+	Private m_db As NotesDatabase
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	'	PUBLIC:
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Public Sub New(in_ps As Variant)
+	End Sub
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Public Function getObject( in_link As Variant ) As Variant
+		On Error GoTo error_point
+		
+		Set getObject = Nothing
+		If ( in_link.domain = DOMAIN_TPS_LEGAL_CLAIMS_REQUEST ) Then
+			Set getObject = getClaimRequest ( in_link )
+		Else
+			Error 1001, "The package for object '" & in_link.domain & "' from parameter 'in_link.domain' is not registered"
+		End If
+		Exit Function
+		
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Function
+	
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Public Property Get db As NotesDatabase
+		On Error GoTo error_point
+		Call Me.log.enter( TypeName( Me ) & "." & GetThreadInfo(1))
+		
+		If ( m_db Is Nothing )Then
+			Set m_db = Me.sm.base.databases.get( DATABASE_KEY )
+		End If
+		Set db = m_db
+		
+		Call Me.log.traceObject( "result", db )	
+		Call Me.log.exit( TypeName( Me ) & "." & GetThreadInfo(1))
+		Exit Property
+		
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Property
+
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Private Function getClaimRequest( in_key As Variant ) As Variant
+		On Error GoTo error_point
+		Call Me.log.enter( TypeName( Me ) & "." & GetThreadInfo(1))
+		Call Me.log.parameter( "in_key", in_key )
+		
+		Dim id As String, doc As NotesDocument
+		id = Me.getId( in_key )
+		Set doc = Me.db.Getdocumentbyunid( id )
+		Set getClaimRequest = Me.getDocObject( doc )
+		
+		Call Me.log.traceObject( "result", getClaimRequest )
+		Call Me.log.exit( TypeName( Me ) & "." & GetThreadInfo(1))
+		Exit Function
+		
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$ 
+	End Function	
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Public Function getDocObject( in_doc As NotesDocument ) As Variant
+		On Error GoTo error_point
+		Call Me.log.enter( TypeName( Me ) & "." & GetThreadInfo(1))
+		Call Me.log.parameter( "in_doc", in_doc )
+		
+		Select Case LCase( in_doc.form(0))
+			Case "claim":
+				Set getDocObject = New TPS_Legal_ClaimRequest( in_doc, Me.Me_variant )
+				
+			Case Else:
+				Error 1001, "Форма '" & in_doc.form(0) & "' не поддерживается"
+		End Select
+		
+		Call Me.log.traceObject( "result", getDocObject )
+		Call Me.log.exit( TypeName( Me ) & "." & GetThreadInfo(1))
+		Exit Function
+		
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Function
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Private Function getId( in_key As Variant ) As String
+		On Error GoTo error_point
+		Call Me.log.enter( TypeName( Me ) & "." & GetThreadInfo(1))
+		
+		Dim key As String
+		If ( LCase( TypeName( in_key )) = "objectlink" ) Then
+			key = in_key.id 
+		ElseIf IsScalar( in_key ) Then 
+			key = in_key
+		Else
+			Error 1001, "The type of data of parameter 'in_key' is '" & TypeName( in_key ) & "'. It is not supported"
+		End If
+		
+		getId = key
+		
+		Call Me.log.trace( "result: " & getId )
+		Call Me.log.exit( TypeName( Me ) & "." & GetThreadInfo(1))
+		Exit Function
+		
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Function
+	'--------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	'создаёт новую претензию по указанному входящему
+	Public Function createNewClaimByInUI(inDoc As NotesDocument) As NotesUIDocument
+		On Error GoTo error_point
+		On Error 4091 Resume Next
+		
+		Dim ws As New NotesUIWorkspace()
+		Dim doc As NotesDocument
+		Dim inDocObj As Variant
+		Dim v As Variant
+		
+		
+		Set inDocObj = me.ps.ps.correspondence.getDocObject(inDoc)
+
+		Set doc = New NotesDocument(me.db)
+		Call doc.replaceItemValue("Form", "Claim")
+		
+		Call doc.replaceItemValue("ClaimCategory", "incoming")
+		Call doc.replaceItemValue("Essence", inDoc.getItemValue("App_Subject")(0))
+		Call doc.ReplaceItemValue("Contragent", inDoc.getItemValue("Contragent_title")(0))
+		Call doc.ReplaceItemValue("Contragent_title", inDoc.getItemValue("Contragent_title")(0))
+		Call doc.ReplaceItemValue("Contragent_id", inDoc.getItemValue("Contragent_id")(0))
+		Call doc.ReplaceItemValue("Contragent_domain", inDoc.getItemValue("Contragent_domain")(0))
+		
+		Dim contrag As Variant
+		Set contrag = Nothing
+		On Error Resume Next
+		Set contrag = me.ps.ps.contragents.getContragent(inDoc.getItemValue("Contragent_id")(0))
+		On Error GoTo error_point
+		On Error 4091 Resume Next 
+		If Not(contrag Is Nothing)Then
+			Call doc.replaceItemValue("inn", contrag.nd.getItemValue("inn"))
+			Call doc.replaceItemValue("kpp", contrag.nd.getItemValue("kpp"))
+			Select Case contrag.nd.getItemValue("Subject_type")(0)
+			Case "0"
+				If(contrag.nd.getItemValue("Contragent_type")(0) = "1")Then
+					Call doc.replaceItemValue("ContragentType", "foreignfirm")
+				Else 
+					Call doc.replaceItemValue("ContragentType", "firm")
+				End If
+			Case "1"
+				Call doc.replaceItemValue("ContragentType", "other")
+			Case "2"
+				Call doc.replaceItemValue("ContragentType", "man")
+		End Select
+			'перенос компании
+			Dim companyDoc As NotesDocument, key As String
+			Dim companyView As NotesView
+			Set companyView = me.db.Getview("(App.Company.Active.LookupByName)")
+
+			Dim korrCompany As NotesDocument
+			Set korrCompany = inDoc.parentDatabase.getDocumentByUnid(inDoc.getItemValue("CompanyRef")(0))
+			If Not(korrCompany Is Nothing)Then
+				key = korrCompany.getItemValue("Contragent_id")(0)
+				Set companyDoc = companyView.getDocumentByKey(key, True)
+			End If
+			If(companyDoc Is Nothing)Then
+				key = inDoc.getItemValue("Company")(0)
+				Set companyDoc = companyView.getDocumentByKey(key, True)
+			End If
+			If Not(companyDoc Is Nothing)Then
+				Dim docTemp As New NotesDocument(me.db)
+				Dim itemRef As NotesItem
+				Call docTemp.MakeResponse(companyDoc)
+				Set ItemRef = docTemp.GetFirstItem("$Ref")
+				If (ItemRef Is Nothing) Then
+					MsgBox {Не удалось сформировать "$Ref" поле}, 16, ERR_MSG_TITLE
+					Exit Function
+				End If
+				Call ItemRef.CopyItemToDocument(doc, "CompanyRef")
+				Call doc.replaceItemValue("Company", companyDoc.getItemValue("Title")(0))
+				Call doc.replaceItemValue("CompanyObjAccess", companyDoc.getItemValue("CompanyObjAccess")(0))
+				Call doc.replaceItemValue("CompanyObjID", companyDoc.getItemValue("CompanyObjID")(0))
+				Call doc.replaceItemValue("CompanyObjName", companyDoc.getItemValue("CompanyObjName")(0))
+				Call doc.replaceItemValue("CompanyObjPath", companyDoc.getItemValue("CompanyObjPath")(0))
+			End If
+			
+		End If
+		
+		Call doc.replaceItemValue("InDoc_id", inDocObj.id)
+		Call doc.replaceItemValue("InDoc_dbReplicaId", inDoc.parentDatabase.replicaId)
+		Call doc.replaceItemValue("InDoc_domain", inDocObj.domain)
+		Call doc.replaceItemValue("InDoc_title", inDoc.getItemValue("NumberTotal")(0) & " от " & Format(inDoc.created, "dd.mm.yyyy") )
+		
+		Dim setting As Fcore_setting
+		Dim processDoc As NotesDocument
+		Set setting = me.sm.core.settings( me.db ).get( "app.processDocID" )
+		Set processDoc = me.db.getDocumentByUNID(CStr(setting.Value))
+		If(processDoc Is Nothing)Then Error 8000, "Не могу найти процесс для создания Претензии"
+		
+		Call doc.save(False, False)
+		
+		Set doc = myInitProcess(doc, processDoc)
+
+		Set createNewClaimByInUI = ws.Editdocument(False, doc, , , True)
+		
+
+		Exit Function
+		
+error_point:
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Function
+	
+	
+	'--------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Private Function myInitProcess(docMain As NotesDocument, docProcess As NotesDocument) As NotesDocument
+		On Error GoTo errh
+		
+		Dim ws As New NotesUIWorkspace
+		Dim ViewID As NotesView
+		Dim ID As String
+		Dim docClaim As NotesDocument
+		
+		Dim noteId As String
+		noteId = docMain.Noteid
+		Print CStr(Now) & { >>>}
+		If (DWFAInitProcess(docProcess, docMain) <> 1) Then
+			Exit Function
+		End If
+		
+		Delete docmain
+		Set docMain = me.db.getDocumentById(noteId)
+		
+		If (DWFAClaim(docMain) <> 1) Then
+			Exit Function
+		End If
+		Print CStr(Now) & { <<<}
+		
+		Set ViewID = me.db.GetView("(UNID)")
+		Call ViewID.Refresh()
+		ViewID.AutoUpdate = False
+		
+		ID = docMain.UniversalID
+		Set docClaim = ViewID.GetDocumentByKey(ID)
+		Set myInitProcess = docClaim
+
+		
+		Exit Function
+errh:
+		MsgBox Error$ & {. Error # } & CStr(Err) & { on line # } & CStr(Erl) & { in (DWFRInitProcess) "DWFRequest"},, {Error}
+		Resume endh
+endh:
+	End Function
+	
+
+	
+End Class
+Public Class TPS_Legal_ClaimRequest As Fbase_abstract_object_doc
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	'	PUBLIC:
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Public Sub New( in_doc As NotesDocument, in_ps As Variant )
+	End Sub
+	'-----------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Public Property Get id As String
+		On Error GoTo error_point
+		If (m_doc.HasItem( "id" )) Then
+			id = m_doc.id(0)
+		Else
+			id = m_doc.UniversalID
+		End If
+		Exit Property 
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Property
+	'-----------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Public Property Get title As String
+		On Error GoTo error_point
+		If (m_doc.HasItem( "title" )) Then
+			title = m_doc.title(0)
+		End If
+		Exit Property 
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Property
+	'-----------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Public Property Get domain As String
+		On Error GoTo error_point
+		domain = DOMAIN_TPS_LEGAL_CLAIMS_REQUEST
+		Exit Property 
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Property
+	
+End Class

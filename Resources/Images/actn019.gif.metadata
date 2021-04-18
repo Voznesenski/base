@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="UTF-8"?><note class="form" maintenanceversion="1.0" replicaid="44257D5C002A4928" version="10.0" xmlns="http://www.lotus.com/dxl">
+<noteinfo noteid="1d16" sequence="9" unid="527994DACF57F9B9432584D20026C3D6">
+<created><datetime>20191216T100325,02+03</datetime></created>
+<modified><datetime>20210418T115628,64+03</datetime></modified>
+<revised><datetime>20191216T100332,12+03</datetime></revised>
+<lastaccessed><datetime>20210418T115628,63+03</datetime></lastaccessed>
+<addedtofile><datetime>20210418T115628,63+03</datetime></addedtofile></noteinfo>
+<updatedby><name>CN=Tambiev/O=tps</name><name>CN=zeos/O=tps</name><name>CN=develop/O=tps</name><name>CN=Igor V Tomnov/O=SVO</name></updatedby>
+<wassignedby><name>CN=Igor V Tomnov/O=SVO</name></wassignedby>
+<item name="$TITLE"><text>actn019.gif</text></item>
+<item name="$FlagsExt" sign="true"><text>D</text></item>
+<item name="$ImagesWide" sign="true"><number>1</number></item>
+<item name="$ImagesHigh" sign="true"><number>1</number></item>
+<item name="$ImagesColorize" sign="true"><number>0</number></item>
+
+
+<item name="$MimeType" sign="true"><text>image/gif</text></item>
+<item name="$FileModDT" sign="true"><datetime dst="true">19981118T152014,00+04</datetime></item>
+<item name="$ImageNames" sign="true"><text>actn019.gif</text></item>
+<item name="$DesignerVersion" sign="true"><text>6.5</text></item>
+<item name="$Flags"><text>34CiQ$</text></item>
+<item name="$EditFilePath"><text>C:\Users\IG1934~1.TOM\AppData\Local\Temp\notes95E17C\~actn0193.gif</text></item></note>

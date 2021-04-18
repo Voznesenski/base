@@ -1,0 +1,559 @@
+'++LotusScript Development Environment:2:5:(Options):0:74
+Option Public
+Option Declare
+Option Compare NoCase
+
+Use "DWFAppAction"
+Use "fbyte"
+
+
+'++LotusScript Development Environment:2:5:(Forward):0:1
+Declare Public Class MethodicLinks
+
+'++LotusScript Development Environment:2:5:(Declarations):0:10
+Public Const LINK_DB_ORDERS = "Order"
+Public Const LINK_DB_METHODICS = "Methodic"
+
+%REM
+	Class MethodicLinks
+	работа со ссылками - проставление взаимных ссылок "туда-обратно" и переход по ссылкам из емб.вьюшки
+%END REM
+Public Class MethodicLinks
+	Private METHODICS_SETTING_NAME As String
+	Private METHODICS_SELECT_VIEW As String
+	Private METHODICS_CHANGE_FIELD As String
+	Private METHODICS_LINKS_VIEW As String
+	
+	Private ORDERS_SETTING_NAME As String
+	Private ORDERS_SELECT_VIEW As String
+	Private ORDERS_CHANGE_FIELD As String
+	Private ORDERS_LINKS_VIEW As String
+	
+	Private AGENT_MIRROR_LINKS_PROCESS As String
+	
+	Private LINKS_LOOKUP_VIEW As String
+	
+	Private s As NotesSession
+	Private db As NotesDatabase
+	
+	
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Public Sub New()
+		On Error GoTo error_point
+		
+		METHODICS_SETTING_NAME = "tps.workflow.methodics"
+		METHODICS_SELECT_VIEW = "App.F01.ByApply"
+		METHODICS_CHANGE_FIELD = "OrdersChange"
+		METHODICS_LINKS_VIEW = "app.emb.orderLinks"
+		
+		ORDERS_SETTING_NAME = "tps.workflow.orders"
+		ORDERS_SELECT_VIEW = "App.OrderByAppNumAll"
+		ORDERS_CHANGE_FIELD = "MethodicsChange"
+		ORDERS_LINKS_VIEW = "app.emb.methodicLinks"
+		
+		AGENT_MIRROR_LINKS_PROCESS = "app.processMirrorLinks"
+		
+		LINKS_LOOKUP_VIEW = "app.lookup.methodicLinks"
+
+		Set s = New NotesSession
+		Set db = s.currentDatabase
+		
+
+		Exit Sub
+		
+error_point:
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Sub
+	
+	
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------	
+	Private m_sm As Variant
+	Private Property Get sm As Variant
+		On Error GoTo error_point
+		
+		If(IsEmpty(me.m_sm))Then Set me.m_sm = getServicesManager()
+		Set sm = me.m_sm
+		
+		
+		Exit Property
+		
+error_point:
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$		
+	End Property
+	
+	
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------	
+	%rem
+		берем бд по ключу из конфигуратора
+	%end rem
+	Private m_dbCache List As NotesDatabase
+	Private Function getDbForLink(dbKey As String) As NotesDatabase
+		On Error GoTo error_point
+
+		If(IsElement(me.m_dbCache(dbKey)))Then
+			Set getDbForLink = me.m_dbCache(dbKey)
+			Exit Function
+		End If
+		
+		Dim res As New NotesDatabase("", "")
+		Dim setting As Variant, v As Variant
+
+		
+		Set setting = me.sm.core.settings(db).get(dbKey)
+		If Not(setting Is Nothing)Then
+			v = setting.value
+			Dim serverName As String, dbName As String
+			If(InStr(v, "!!") > 1)Then
+				serverName = StrLeft(v, "!!")
+				dbName = StrRight(v, "!!")
+			Else
+				serverName = db.Server
+				dbName = v
+			End If
+			
+			Call res.Open(serverName, dbName)
+			If Not(res.Isopen)Then Call res.OpenByReplicaId(serverName, dbName)
+		End If
+		
+		If Not(res.Isopen)Then
+			Set res = sm.base.databases.get(dbKey)
+			If(res Is Nothing)Then Set res = New NotesDatabase("", "")
+		End If
+		 
+		If Not(res.isOpen)Then 
+			Set me.m_dbCache(dbKey) = Nothing
+			Error 7000, "Не могу открыть ПМ по ключу: " & dbKey & Chr(10) & "Проверьте доступ к ней и наличие ПМ в конфигураторе или в настройках текущей ПМ."
+		End If 
+		
+		Set me.m_dbCache(dbKey) = res
+		Set getDbForLink = res
+		
+
+		Exit Function
+		
+error_point:
+		Set getDbForLink = Nothing
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$		
+	End Function
+	
+	
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	'существует ли линк от одного документа к другому
+	'fromDoc can be Nothing
+	Private Function isLinkExists (indb As NotesDatabase, fromDoc As NotesDocument, toDoc As NotesDocument) As Boolean
+		On Error GoTo error_point
+
+		Dim view As NotesView
+		Set view = indb.getView(LINKS_LOOKUP_VIEW)
+		If(view Is Nothing)Then 'нет вьюшки - нет мультиков (с)
+			Print "Не могу найти вьюшку " & LINKS_LOOKUP_VIEW & " в базе " & indb.Filepath
+			isLinkExists = False
+			Exit Function 
+		End If
+
+		Dim keys As Variant
+		If(fromDoc Is Nothing)Then
+			ReDim keys(0) As String
+		Else
+			ReDim keys(1) As String
+			keys(1) = fromDoc.Universalid
+		End If
+		keys(0) = toDoc.Universalid
+		
+		Dim rcol As NotesDocumentCollection
+		Set rcol = view.Getalldocumentsbykey(keys, True)
+		isLinkExists = (rcol.count > 0)
+
+
+		Exit Function
+		
+error_point:
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$		
+	End Function
+	
+	
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	%rem
+		добавить линк на методику к приказу
+	%end rem
+	Public Sub addLink (fromDoc As NotesDocument, fromDb As String, toDb As String)
+		On Error GoTo error_point
+
+		Dim ws As New NotesUIWorkspace()
+		Dim toCol As NotesDocumentCollection, toDoc As NotesDocument
+		Dim pickListPrompt As String
+		
+		
+		Dim tdb As NotesDatabase, tViewName As String
+		Select Case toDb
+			Case LINK_DB_METHODICS
+				Set tdb = me.getDbForLink(me.METHODICS_SETTING_NAME)
+				tViewName = me.METHODICS_SELECT_VIEW
+				pickListPrompt = "Выберите Методику, которую изменяет данный приказ:"
+			
+			Case LINK_DB_ORDERS
+				Set tdb = me.getDbForLink(me.ORDERS_SETTING_NAME)
+				tViewName = me.ORDERS_SELECT_VIEW
+				pickListPrompt = "Выберите Приказ, который изменяет данную методику:"
+				
+			Case Else
+				Print "Неизвестный тип ПМ для создания связи"
+				Exit Sub
+				
+		End Select
+		
+		Set toCol = ws.Picklistcollection(PICKLIST_CUSTOM, True, tdb.Server, tdb.Filepath, tViewName, db.Title, pickListPrompt)
+		If(toCol.count = 0)Then Exit Sub
+		
+		Set toDoc = toCol.Getfirstdocument()
+		While Not(toDoc Is Nothing)
+			'check if exists
+			If Not(isLinkExists(fromDoc.parentDatabase, fromDoc, toDoc))Then
+				Dim oLinkDoc As NotesDocument
+				
+				Set oLinkDoc = createLink(fromDoc, toDoc, fromDb & "To" & toDb, "Внесено изменение в методику")
+				Call oLinkDoc.save(True, False)
+				
+				Call updateMirrorLinks(oLinkDoc)
+				
+			End If
+			
+			Set toDoc = toCol.Getnextdocument(toDoc)
+		Wend
+		
+
+		Exit Sub
+		
+error_point:
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$		
+	End Sub
+	
+	
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	%rem
+		создает новый документ-линк
+	%end rem
+	Private Function createLink (fromDoc As NotesDocument, toDoc As NotesDocument, linkType As String, linkSubject As String) As NotesDocument
+		On Error GoTo error_point
+
+		Dim linkDoc As NotesDocument, v As Variant
+		
+		Set linkDoc = New NotesDocument(fromDoc.Parentdatabase)
+
+		If( DWFSSetRefItem(fromDoc, linkDoc, "ParentRef", "") <> 1)Then Error 7000, "Не удалось создать ссылку для Приказов"
+		Call linkDoc.replaceItemValue("Form", "LinkToAnotherDoc")
+		Call linkDoc.replaceItemValue("LinkType", linkType)
+		Call linkDoc.replaceItemValue("Deleted", "")
+		Call linkDoc.replaceItemValue("Subject", linkSubject)
+
+		v = toDoc.getItemValue("AppNumber")(0) & "-" & toDoc.Getitemvalue("AppSuffix")(0)
+		If(v = "-")Then v = toDoc.Getitemvalue("NumberTotal")(0)
+		
+		Call linkDoc.replaceItemValue("DocIndex", v)
+		Call linkDoc.replaceItemValue("DocDate", toDoc.getItemValue("AppDate")(0))
+		v = toDoc.getItemValue("Name")(0)
+		If(v = "")Then v = toDoc.getItemValue("Title")(0)
+		Call linkDoc.replaceItemValue("DocName", v)
+
+		Call fillDocLinkInfo(linkDoc, fromDoc, "FromDoc")
+		Call fillDocLinkInfo(linkDoc, toDoc, "ToDoc")
+		
+		Set createLink = linkDoc
+		
+
+		Exit Function
+		
+error_point:
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$		
+	End Function
+
+	
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	%rem
+		удалить линк из текущего дока
+	%end rem
+	Public Sub deleteLink (mainDoc As NotesDocument, fromDbType As String)
+		On Error GoTo error_point
+
+		Dim ws As New NotesUIWorkspace()
+		
+		Dim col As NotesDocumentCollection, viewName As String
+		
+		Select Case fromDbType
+			Case LINK_DB_METHODICS
+				viewName = METHODICS_LINKS_VIEW
+				
+			Case LINK_DB_ORDERS
+				viewName = ORDERS_LINKS_VIEW
+				
+			Case Else
+				Print "Непонятная какая-то база"
+				Exit Sub
+		End Select
+		
+		Set col = ws.Picklistcollection(PICKLIST_CUSTOM, True, db.server, db.Filepath, viewName, db.title, "Выберите ссылки для удаления:", mainDoc.Universalid)
+		If(col.count = 0)Then Exit Sub
+		
+		Call col.Stampall("Deleted", "1")
+		
+		Call updateMirrorLinks(col)
+		
+		
+		Exit Sub
+		
+error_point:
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$		
+	End Sub
+	
+	
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	%rem
+		серверный агент - создает или удаляет зеркальные линки в базе методик
+	%end rem
+	Public Sub agent_processMirrorLink()
+		On Error GoTo error_point
+
+		Dim toDoc As NotesDocument, revLinkType As String, fromDb As String
+
+		Dim ag As NotesAgent
+		Set ag = s.Currentagent
+		
+		Dim id As String
+		id = ag.Parameterdocid
+		
+		Dim srcLink As NotesDocument, dstLink As NotesDocument
+		Dim tgtLinkUrl As String
+		
+		Set srcLink = db.Getdocumentbyid(id)
+		If(srcLink Is Nothing)Then Error 7000, "Не могу найти ссылку с ид: " & id
+		
+		tgtLinkUrl = srcLink.Getitemvalue("MirrorLinkURL")(0)
+		If(tgtLinkUrl <> "")Then 'обновить зеркальный линк - пока что только для операций удаления (других вроде не предвидится)
+			Set dstLink = s.Resolve(tgtLinkUrl)
+			If(dstLink Is Nothing)Then 'пытаемся как-нибудь найти зеркальный линк
+				Set dstLink = getDocumentFromLink(srcLink, "MirrorLink")
+			End If
+			If(dstLink Is Nothing)Then Error 7000, "Не найдена зеркальная ссылка для ссылки: " & srcLink.Universalid
+
+			If(srcLink.Getitemvalue("Deleted")(0) = "1")Then
+				Call dstLink.Replaceitemvalue("Deleted", "1")
+				Call dstLink.save(True, False)
+				
+				Set toDoc = getDocumentFromLink(srcLink, "ToDoc")
+				If( Not isLinkExists(dstLink.Parentdatabase, Nothing, toDoc))Then
+					revLinkType = srcLink.Getitemvalue("LinkType")(0)
+					fromDb = StrRight(revLinkType, "To")
+
+					Dim delField As String
+					Select Case fromDb
+					Case LINK_DB_METHODICS
+						delField = METHODICS_CHANGE_FIELD
+						
+					Case LINK_DB_ORDERS
+						delField = ORDERS_CHANGE_FIELD
+						
+					Case Else
+						Print "непонятная какая-то бд, пропускаем"
+						delField = ""
+						
+					End Select
+					If(delField <> "")Then 
+						Call toDoc.Replaceitemvalue(delField, "")
+						Call toDoc.save(False, False)
+					End If 
+				End If
+			End If
+			
+		Else 'создаем зеркальные линки в другой базе
+			Dim fromDoc As NotesDocument, toDb As String
+
+			Set fromDoc = getDocumentFromLink(srcLink, "ToDoc") 'линк зеркальный же, так что создаём в обратной проекции
+			Set toDoc = getDocumentFromLink(srcLink, "FromDoc")
+			
+			revLinkType = srcLink.Getitemvalue("LinkType")(0)
+			fromDb = StrRight(revLinkType, "To") 'дадада, зеркалим линк, всё правильно
+			toDb = StrLeft(revLinkType, "To")
+			revLinkType = fromDb & "To" & toDb
+			
+			Dim changeField As String
+			Select Case fromDb
+			Case LINK_DB_METHODICS
+				changeField = METHODICS_CHANGE_FIELD
+				
+			Case LINK_DB_ORDERS
+				changeField = ORDERS_CHANGE_FIELD
+				
+			Case Else
+				Print "непонятная какая-то бд, пропускаем"
+				changeField = ""
+				
+			End Select
+			If(changeField <> "") And (fromDoc.Getitemvalue(changeField)(0) <> "change")Then 
+				Call fromDoc.Replaceitemvalue(changeField, "change")
+				Call fromDoc.save(False, False)
+			End If 
+			
+			Set dstLink = createLink(fromDoc, toDoc, revLinkType, "Методика изменена приказом")
+			
+			Call fillDocLinkInfo(srcLink, dstLink, "MirrorLink")
+			Call fillDocLinkInfo(dstLink, srcLink, "MirrorLink")
+			
+			Call srcLink.save(True, False)
+			Call dstLink.save(True, False)
+		End If
+		
+
+		Exit Sub
+		
+error_point:
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$		
+	End Sub
+	
+	
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	%rem
+		заполняет кучку полей о доке для линка
+	%end rem
+	Private Sub fillDocLinkInfo (linkDoc As NotesDocument, fromDoc As NotesDocument, itemPrefix As String)
+		On Error GoTo error_point
+
+		Call linkDoc.replaceItemValue(itemPrefix & "URL", fromDoc.Notesurl)
+		Call linkDoc.replaceItemValue(itemPrefix & "UNID", fromDoc.Universalid)
+		Call linkDoc.replaceItemValue(itemPrefix & "CustomID", fromDoc.Getitemvalue("CustomId")(0))
+		Call linkDoc.replaceItemValue(itemPrefix & "DbServer", fromDoc.Parentdatabase.Server)
+		Call linkDoc.replaceItemValue(itemPrefix & "DbReplicaID", fromDoc.parentDatabase.replicaId)
+		Call linkDoc.replaceItemValue(itemPrefix & "DbFilePath", fromDoc.parentDatabase.filePath)
+		
+		
+		Exit Sub
+		
+error_point:
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$		
+	End Sub
+	
+	
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	%rem
+		открывает (на чтение) док, на который указывает линк
+	%end rem
+	Public Sub goViaLink (linkDoc As NotesDocument)
+		On Error GoTo error_point
+		
+		Dim ws As New NotesUIWorkspace
+		Dim tdoc As NotesDocument
+		
+		Set tdoc = getDocumentFromLink(linkDoc, "ToDoc")
+		
+		If Not(tdoc Is Nothing)Then Call ws.Editdocument(False, tdoc)
+		
+
+		Exit Sub
+		
+error_point:
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$		
+	End Sub
+	
+	
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Private dbCache List As NotesDatabase
+	%rem
+		добывает документ из линка (из полей с указанным префиксом)
+	%end rem
+	Private Function getDocumentFromLink(linkDoc As NotesDocument, itemPrefix As String) As NotesDocument
+		On Error GoTo error_point
+		On Error 4091 Resume Next
+		
+		Dim tdb As NotesDatabase
+		Dim tview As NotesView
+		Dim tdoc As NotesDocument
+		
+		Dim tdbServer As String, backupServer As String, tdbReplicaId As String, tdbFilePath As String
+		Dim tdocId As String, tdocCustomId As String
+		
+		tDocId = linkDoc.Getitemvalue(itemPrefix & "UNID")(0)
+		tDocCustomId = linkDoc.Getitemvalue(itemPrefix & "CustomID")(0)
+		
+		backupServer = db.server
+		tdbServer = linkDoc.Getitemvalue(itemPrefix & "DbServer")(0)
+		tdbReplicaId = linkDoc.Getitemvalue(itemPrefix & "DbReplicaID")(0)
+		tdbFilePath = linkDoc.Getitemvalue(itemPrefix & "DbFilePath")(0)
+		
+		If(IsElement(dbCache(tdbReplicaId)))Then
+			Set tdb = dbCache(tdbReplicaId)
+		Else
+			Set tdb = New NotesDatabase("", "") 'перебираем все варианты открытия БД, вдруг её куда-то унесло
+			Call tdb.OpenByReplicaId(tdbServer, tdbReplicaId)
+			If Not(tdb.isopen)Then Call tdb.open(tdbServer, tdbFilePath)
+			If Not(tdb.isopen)Then
+				If(tdbServer <> backupServer And backupServer <> "")Then
+					tdbServer = backupServer
+					Call tdb.OpenByReplicaId(tdbServer, tdbReplicaId)
+					If Not(tdb.isopen)Then Call tdb.open(tdbServer, tdbFilePath)
+				End If 
+			End If
+			If Not(tdb.Isopen)Then Error 8000, "Не могу открыть БД: " & tdbServer & "!!" & tdbFilePath & " :: " & tdbReplicaId
+			Set dbCache(tdbReplicaId) = tdb
+		End If
+		
+		Set tview = tdb.getView("(UNID)")
+		
+		Set tdoc = tdb.Getdocumentbyunid(tdocId)
+		If(tdoc Is Nothing And Not tview Is Nothing)Then Set tdoc = tview.Getdocumentbykey(tdocId, True)
+		If(tdoc Is Nothing)Then
+			If(tdocId <> tdocCustomId And tdocCustomId <> "")Then
+				tdocId = tdocCustomId
+				Set tdoc = tdb.Getdocumentbyunid(tdocId)
+				If(tdoc Is Nothing And Not tview Is Nothing)Then Set tdoc = tview.Getdocumentbykey(tdocId, True)
+			End If
+		End If 
+		If(tdoc Is Nothing)Then Error 8000, "Не могу открыть документ " & tdocId & " в бд " & tdb.Server & "!!" & tdb.FilePath
+
+		Set getDocumentFromLink = tdoc
+
+
+quit:
+		Exit Function
+		
+error_point:
+		If(Err >= 8000)Then
+			MsgBox Error$
+			Set getDocumentFromLink = Nothing
+			Resume quit
+		End If
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$		
+	End Function
+	
+	
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	%rem
+		запускает агент по зеркальному обновлению линков в методиках
+	%end rem
+	Private Sub updateMirrorLinks ( link As Variant )
+		On Error GoTo error_point
+
+		Dim doc As NotesDocument
+		Dim ag As NotesAgent
+		Set ag = db.getAgent(AGENT_MIRROR_LINKS_PROCESS)
+		
+		If(link IsA "NotesDocument")Then
+			Call ag.Runonserver(link.noteId)
+		ElseIf(link IsA "NotesDocumentCollection")Then
+			Set doc = link.Getfirstdocument()
+			While Not(doc Is Nothing)
+				Call ag.runOnServer( doc.Noteid )
+				
+				Set doc = link.Getnextdocument(doc)
+			Wend
+		Else
+			Error 7000, "Неизвестный тип ссылки"
+		End If
+		
+
+		Exit Sub
+		
+error_point:
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$		
+	End Sub
+	
+	
+End Class

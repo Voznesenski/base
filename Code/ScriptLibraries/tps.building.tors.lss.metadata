@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8"?><note class="filter" maintenanceversion="1.0" replicaid="44257D5C002A4928" version="10.0" xmlns="http://www.lotus.com/dxl">
+<noteinfo noteid="7c6" sequence="143" unid="049329C9EEF2FBD64325802500326936">
+<created><datetime>20160905T121037,34+03</datetime></created>
+<modified><datetime>20210418T115609,72+03</datetime></modified>
+<revised><datetime>20201118T171300,33+03</datetime></revised>
+<lastaccessed><datetime>20210418T115609,71+03</datetime></lastaccessed>
+<addedtofile><datetime>20210418T115609,71+03</datetime></addedtofile></noteinfo>
+<updatedby><name>CN=Tambiev/O=tps</name><name>CN=Salpagarov/O=tps</name><name>CN=Tambiev/O=tps</name><name>CN=Salpagarov/O=tps</name><name>CN=Tambiev/O=tps</name><name>CN=Salpagarov/O=tps</name></updatedby>
+<wassignedby><name>CN=Salpagarov/O=tps</name></wassignedby>
+<item name="$Flags"><text>s34Q</text></item>
+<item name="$PublicAccess" sign="true"><text>1</text></item>
+<item name="$TITLE" sign="true"><text>tps.building.tors</text></item>
+<item name="$DesignerVersion" sign="true"><text>8.5.3</text></item>
+
+
+
+<item name="$POID"><datetime>20201118T171300,33+03</datetime></item></note>

@@ -1,0 +1,235 @@
+'++LotusScript Development Environment:2:5:(Options):0:74
+%REM
+	Library tps.hr.changerequests
+	Created Nov 26, 2019 by Igor V Tomnov/SVO
+	Description: Comments for Library
+%END REM
+Option Public
+Option Declare
+
+Use "fbyte"
+
+'++LotusScript Development Environment:2:5:(Forward):0:1
+Declare Class THR_ChangerequestsService As Fbase_abstract_service
+Declare Public Class THR_Changerequests_Departament As FBase_Abstract_Object_Doc
+Declare Public Class THR_Changerequests_Position As FBase_Abstract_Object_Doc
+Declare Public Class THR_Changerequests_Request As FBase_Abstract_Object_Doc
+Declare Public Class THR_Changerequests_Unit As FBase_Abstract_Object_Doc
+
+'++LotusScript Development Environment:2:5:(Declarations):0:10
+Private Const DATABASE_KEY = "tps.hr.changerequests"
+
+Public Const DOMAIN_TPS_HR_CHANGEREQUESTS_REQUEST = "tps.hr.changerequests.request"
+Public Const DOMAIN_TPS_HR_CHANGEREQUESTS_DEPARTAMENT = "tps.hr.changerequests.departament"
+Public Const DOMAIN_TPS_HR_CHANGEREQUESTS_POSITION = "tps.hr.changerequests.position"
+Public Const DOMAIN_TPS_HR_CHANGEREQUESTS_UNIT = "tps.hr.changerequests.unit"
+
+%REM
+	Class THR_ChangerequestsService
+	Description: Comments for Class
+%END REM
+Class THR_ChangerequestsService As Fbase_abstract_service
+	Private m_db As NotesDatabase
+
+	Private Function getId( in_key As Variant ) As String
+		On Error GoTo error_point
+		Call Me.log.enter( TypeName( Me ) & "." & GetThreadInfo(1))
+		
+		Dim key As String
+		If ( LCase( TypeName( in_key )) = "objectlink" ) Then
+			key = in_key.id 
+		ElseIf IsScalar( in_key ) Then 
+			key = in_key
+		Else
+			Error 1001, "The type of data of parameter 'in_key' is '" & TypeName( in_key ) & "'. It is not supported"
+		End If
+		
+		getId = key
+		
+		Call Me.log.trace( "result: " & getId )
+		Call Me.log.exit( TypeName( Me ) & "." & GetThreadInfo(1))
+		Exit Function
+		
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Function
+
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	'	PUBLIC:
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Sub New( in_ps As Variant )
+	End Sub
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Property Get db As NotesDatabase
+		On Error GoTo error_point
+		Call Me.log.enter( TypeName( Me ) & "." & GetThreadInfo(1))
+		
+		If ( m_db Is Nothing )Then
+			Set m_db = Me.sm.base.databases.get( DATABASE_KEY )
+		End If
+		Set db = m_db
+		
+		Call Me.log.traceObject( "result", db )		
+		Call Me.log.exit( TypeName( Me ) & "." & GetThreadInfo(1))
+		Exit Property
+		
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Property
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Function getObject( in_link As Variant ) As Variant
+		On Error GoTo error_point
+		Call Me.log.enter( TypeName( Me ) & "." & GetThreadInfo(1))
+		Call Me.log.parameter( "in_link", in_link )
+		
+		Select Case in_link.domain
+			Case DOMAIN_TPS_HR_CHANGEREQUESTS_DEPARTAMENT:
+				Set getObject = Me.getByKey( in_link )
+			Case DOMAIN_TPS_HR_CHANGEREQUESTS_POSITION:
+				Set getObject = Me.getByKey( in_link )
+			Case DOMAIN_TPS_HR_CHANGEREQUESTS_UNIT:
+				Set getObject = Me.getByKey( in_link )
+			Case DOMAIN_TPS_HR_CHANGEREQUESTS_REQUEST:
+				Set getObject = Me.getByKey( in_link )
+			Case Else
+				Error 1001, "The data of type '" & in_link.domain & "' of parameter 'in_link.domain' is not supported"
+		End Select
+		
+		Call Me.log.traceObject( "result", getObject )
+		Call Me.log.exit( TypeName( Me ) & "." & GetThreadInfo(1))
+		Exit Function
+		
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Function
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Function getByKey( in_key As Variant ) As Variant
+		On Error GoTo error_point
+		Call Me.log.enter( TypeName( Me ) & "." & GetThreadInfo(1))
+		Call Me.log.parameter( "in_key", in_key )
+		
+		Dim key As String, vw As NotesView, dc As NotesDocumentCollection
+		key = Me.getId( in_key )
+		Set vw = Me.sm.core.cache.getView( "(CustomID)", Me.db )
+		Set dc = vw.GetAllDocumentsByKey( key, True )
+		If ( dc.Count = 0 ) Then
+			Set getByKey = Nothing
+		ElseIf ( dc.Count > 1 ) Then
+			Error 1001, "In database '" & Me.db.Title & "' ( path: " & Me.db.FilePath & " ) found more than one document by key '" & in_key & "' ( count: " & CStr( dc.Count ) & " )"
+		Else
+			Set getByKey = Me.getDocObject( dc.GetFirstDocument )
+		End If
+		
+		Call Me.log.traceObject( "result", getByKey )
+		Call Me.log.exit( TypeName( Me ) & "." & GetThreadInfo(1))
+		Exit Function
+		
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$ 
+	End Function
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Function getDocObject( in_doc As NotesDocument ) As Variant
+		On Error GoTo error_point
+		Call Me.log.enter( TypeName( Me ) & "." & GetThreadInfo(1))
+		Call Me.log.parameter( "in_doc", in_doc )
+		
+		Select Case LCase( in_doc.form(0))
+			Case DOMAIN_TPS_HR_CHANGEREQUESTS_REQUEST:
+				Set getDocObject = New THR_Changerequests_Request( in_doc, Me.Me_Variant )
+			Case DOMAIN_TPS_HR_CHANGEREQUESTS_DEPARTAMENT:
+				Set getDocObject = New THR_Changerequests_Departament( in_doc, Me.Me_Variant )
+			Case DOMAIN_TPS_HR_CHANGEREQUESTS_POSITION:
+				Set getDocObject = New THR_Changerequests_Position( in_doc, Me.Me_Variant )
+			Case DOMAIN_TPS_HR_CHANGEREQUESTS_UNIT:
+				Set getDocObject = New THR_Changerequests_Unit( in_doc, Me.Me_Variant )
+			Case Else:
+				Error 1001, "Форма '" & in_doc.form(0) & "' не поддерживается"
+		End Select
+					
+		Call Me.log.traceObject( "result", getDocObject )
+		Call Me.log.exit( TypeName( Me ) & "." & GetThreadInfo(1))
+		Exit Function
+		
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Function
+
+End Class
+
+Public Class THR_Changerequests_Departament As FBase_Abstract_Object_Doc
+	
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	'	PUBLIC:
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Sub New( in_doc As NotesDocument, in_ps As Variant )
+	End Sub
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Property Get domain As String
+		On Error GoTo error_point
+		domain = DOMAIN_TPS_HR_CHANGEREQUESTS_DEPARTAMENT
+		Exit Property
+		
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Property
+End Class
+Public Class THR_Changerequests_Position As FBase_Abstract_Object_Doc
+	
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	'	PUBLIC:
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Sub New( in_doc As NotesDocument, in_ps As Variant )
+	End Sub
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Property Get domain As String
+		On Error GoTo error_point
+		domain = DOMAIN_TPS_HR_CHANGEREQUESTS_POSITION
+		Exit Property
+		
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Property
+End Class
+Public Class THR_Changerequests_Request As FBase_Abstract_Object_Doc
+	
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	'	PUBLIC:
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Sub New( in_doc As NotesDocument, in_ps As Variant )
+	End Sub
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Property Get domain As String
+		On Error GoTo error_point
+		domain = DOMAIN_TPS_HR_CHANGEREQUESTS_REQUEST
+		Exit Property
+		
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Property
+End Class
+Public Class THR_Changerequests_Unit As FBase_Abstract_Object_Doc
+	
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	'	PUBLIC:
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Sub New( in_doc As NotesDocument, in_ps As Variant )
+	End Sub
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Property Get domain As String
+		On Error GoTo error_point
+		domain = DOMAIN_TPS_HR_CHANGEREQUESTS_UNIT
+		Exit Property
+		
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Property
+End Class

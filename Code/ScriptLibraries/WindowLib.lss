@@ -1,0 +1,1242 @@
+'++LotusScript Development Environment:2:5:(Options):0:74
+'WindowLib: 
+
+Option Public
+Use "ArrayTools"
+
+'++LotusScript Development Environment:2:5:(Forward):0:1
+Declare Type Rect
+Declare Type Point
+Declare Public Class LNProgressbar
+Declare Class PopupMenu
+Declare Function GetWindowText (hWnd As Long) As String
+Declare Function MouseClick (x As Integer, y As Integer, mButton As Integer, click As Integer)
+Declare Function GetCursorPosition (x As Integer, y As Integer) As Long
+Declare Private Function CoordToString (x As Integer, y As Integer) As String
+Declare Function GetWindowFromPoint (x As Integer, y As Integer) As Long
+Declare Private Function CoordToDouble (x As Integer, y As Integer) As Double
+Declare Function StringToCoord (s As String, x As Integer, y As Integer)
+Declare Function GetWindowCoords (hWnd As Long, x1 As Integer, y1 As Integer, x2 As Integer, y2 As Integer)
+Declare Function SendKey (s As String) As Long
+Declare Function CloseActiveWindow
+Declare Sub CloseCurrentNotesWindow
+Declare Function MenuMultipleSelection (ArrayToChoose As Variant, ArrayChosen As Variant,CancelItem As Variant, OkItem As Variant, ShowType As Variant) As Variant
+Declare Function SetWindowCoords (hWnd As Long, x1 As Integer, y1 As Integer, x2 As Integer, y2 As Integer)
+Declare Function MouseDrag (x1 As Integer, y1 As Integer, x2 As Integer, y2 As Integer, steps As Integer)
+Declare Function ShowScrollBars (hwnd As Long, vScroll As Variant, hScroll As Variant) As Variant
+Declare Function IsWindowZoomed (hwnd As Long) As Variant
+Declare Function KeyPressed (keyCode As Variant) As Integer
+Declare Public Function WinLib_GetRegistryValue ( hKey As Variant , strPath As Variant , strVariable As Variant ) As String
+Declare Public Function WinLib_SetRegistryValue ( hKey As Variant , strPath As Variant , strVariable As Variant, strValue As Variant) As Long
+Declare Public Function WinLib_DelRegistryValue ( hKey As Variant , strPath As Variant, strVariable As Variant) As Long
+Declare Public Function WinLib_GetTempDirectory() As String
+
+'++LotusScript Development Environment:2:5:(Declarations):0:10
+
+Private Const LibName="WindowLib"
+
+'WindowLib: 
+
+'Список функций:
+
+'------------------------------------
+'GetCursorPosition (x as Integer, y as Integer) - возвращает позицию курсора мыши
+
+'SetCursorPosition (x as Integer, y as Integer) - устанавливает курсор мыши на нужную позицию
+
+'GetWindowFromPoint (x as Integer, y as Integer) as Long - возвращает хэндл видимого окна,
+'        содержащего точку (x, y) 
+
+'GetActiveWindow as Long - возвращает хэндл активного окна (не возвращает его потомков)
+
+'GetForegroundWindow as Long - возвращает окно, находящееся сверху
+
+'GetTopWindow As Long - возвращает окно, находящееся сверху - см. отличия в MSDN
+
+'GetDesktopWindow as Long - возвращает хэндл на desktop
+
+'IsWindowVisible (hWnd as Long) as Long - 1, если окно видимое, 0 - нет
+
+'GetWindowCoords (hWnd as Long, x1 as Integer, y1 as Integer, x2 as Integer, y2 as Integer) - возвращает
+'        координаты окна hWnd
+
+'GetWindowText (hWnd as Long) as String - возвращает заголовок окна
+
+'GetWindowTextLength (hWnd as Long) as long - возвращает длину заголовка окна
+
+'SetWindowText (hWnd as Long, title as String) - устанавливает заголовок окна
+
+'GetFocus as Long - возвращает хэндл на окно с фокусом
+
+'SetFocus (hWnd as Long) as Long - устанавливает фокус на окно с заданным хэндлом
+
+'GetCurrentNotesWindow as Long - возвращает хэндл на активную "закладку" Лотуса
+
+'CloseCurrentNotesWindow - закрывает текущую Лотусовую закладку
+
+'MouseClick (x as Integer, y as Integer, button as integer, click as integer) - кликает мышкой
+'        в заданной точке кнопкой button (1 - левая, 2 - правая) click раз (1 или 2)
+'        в лотусовых окнах работает, но виндовые окна не всегда кликаются правильно
+
+'SendKey (s as String) - имитирует клавиатурные нажатия.
+'        пока печатает только строку без использования Ctrl, Alt. и т. п.
+
+'----------------------------------------------------
+
+'Также имеется класс, рисующий прогресс-бар (см. далее в Declarations). Показывает лотусовые проценты
+'выполнения либо в отдельном окне, либо полоской в строке статус-бара
+
+'Там же - класс работы с виндовым popup-menu.
+
+Type Rect
+	x1 As Long
+	y1 As Long
+	x2 As Long
+	y2 As Long
+End Type
+
+Type Point
+	x As Long
+	y As Long
+End Type
+
+Const MK_LBUTTON			= 1
+Const MK_RBUTTON			= 2
+Const MK_SHIFT					= 4
+Const MK_CONTROL			= 8
+Const MK_MBUTTON			= 16
+
+Const WM_LBUTTONDOWN	= 513
+Const WM_LBUTTONUP		= 514
+Const WM_LBUTTONDBLCLK= 515
+Const WM_RBUTTONDOWN	= 516
+Const WM_RBUTTONUP		= 517
+Const WM_RBUTTONDBLCLK= 518
+Const WM_MBUTTONDOWN	= 519
+Const WM_MBUTTONUP		= 520
+Const WM_MBUTTONDBLCLK= 521
+
+Const GW_HWNDFIRST				= 0
+Const GW_HWNDLAST				= 1
+Const GW_HWNDNEXT				= 2
+Const GW_HWNDPREV				= 3
+Const GW_OWNER					= 4
+Const GW_CHILD						= 5
+Const GW_MAX						= 6
+
+' SetWindowPos Flags
+%REM
+Const SWP_NOSIZE					= &h0001
+Const SWP_NOMOVE         		 	= &H0002
+Const SWP_NOZORDER				= &H0004
+Const SWP_NOREDRAW			= &H0008
+Const SWP_NOACTIVATE      		= &H0010
+Const SWP_FRAMECHANGED   	= &H0020  '/* The frame changed: send WM_NCCALCSIZE */
+Const SWP_SHOWWINDOW      	= &H0040
+Const SWP_HIDEWINDOW      		= &H0080
+Const SWP_NOCOPYBITS      		= &H0100
+Const SWP_NOOWNERZORDER   	= &H0200  '/* Don't do owner Z ordering */
+Const SWP_NOSENDCHANGING  	= &H0400  '/* Don't send WM_WINDOWPOSCHANGING */
+Const SWP_DRAWFRAME       		= SWP_FRAMECHANGED
+Const SWP_NOREPOSITION    	= SWP_NOOWNERZORDER
+Const SWP_DEFERERASE      		= &H2000
+Const SWP_ASYNCWINDOWPOS 	= &H4000
+Const HWND_TOP        				= 0
+Const HWND_BOTTOM     			= 1
+Const HWND_TOPMOST    			= -1
+Const HWND_NOTOPMOST  		= -2
+
+%END REM
+Declare Function GetVersion Lib "kernel32.dll" () As Long
+Declare Function SetWindowPosition Lib "user32.dll" Alias "SetWindowPos"(Byval hWnd As Long, Byval hWndInsertAfter As Long, Byval X As Integer, Byval Y As Integer, Byval w As Integer, Byval h As Integer, Byval uFlags As Long) As Integer
+Declare Function GetActiveWindow Lib "user32.dll" () As Long
+Declare Function GetForegroundWindow Lib "user32.dll" () As Long
+Declare Function FindWindow Lib "user32.dll"  Alias "FindWindowA" (Byval ClassName As String, Byval Title As String) As Long
+Declare Function GetWindowTextA Lib "user32.dll" Alias "GetWindowTextA" (Byval hWnd As Long, Byval lpString As String, Byval chMax As Long) As Long
+Declare Function GetWindowTextLength Lib "user32.dll" Alias "GetWindowTextLengthA" (Byval hWnd As Long) As Long
+Declare Function SetWindowText Lib "user32.dll" Alias "SetWindowTextA"(Byval hWnd As Long, Byval Title As String) As Long
+Declare Function GetTopWindow Lib "user32.dll" (Byval hWnd As Long) As Long
+Declare Function GetFocus Lib "user32.dll" () As Long
+Declare Function SetFocus Lib "user32.dll" (Byval hWnd As Long) As Long
+Declare Function IsWindowVisible Lib "user32.dll" (Byval hWnd As Long) As Long
+Declare Function GetWindow Lib "user32.dll" (Byval hWnd As Long, Byval relation As Long) As Long
+Declare Function SetForegroundWindow Lib "user32.dll" (Byval hWnd As Long) As Long
+Declare Function PostMessage Lib "user32.dll" Alias "PostMessageA" (Byval hwnd As Long, Byval uMsg As Long, Byval wParam As Long, Byval vPoint As Long) As Long
+Declare Function SendMessage Lib "user32.dll" Alias "SendMessageA" (Byval hwnd As Long, Byval uMsg As Long, Byval wParam As Long, Byval vPoint As Long) As Long
+Declare Function PostQuitMessage Lib "user32.dll" (Byval errCode As Long) As Long
+Declare Function GetCursorPos Lib "user32.dll" (vPoint As Point) As Long
+Declare Function GetWindowRect Lib "user32.dll" (Byval hWnd As Long, vRect As Rect) As Long
+Declare Function GetWindowInfo Lib "user32.dll" (Byval hWnd As Long, Byval Buf As String) As Long
+Declare Function GetClientRect Lib "user32.dll" (Byval hWnd As Long, Byval Rect As String) As Long
+
+Declare Function GetTempPath Lib "kernel32" Alias "GetTempPathA" (Byval nBufferLength As Long, Byval lpBuffer As String) As Long
+'Возвращает временную директорию Windows
+
+'Declare Function ShellExecute Lib "shell32.dll" Alias "ShellExecuteA" (Byval hwnd As Long, Byval lpszOp As String, Byval lpszFile As String, Byval lpszParams As String, _
+'Byval LpszDir As String, Byval FsShowCmd As Long) As Long
+'запускает любой указанный файл установленным в Windows приложением
+
+Declare Function SetCursorPosition Lib "user32.dll" Alias "SetCursorPos" (Byval x As Long, Byval y As Long) As Long
+Declare Function GetCapture Lib "user32.dll" () As Long
+Declare Function ReleaseCapture Lib "user32.dll" () As Long
+Declare Function SetCapture Lib "user32.dll" (hWnd As Long) As Long
+
+Declare Function GetAsyncKeyState Lib "user32.dll" Alias "GetAsyncKeyState" (Byval nVirtKey As Long) As Integer
+
+Declare Function WindowFromPoint Lib "user32.dll" (Byval vPoint As Double) As Long
+Declare Function ChildWindowFromPoint Lib "user32.dll" (Byval hWnd As Long, Byval vPoint As Double) As Long
+Declare Function GetDesktopWindow Lib "user32.dll" () As Long
+Declare Function GetParentWindow Lib "user32.dll" Alias "GetParent" (Byval hWnd As Long) As Long
+
+Declare Function SetWindowLong Lib "user32.dll" Alias "SetWindowLongA" (Byval hWnd As Long, Byval nIndex As Long, Byval Style As Long) As Long
+Declare Function GetWindowLong Lib "user32.dll" Alias "GetWindowLongA" (Byval hWnd As Long, Byval nIndex As Long) As Long
+
+Declare Function GetDC Lib "user32.dll" (Byval hwnd As Long) As Long
+Declare Function GetPixel Lib "gdi32.dll" (Byval hDc As Long, Byval x As Integer, Byval y As Integer) As Long 
+
+Declare Function GetLastError Lib "kernel32.dll" () As Long
+Declare Function IsZoomed Lib "user32.dll" (Byval hwnd As Long) As Long
+
+'Declare Function Memccpy Lib "msvcrt.dll" Alias "_memccpy" (dest As Any, Byval src As String, Byval c As Long, Byval count As Long) As Long
+Declare Function Memcpy Lib "msvcrt.dll" Alias "memcpy" (dest As Any, Byval src As String, Byval count As Long) As Long
+
+Declare Function GetCurrentNotesWindow Lib "nnotesws.dll" Alias "NEMGetCurrentSubprogramWindow" () As Long
+Declare Private Function NEMStopSubprogramWindow Lib "nnotesws.dll" (Byval hwnd As Long) As Integer
+
+'----------------------------------------- Windows Registry --------------------------------------------------
+Const HKEY_CLASSES_ROOT = &H80000000
+Const HKEY_CURRENT_USER = &H80000001
+Const HKEY_LOCAL_MACHINE = &H80000002
+Const HKEY_USERS = &H80000003
+Const HKEY_CURRENT_CONFIG = &H80000005
+Const HKEY_DYN_DATA = &H80000006
+Const REG_SZ = 1 ' Unicode nul terminated string
+Const REG_BINARY = 3 ' Free form binary
+Const REG_DWORD = 4 ' 32-bit number
+Const REG_ERROR_SUCCESS = 0&
+
+Declare Function RegCloseKey Lib "advapi32.dll" (Byval hKey As Long) As Long
+Declare Function RegOpenKey Lib "advapi32.dll" Alias "RegOpenKeyA" (Byval hKey As Long, Byval lpSubKey As String, phkResult As Long) As Long
+Declare Function RegQueryValueEx Lib "advapi32.dll" Alias "RegQueryValueExA" (Byval hKey As Long, Byval lpValueName As String, Byval lpReserved As Long, lpType As Long, Byval lpData As String, lpcbData As Long) As Long
+Declare Function RegQueryValueSizeEx Lib "advapi32.dll" Alias "RegQueryValueExA" (Byval hKey As Long, Byval lpValueName As String, Byval lpReserved As Long, lpType As Long, Byval ZERO As Long, lpcbData As Long) As Long
+Declare Function RegSetValueEx Lib "advapi32.dll" Alias "RegSetValueExA" (Byval hKey As Long, Byval lpValueName As String, Byval lpReserved As Long, Byval lpType As Long, Byval lpData As String, Byval cbData As Long) As Long
+Declare Function RegDeleteValue Lib "advapi32.dll" Alias "RegDeleteValueA" (Byval hKey As Long, Byval lpValueName As String) As Long
+
+'----------------------------------------- ProgressBar --------------------------------------------------
+Declare Private Function NEMProgressBegin Lib "nnotesws.dll" ( Byval wFlags As Integer ) As Long
+Declare Private Sub NEMProgressDeltaPos Lib "nnotesws.dll" ( Byval hwnd As Long, Byval dwIncrement As Long )
+Declare Private Sub NEMProgressEnd Lib "nnotesws.dll" ( Byval hwnd As Long )
+Declare Private Sub NEMProgressSetBarPos Lib "nnotesws.dll" ( Byval hwnd As Long, Byval dwPos As Long)
+Declare Private Sub NEMProgressSetBarRange Lib "nnotesws.dll" ( Byval hwnd As Long, Byval dwMax As Long )
+Declare Private Sub NEMProgressSetText Lib "nnotesws.dll" ( Byval hwnd As Long, Byval pcszLine1 As Lmbcs String, Byval pcszLine2 As Lmbcs String )
+
+Declare Private Function NEMEnableWaitCursor Lib "nnotesws.dll" () As Long
+Declare Private Function NEMDisableWaitCursor Lib "nnotesws.dll" () As Long
+
+Private Const NPB_TWOLINE = 3 'окно с двумя строками текста внутри
+Private Const NPB_ONELINE = 2 'окно с одной строкой текста внутри
+Private Const NPB_STATUSBAR = 32 'полоска в статус-баре
+
+'-------------------------------------- Shortcut menu ----------------------------------------
+Declare Private Function GetSystemMenu Lib "user32.dll" (Byval hwnd As Long, Byval bRevert As Long) As Long
+Declare Private Function CreatePopupMenu Lib "user32.dll" () As Long
+Declare Private Function DestroyMenu Lib "user32.dll" (Byval hMenu As Long) As Long
+Declare Private Function GetMenuItemCount Lib "user32.dll" (Byval hMenu As Long) As Long
+Declare Private Function SetMenu Lib "user32.dll" (Byval hWnd As Long, Byval hMenu As Long) As Long
+Declare Private Function GetMenu Lib "user32.dll" (Byval hWnd As Long) As Long
+Declare Private Function AppendMenu Lib "user32.dll" Alias "AppendMenuA" (Byval hMenu As Long,_
+Byval uFlags As Long, Byval uIDNewItem As Long, Byval lpNewItem As String) As Long
+Declare Private Function GetMenuString Lib "User32.dll" Alias "GetMenuStringA" (Byval hMenu As Long,_
+Byval uIDItem As Long, Byval lpString As String, Byval nMaxLen As Long, Byval uFlags As Long) As Long
+Declare Private Function TrackPopupMenu Lib "user32.dll" (Byval hMenu As Long,_
+Byval uFlags As Long, Byval x As Integer, Byval y As Integer, Byval nReserved As Integer,_
+Byval hWnd As Long, Byval prcRect As Long) As Long
+Declare Private Function DrawMenuBar Lib "user32.dll" (Byval hWnd As Long) As Long
+Declare Private Function EnableMenuItem Lib "user32.dll" (Byval hMenu As Long,_
+Byval uIDEnableItem As Long, Byval uEnable As Long) As Long
+Declare Private Function CheckMenuItem Lib "user32.dll" (Byval hMenu As Long,_
+Byval uIDCheckItem As Long, Byval uCheck As Long) As Long
+Declare Private Function DeleteMenu Lib "user32.dll" (Byval hMenu As Long, Byval uPosition As Long,_
+Byval uFlags As Long) As Long
+Declare Private Function InsertMenu Lib "user32.dll" Alias "InsertMenuA" (Byval hMenu As Long, Byval uPosition As Long,_
+Byval uFlags As Long, Byval uIDNewItem As Long, Byval lpNewItem As String) As Long
+Declare Private Function GetMenuItemID Lib "user32.dll" (Byval hMenu As Long, Byval uPosition As Long) As Long
+Declare Private Function GetSubMenu Lib "user32.dll" (Byval hMenu As Long, Byval uPosition As Long) As Long
+Declare Private Function HiliteMenuItem Lib "user32.dll" (Byval hwnd As Long, Byval hMenu As Long, Byval uItemHilite As Long, Byval uHilite As Long) As Long
+Declare Private Function SetMenuDefaultItem Lib "user32.dll" (Byval hMenu As Long, Byval uItem As Long, Byval fByPos As Long) As Long
+Declare Private Function CheckMenuRadioItem Lib "user32.dll" (Byval hMenu As Long, Byval idFirst As Long,_
+Byval idLast As Long, Byval idCheck As Long, Byval uFlags As Long) As Long
+Declare Private Function GetMenuItemRect Lib "user32.dll" (Byval hWnd As Long, hMenu As Long, Byval uItem As Long, lprcItem As Rect) As Long
+
+Private MenuId As Long 'глобальный счетчик идентификаторов меню
+
+Public Class LNProgressbar
+	hwnd As Long
+	Private rang As Long
+	Private posit As Long
+	Sub New(NPB_Type As Integer)
+'Set-up the progress bar on the screen
+		If NPB_Type=1 Then
+			hwnd = NEMProgressBegin(NPB_ONELINE)			
+		Elseif NPB_Type=2 Then
+			hwnd = NEMProgressBegin(NPB_TWOLINE)
+		Else
+			hwnd = NEMProgressBegin(NPB_STATUSBAR)
+		End If
+		rang=0
+		posit=0
+	End Sub
+	
+	Sub SetText(FirstLineText As String,SecondLineText As String)
+'Display the text in progress bar
+		NemProgressSetText hwnd, FirstLineText,SecondLineText
+	End Sub
+	
+	Property Set Position As Long
+		If Position>=0 Then
+			If Position>=rang Then
+				posit=rang
+			Else
+				posit=Position
+			End If
+			NEMProgressSetBarPos hwnd, posit
+		End If
+	End Property
+	
+	Property Get Position As Long
+		Position=posit
+	End Property
+	
+	Property Get Range As Long
+		Range=rang
+	End Property
+	
+	Property Set Range As Long
+		If Range<0 Then
+			Exit Property
+		Else
+			rang=Range
+			NEMProgressSetBarRange hwnd, rang
+		End If
+	End Property
+	
+	Sub IncPosition (DPos As Long)
+' This function adds the number in DPOS to the current ProgressPos
+		posit=posit+DPos
+		NEMProgressDeltaPos hwnd, DPos
+	End Sub
+	
+	Sub Delete
+'Terminate the progress bar on the screen
+		NEMProgressEnd hwnd
+	End Sub
+End Class
+
+Class PopupMenu
+	Private ParentMenuArray As Variant
+	Private SubMenuArray As Variant
+	Private Count As Long
+	Private hMenu As Long	
+	Private hWnd As Long
+	Private xPos As Long
+	Private yPos As Long
+	Private xPos1 As Long
+	Private yPos1 As Long
+	Private xPos2 As Long
+	Private yPos2 As Long
+	Private AnimationFlag As Long
+	Private SelectedID As Long
+	Public Sub New
+		Dim x As Integer
+		Dim y As Integer
+		Dim x1 As Integer
+		Dim y1 As Integer
+		Dim ActionHwnd As Long
+		Call GetCursorPosition (x, y)
+		ActionHwnd=GetWindowFromPoint(x,y)
+		Call GetWindowCoords(ActionHwnd, x,y,x1,y1)
+		xPos1=x
+		yPos1=y1
+		xPos2=x1
+		yPos2=y1
+		hWnd=GetActiveWindow
+		hMenu=CreatePopupMenu
+		xPos=-1
+		yPos=-1
+		If MenuId=0 Then MenuId=214748300
+		AnimationFlag=0
+		Redim SubMenuArray (1 To 1) As Variant
+		SubMenuArray(1)=""
+		ParentMenuArray=SubMenuArray
+	End Sub
+	
+	Public Function SetPosition (x As Variant, y As Variant)
+		xPos=Clng(x)
+		yPos=Clng(y)
+	End Function
+	
+	Public Function GetPosition (x As Variant, y As Variant)
+		x=xPos
+		y=yPos
+	End Function
+	
+	Public Function GetItem (pos As Variant) As Variant
+		GetItem=""
+		If hMenu=0 Then Exit Function
+		Dim menuString As String*128
+		Dim l As Long
+		Dim p As Long
+		p=Clng(pos-1)
+		l=GetMenuString (hMenu, p, menuString, 0, 1024)+1
+		Call GetMenuString (hMenu, p, menuString, l, 1024)
+		For i=1 To l-1
+			s=Mid(MenuString,i,1)
+			GetItem=GetItem+s
+		Next
+	End Function
+	
+	Public Function AppendItem (itemName As Variant) As Variant
+		If hMenu=0 Then Exit Function
+		MenuId=MenuId-1
+		Count=Count+1
+		Call AppendMenu (hMenu, 0, menuId, Cstr(itemName))
+		Call Arrays_AppendElement(SubMenuArray, Nothing)
+	End Function
+	
+	Public Function AppendItemArray (itemNames As Variant) As Variant
+		If hMenu=0 Then Exit Function
+		Forall x In itemNames
+			Call AppendItem(x)
+		End Forall
+%REM
+		If Not Isarray (itemNames) Then
+			Menuid=Menuid-1
+			Count=Count+1
+			Call AppendMenu (hMenu, 0, MenuId, Cstr(itemNames))
+		Else
+			Forall x In itemNames
+				Menuid=Menuid-1
+				Count=Count+1
+				Call AppendMenu (hMenu, 0, MenuId, Cstr(x))
+			End Forall
+		End If
+%END REM
+	End Function
+	
+	Public Function ItemCount As Long
+		If hMenu=0 Then Exit Function
+		ItemCount=GetMenuItemCount(hMenu)
+	End Function
+	
+	Public Function InsertItem (itemName As Variant, pos As Variant) As Variant
+		If hMenu=0 Then Exit Function
+		Menuid=Menuid-1
+		Count=Count+1
+		Call InsertMenu (hMenu, Clng(pos-1), 1024, MenuId, Cstr(itemName))
+		Call Arrays_InsertElement(SubMenuArray, Nothing, pos)
+	End Function
+	
+	Public Function AppendSubmenu (menu As Variant, ItemName As Variant) As Variant
+		If hMenu=0 Then Exit Function
+		Dim h As Long
+		h=menu.Handle
+		If h=0 Then Exit Function
+		Call AppendMenu (hMenu, 16, h, Cstr(itemName))
+		Call Arrays_AppendElement(SubMenuArray, menu)
+		Call menu.AddParentMenu (Me)
+	End Function
+	
+	Public Function InsertSubmenu (menu As Variant, itemName As Variant, pos As Variant) As Variant
+		If hMenu=0 Then Exit Function
+		Dim h As Long
+		h=menu.Handle
+		If h=0 Then Exit Function
+		Call InsertMenu (hMenu, Clng(pos-1), 1040, h, Cstr(itemName))
+		Call Arrays_InsertElement(SubMenuArray, menu, pos)
+		Call menu.AddParentMenu (Me)
+	End Function
+	
+	Public Function AppendSeparator
+		If hMenu=0 Then Exit Function
+		Call AppendMenu (hMenu, 2048, 0,"")
+		Call Arrays_AppendElement(SubMenuArray, Nothing)
+	End Function
+	
+	Public Function InsertSeparator (pos As Variant)
+		If hMenu=0 Then Exit Function
+		Call InsertMenu (hMenu, Clng(pos-1), 3072, 0, "")
+		Call Arrays_InsertElement(SubMenuArray, Nothing, pos)
+	End Function
+	
+	Public Function DeleteItem (pos As Variant) As Variant
+		If hMenu=0 Then Exit Function
+		Call DeleteMenu(hMenu, Clng(pos-1), 1024)
+		If Not SubMenuArray(pos) Is Nothing Then
+			Set menu=SubMenuArray(pos)
+			Call menu.RemoveParentMenu(Me)
+		End If
+		Call Arrays_RemoveElement(SubMenuArray, pos)
+	End Function
+	
+	Public Function AppendBreak(itemName As Variant)
+		If hMenu=0 Then Exit Function
+		Menuid=Menuid-1
+		Call AppendMenu (hMenu, 64, MenuId, Cstr(ItemName))
+		Call Arrays_AppendElement(SubMenuArray, Nothing)
+	End Function
+	
+	Public Function InsertBreak (itemName As Variant, pos As Variant)
+		If hMenu=0 Then Exit Function
+		Menuid=Menuid-1
+		Call InsertMenu (hMenu, Clng(pos-1), 1088, MenuId, Cstr(itemName))
+		Call Arrays_InsertElement(SubMenuArray, Nothing, pos)
+	End Function
+	
+	Public Function AppendBarBreak (itemName As Variant)
+		If hMenu=0 Then Exit Function
+		Menuid=Menuid-1
+		Call AppendMenu (hMenu, 32, MenuId, Cstr(itemName))
+		Call Arrays_AppendElement(SubMenuArray, Nothing)
+	End Function
+	
+	Public Function InsertBarBreak (itemName As Variant, pos As Variant)
+		If hMenu=0 Then Exit Function
+		Menuid=Menuid-1
+		Call InsertMenu (hMenu, Clng(pos-1), 1056, MenuId, Cstr(itemName))
+		Call Arrays_InsertElement(SubMenuArray, Nothing, pos)
+	End Function
+	
+	Public Function EnableItem (pos As Variant) As Variant
+		If hMenu=0 Then Exit Function
+		Call EnableMenuItem (hMenu, Clng(pos-1), 1024)	
+	End Function
+	
+	Public Function DisableItem (pos As Variant) As Variant
+		If hMenu=0 Then Exit Function
+		Call EnableMenuItem (hMenu, Clng(pos-1), 1025)
+	End Function
+	
+	Public Function CheckItem(pos As Variant) As Variant
+		If hMenu=0 Then Exit Function
+		Call CheckMenuItem (hMenu, Clng(pos-1), 1032)
+	End Function
+	
+	Public Function UncheckItem(pos As Variant) As Variant
+		If hMenu=0 Then Exit Function
+		Call CheckMenuItem (hMenu, Clng(pos-1), 1024)
+	End Function
+	
+	Public Function CheckRadioItem (pos As Variant) As Variant
+		If hMenu=0 Then Exit Function
+		Call CheckMenuRadioItem(hMenu, Clng(pos-1), Clng(pos-1), Clng(pos-1), 1024)
+	End Function
+	
+	Property Get Handle As Long
+		Handle=hMenu
+	End Property
+	
+	Public Function Show As Variant
+		Show=""		
+		If hMenu=0 Then Exit Function
+		If hWnd=0 Then Exit Function
+		Dim MenuString As String*256  ' akondr теперь буфер на 256 символов
+		
+		Call SetForegroundWindow(hWnd)
+		Dim x As Integer
+		Dim y As Integer
+		If xPos<0 Or yPos<0 Then
+			Call GetCursorPosition (x, y)
+		Else
+			x=xPos
+			y=yPos
+		End If
+		Dim l As Long
+		Dim r As Long
+		
+		Dim ns As New NotesSession
+		Dim ver As String
+		ver = Strleft(Strright (ns.NotesVersion, " "), ".")
+		
+		If Cint(ver)< 8 Then _   
+		NEMDisableWaitCursor
+		r=TrackPopupMenu (hMenu, 256+animationFlag, x, y, 0, GetFocus, 0)
+		
+		If Cint(ver)< 8 Then _
+		NEMEnableWaitCursor
+		
+		SelectedID=r
+		l=GetMenuString (hMenu, r, menuString, 0, 0)+1
+		Call GetMenuString (hMenu, r, menuString, l, 0)
+		Call PostMessage(hWnd, 0, 0, 0)
+		For i=1 To l-1
+			s=Mid(MenuString,i,1)
+			Show=Show+s
+		Next
+	End Function
+	
+	Public Function ShowAsAction As String
+		ShowAsAction=""
+		If hMenu=0 Then Exit Function
+		If hWnd=0 Then Exit Function
+		Dim MenuString As String*128
+		Call SetForegroundWindow(hWnd)
+		Dim l As Long
+		Dim r As Long
+		Dim ns As New NotesSession
+		Dim ver As String
+		ver = Strleft(Strright (ns.NotesVersion, " "), ".")
+		
+		If Cint(ver)< 8 Then _  
+		NEMDisableWaitCursor
+		r=TrackPopupMenu (hMenu, 256+AnimationFlag, xPos1, yPos1, 0, GetFocus, 0)
+		If Cint(ver)< 8 Then _
+		NEMEnableWaitCursor
+		SelectedID=r
+		l=GetMenuString (hMenu, r, menuString, 0, 0)+1
+		Call GetMenuString (hMenu, r, menuString, l, 0)
+		Call PostMessage(hWnd, 0, 0, 0)
+		For i=1 To l-1
+			s=Mid(MenuString,i,1)
+			ShowAsAction=ShowAsAction+s
+		Next
+	End Function
+	
+	Public Function HiliteItem(pos As Variant)
+		If hWnd=0 Then Exit Function
+		If hMenu=0 Then Exit Function
+		Call HiliteMenuItem(hwnd,hmenu, pos-1, 1152)
+	End Function
+	
+	Public Function UnhiliteItem (pos As Variant)
+		If hWnd=0 Then Exit Function
+		If hMenu=0 Then Exit Function
+		Call HiliteMenuItem(hwnd,hmenu, pos-1, 1024)
+	End Function
+	
+	Public Function SetDefaultItem (pos As Variant)
+		If hMenu=0 Then Exit Function
+		Call SetMenuDefaultItem(hMenu,pos-1, 1)
+	End Function
+	
+	Public Function ClearDefaultItem
+		If hMenu=0 Then Exit Function
+		Call SetMenuDefaultItem(hMenu,-1, 1)
+	End Function
+	
+	Public Function ShowAsRightAction As String
+		ShowAsRightAction=""
+		If hMenu=0 Then Exit Function
+		If hWnd=0 Then Exit Function
+		Dim MenuString As String*128
+		Call SetForegroundWindow(hWnd)
+		Dim l As Long
+		Dim r As Long
+		Dim ns As New NotesSession
+		Dim ver As String
+		ver = Strleft(Strright (ns.NotesVersion, " "), ".")
+		
+		If Cint(ver)< 8 Then _  
+		NEMDisableWaitCursor
+		r=TrackPopupMenu (hMenu, 256+AnimationFlag, xPos2, yPos2, 0, GetFocus, 0)
+		If Cint(ver)< 8 Then _
+		NEMEnableWaitCursor
+		SelectedID=r
+		l=GetMenuString (hMenu, r, menuString, 0, 0)+1
+		Call GetMenuString (hMenu, r, menuString, l, 0)
+		Call PostMessage(hWnd, 0, 0, 0)
+		For i=1 To l-1
+			s=Mid(MenuString,i,1)
+			ShowAsRightAction=ShowAsRightAction+s
+		Next
+	End Function
+	
+	Public Function GetSelectedPosition As Variant
+		Redim arr (0 To 0) As Integer
+		arr(0)=0
+		Call GetSelectedPos(hMenu, arr)
+		GetSelectedPosition=arr
+	End Function
+	
+	Private Function GetSelectedPos (hMenuLoc As Long, arr As Variant) As Variant
+		GetSelectedPos=False
+		Dim i As Long
+		Dim hMenu1 As Long
+		For i=0 To GetMenuItemCount(hMenuLoc)
+			ItemID=GetMenuItemID(hMenuLoc,i)
+			If itemId=-1 Then 'выбрана менюшка
+				hMenu1=GetSubMenu(hMenuLoc,i)
+				If hMenu1<>0 Then
+					arr(Ubound(arr))=i+1
+					Call Arrays_AppendElement(arr,0)
+					If GetSelectedPos(hMenu1,arr)=True Then
+						GetSelectedPos=True
+						Exit Function
+					Else
+						Call Arrays_RemoveElement(arr,Ubound(arr))
+						arr(Ubound(arr))=0
+					End If
+				End If
+			Else
+				If itemId=SelectedID Then
+					arr(Ubound(arr))=i+1
+					GetSelectedPos=True
+					Exit Function
+				End If
+			End If
+		Next
+	End Function
+	
+	Public Function GetSelectedItems As Variant
+		Redim arr (0 To 0) As String
+		Call GetSelectedItem(hMenu, arr)
+		GetSelectedItems=arr
+	End Function
+	
+	Private Function GetSelectedItem (hMenuLoc As Long, arr As Variant) As Variant
+		GetSelectedItem=False
+		Dim i As Long
+		Dim hMenu1 As Long
+		Dim menuString As String*128
+		Dim l As Long
+		Dim p As Long
+		
+		For i=0 To GetMenuItemCount(hMenuLoc)
+			ItemID=GetMenuItemID(hMenuLoc,i)
+			If itemId=-1 Then 'выбрана менюшка
+				hMenu1=GetSubMenu(hMenuLoc,i)
+				If hMenu1<>0 Then
+					l=GetMenuString (hMenuLoc, i, menuString, 0, 1024)+1
+					Call GetMenuString (hMenuLoc, i, menuString, l, 1024)
+					ss=""
+					For k=1 To l-1
+						s=Mid(MenuString,k,1)
+						ss=ss+s
+					Next
+					Call Arrays_AppendElement(arr,ss)
+					If GetSelectedItem(hMenu1,arr)=True Then
+						GetSelectedItem=True
+						Exit Function
+					Else
+						Call Arrays_RemoveElement(arr,Ubound(arr))
+					End If
+				End If
+			Else
+				If itemId=SelectedID Then
+					l=GetMenuString (hMenuLoc, i, menuString, 0, 1024)+1
+					Call GetMenuString (hMenuLoc, i, menuString, l, 1024)
+					ss=""
+					For k=1 To l-1
+						s=Mid(MenuString,k,1)
+						ss=ss+s
+					Next
+					Call Arrays_AppendElement(arr,ss)
+					GetSelectedItem=True
+					Exit Function
+				End If
+			End If
+		Next
+	End Function
+	
+	Property Get Animation As Variant
+		If AnimationFlag=0 Then Animation=True Else Animation=False
+	End Property
+	
+	Property Set Animation As Variant
+		v=GetVersion() And &H00FF
+		v1=(v And &HF0)/256
+		v2=v And &H0F
+		If v1=0 And (v2=4 Or v2=3)Then 'NT 3, 4
+			AnimationFlag=0
+		Else 'другое
+			If Animation=True Then AnimationFlag=0 Else AnimationFlag=16384
+		End If
+	End Property
+	
+	Public Sub Delete
+		If hMenu<>0 Then Call DestroyMenu (hMenu)
+		MenuId=MenuId+Count
+	End Sub
+	
+	Public Function GetSubMenuArray As Variant
+		If hMenu=0 Then Exit Function
+		GetSubMenuArray=SubMenuArray
+	End Function
+	
+	Public Function GetParentMenuArray As Variant
+		If hMenu=0 Then Exit Function
+		GetParentMenuArray=ParentMenuArray
+	End Function
+	
+	Public Function AddParentMenu (menu As Variant) As Variant
+		Call Arrays_AppendElement(ParentMenuArray, menu)
+		AddParentMenu=True
+	End Function
+	
+	Public Function RemoveParentMenu (menu As Variant) As Variant
+		If Not Isarray(ParentMenuArray) Then Exit Function
+		Dim i As Integer
+		For i=Lbound(ParentMenuArray) To Ubound(ParentMenuArray)
+			If ParentMenuArray(i) Is menu Then
+				Call Arrays_RemoveElement(ParentMenuArray, i)
+				Exit For
+			End If
+		Next
+		RemoveParentMenu=True
+	End Function	
+End Class
+
+'++LotusScript Development Environment:2:1:GetWindowText:1:8
+Function GetWindowText (hWnd As Long) As String
+	Dim s As String*128
+	Call GetWindowTextA(hWnd, s, GetWindowTextLength(hWnd)*2)
+	GetWindowText=Cstr(s)
+End Function
+
+'++LotusScript Development Environment:2:1:MouseClick:2:8
+
+Function MouseClick (x As Integer, y As Integer, mButton As Integer, click As Integer)
+	Dim hWnd As Long
+	hWnd=GetWindowFromPoint(x,y)
+	Dim x1 As Integer
+	Dim y1 As Integer
+	Dim x2 As Integer
+	Dim y2 As Integer
+	Dim xPos As Integer
+	Dim yPos As Integer
+	Call GetWindowCoords(hWnd, x1,y1,x2,y2)
+	xPos=x-x1
+	yPos=y-y1
+	Call ReleaseCapture
+	Dim mb As Long
+	If mButton=2 Then mb=2 Else mb=1
+	Dim l As Long
+	l=xPos+65536*yPos
+	If click=2 Then
+		If mb=1 Then
+			Call SendMessage (hWnd, 513, 1, l)
+			Call SendMessage (hWnd, 514, 0, l)
+			Call SendMessage (hWnd, 515, 1, l)
+			Call SendMessage (hWnd, 514, 0, l)
+		Else
+			Call SendMessage (hWnd, 516, 1, l)
+			Call SendMessage (hWnd, 514, 0, l)
+			Call SendMessage (hWnd, 518, 1, l)
+			Call SendMessage (hWnd, 514, 0, l)
+		End If
+	Else
+		If mb=1 Then
+			Call SendMessage (hWnd, 513, 1, l)
+			Call SendMessage (hWnd, 514, 0, l)
+		Else
+			Call SendMessage (hWnd, 516, 1, l)
+			Call SendMessage (hWnd, 514, 0, l)
+		End If
+	End If
+End Function
+
+'++LotusScript Development Environment:2:1:GetCursorPosition:2:8
+
+Function GetCursorPosition (x As Integer, y As Integer) As Long
+	Dim p As Point
+	Call GetCursorPos (p)
+	x=p.x
+	y=p.y
+End Function
+
+'++LotusScript Development Environment:2:1:CoordToString:2:8
+
+Private Function CoordToString (x As Integer, y As Integer) As String
+	Dim s As String*8
+	x1=x And 255
+	x2=(x And 65280)/256
+	y1=y And 255
+	y2=(y And 65280)/256
+	
+	s=Chr$(x1)+Chr$(x2)+Chr$(0)+Chr$(0)+Chr$(y1)+Chr$(y2)+Chr$(0)+Chr$(0)
+	CoordToString=s
+End Function
+
+'++LotusScript Development Environment:2:1:GetWindowFromPoint:2:8
+
+Function GetWindowFromPoint (x As Integer, y As Integer) As Long
+	GetWindowFromPoint=WindowFromPoint (CoordToDouble(x,y))
+End Function
+
+'++LotusScript Development Environment:2:1:CoordToDouble:2:8
+
+Private Function CoordToDouble (x As Integer, y As Integer) As Double
+	Dim vPointStr As String*8
+	vPointStr=CoordToString(x,y)
+	Dim vPoint As Double
+	Call memcpy(vPoint, vPointStr, 8)
+	CoordToDouble=vPoint
+End Function
+
+'++LotusScript Development Environment:2:1:StringToCoord:2:8
+
+Function StringToCoord (s As String, x As Integer, y As Integer)
+	Dim b(1 To 8) As Integer
+	For i=1 To 8
+		b(i)=Asc(Mid(s,i,1))
+	Next
+	x=b(1)+b(2)*256
+	y=b(5)+b(6)*256
+End Function
+
+'++LotusScript Development Environment:2:1:GetWindowCoords:2:8
+
+Function GetWindowCoords (hWnd As Long, x1 As Integer, y1 As Integer, x2 As Integer, y2 As Integer)
+	Dim r As Rect
+	Call GetWindowRect(hWnd,r)
+	x1=r.x1
+	y1=r.y1
+	x2=r.x2
+	y2=r.y2
+End Function
+
+'++LotusScript Development Environment:2:1:SendKey:2:8
+
+Function SendKey (s As String) As Long
+	Dim i As Integer
+	Dim k As Long
+	Dim lParam As Long
+	lParam=1
+	hWnd=GetFocus
+	
+	For i=1 To Len(s)
+		k=Asc(Mid(s,i,1))
+		r=PostMessage (hWnd, 256, k, lParam) '- WM_KEYDOWN
+		r=PostMessage (hWnd, 258, k, lParam) '- WM_CHAR
+		r=PostMessage (hWnd, 257, k, lParam) '- WM_KEYUP
+	Next
+End Function
+
+'++LotusScript Development Environment:2:1:CloseActiveWindow:2:8
+
+Function CloseActiveWindow
+	Call PostQuitMessage (0)
+End Function
+
+'++LotusScript Development Environment:2:2:CloseCurrentNotesWindow:2:8
+
+Sub CloseCurrentNotesWindow
+	Call NEMStopSubprogramWindow(GetCurrentNotesWindow)
+End Sub
+
+'++LotusScript Development Environment:2:1:MenuMultipleSelection:2:8
+
+Function MenuMultipleSelection (ArrayToChoose As Variant, ArrayChosen As Variant,CancelItem As Variant, OkItem As Variant, ShowType As Variant) As Variant
+	On Error Goto handler
+	FuncName="MenuMultipleSelection"
+'	Redim arr(0 To 0) As Long
+'	arr(0)=0
+	MenuMultipleSelection=0
+	
+	Dim resultArray As Variant
+	Redim resultArray(0 To 0) As Variant
+	If Isarray(ArrayChosen) Then
+		resultArray=ArrayChosen
+	Else
+		resultArray(0)=ArrayChosen
+	End If
+	
+	Dim sourceArray As Variant	
+	Redim sourceArray(0 To 0) As Variant
+	If Isarray(ArrayToChoose) Then
+		sourceArray=ArrayToChoose
+	Else
+		sourceArray(0)=ArrayToChoose
+	End If
+	
+	If sourceArray(0)="" Then Goto endh
+	Dim Menu As New PopupMenu
+	Call Menu.AppendItemArray(sourceArray)
+	
+	Call menu.AppendSeparator
+	Call menu.AppendItem("Выделить все")
+	Call menu.AppendItem("Снять выделение")
+	
+	Call menu.AppendSeparator
+	If CancelItem<>"" Then
+		Call menu.AppendItem(CancelItem)
+	End If
+	If OkItem="" Then
+		OkItem="Завершить выбор"
+	End If
+	Call menu.AppendItem(OkItem)
+	
+	lb=Lbound(sourceArray)
+	ub=Ubound(sourceArray)
+	Forall a In resultArray
+		p=Arraygetindex(sourceArray,a)
+		If Not Isnull(p) Then
+			Call menu.CheckItem(p-lb+1)
+		End If
+	End Forall
+	Dim x As Integer
+	Dim y As Integer
+	st=Cstr(ShowType)
+	Select Case st
+	Case "1","":
+		Call GetCursorPosition(x,y)
+		Call menu.SetPosition(x,y)
+		r=menu.Show
+	Case "2":
+		r=menu.ShowAsAction
+	Case "3":
+		r=menu.ShowAsRightAction
+	End Select
+	menu.Animation=False
+	Do While True
+		If r="Выделить все" Then
+			If CancelItem="" Then c=4 Else c=5
+			For i=1 To menu.ItemCount-c
+				Call menu.CheckItem(i)
+			Next
+			resultArray=sourceArray
+		Elseif r="Снять выделение" Then
+			For i=1 To menu.ItemCount
+				Call menu.UncheckItem(i)
+			Next
+			Redim resultArray(0 To 0) As Variant
+			resultArray(0)=""
+		Elseif r="" Or r=CancelItem Or r=OkItem Then
+			Exit Do
+		Else
+			p=menu.GetSelectedPosition
+			p=p(0)
+'			p1=Arraygetindex(resultArray,r)
+'			If Not Isnull(p1) Then			
+			p1=p-1+Lbound(SourceArray)
+			p2 = Arraygetindex(resultArray, SourceArray(p1)) ' добавил М. Канаков 10.01.08
+'			If Not Isnull(Arraygetindex(resultArray, SourceArray(p1) )) Then ' закомментировал М. Канаков 10.01.08
+			If Not Isnull(p2) Then ' добавил М. Канаков 10.01.08
+				Call menu.UnCheckItem(p)
+'				Call Arrays_RemoveElement(resultArray,p1) ' закомментировал М. Канаков 10.01.08
+				Call Arrays_RemoveElement(resultArray,p2) ' добавил М. Канаков 10.01.08
+			Else
+				Call menu.CheckItem(p)
+'				Call Arrays_AppendElement(resultArray,r)
+				Call Arrays_AppendElement(resultArray, ArrayToChoose(p1))
+			End If
+		End If
+		
+'		Call menu.HiliteItem(p)
+		st=Cstr(ShowType)
+		Select Case st
+		Case "1","":
+			r=menu.Show
+		Case "2":
+			r=menu.ShowAsAction
+		Case "3":
+			r=menu.ShowAsRightAction
+		End Select
+	Loop
+	
+	If r=CancelItem Or r="" Then 
+		MenuMultipleSelection=""
+		Goto endh
+	End If
+	If resultArray(Lbound(resultArray))="" Then 
+		Goto endh
+	End If
+	MenuMultipleSelection=Arrays_InitArray("")
+	For i=lb To ub
+		p=Arraygetindex(resultArray,sourceArray(i))
+		If Not Isnull(p) Then
+			Call Arrays_AppendElement(MenuMultipleSelection,i)	
+		End If
+	Next
+	
+	Goto endh
+handler:
+	If Not menu Is Nothing Then Delete menu
+	ErrorString="("+LibName+") "+FuncName+", стр. "+Cstr(Erl)+Chr(10)+Error$
+	Error Err, ErrorString
+endh:
+	If Not menu Is Nothing Then Delete menu
+End Function
+
+'++LotusScript Development Environment:2:1:SetWindowCoords:2:8
+
+Function SetWindowCoords (hWnd As Long, x1 As Integer, y1 As Integer, x2 As Integer, y2 As Integer)
+	Dim xx1 As Integer, yy1 As Integer, xx2 As Integer, yy2 As Integer
+	Call GetWindowCoords(hWnd, xx1, yy1, xx2, yy2)
+	Call SetWindowPosition (hWnd, 0 ,x1-xx1, y1-yy1, x2-x1, y2-y1,&H0044)
+End Function
+
+'++LotusScript Development Environment:2:1:MouseDrag:2:8
+
+Function MouseDrag (x1 As Integer, y1 As Integer, x2 As Integer, y2 As Integer, steps As Integer)
+	Dim hWnd As Long
+	hWnd=GetWindowFromPoint(x1,y1)
+	Dim xPos As Integer
+	Dim yPos As Integer
+	Dim xx1 As Integer, yy1 As Integer, xx2 As Integer, yy2 As Integer
+	Call GetWindowCoords(hWnd, xx1,yy1,xx2,yy2)
+	xPos=x1-xx1
+	yPos=y1-yy1
+	Call ReleaseCapture
+	Dim mb As Long
+	If mButton=2 Then mb=2 Else mb=1
+	Dim l As Long, l1 As Long
+	l=xPos+65536*yPos
+	Call SendMessage (hWnd, 513, 1, l) 'WM_LBUTTONDOWN
+	If steps>1 Then
+		dx=(x2-x1)/steps
+		dy=(y2-y1)/steps
+		dt=0.5/steps
+		For i=1 To steps-1
+			l1=xPos+Cint(i*dx)+65536*(yPos+Cint(i*dy))
+			Call SendMessage (hWnd, 512, 1, l1) 'WM_MOUSEMOVE
+			Call SendMessage (hWnd, 514, 0, l1) 'WM_LBUTTONUP
+			Call SendMessage (hWnd, 513, 1, l1) 'WM_LBUTTONDOWN
+		Next
+	End If
+	l1=xPos+x2-x1+65536*(yPos+y2-y1)
+	Call SendMessage (hWnd, 512, 1, l1) 'WM_MOUSEMOVE
+	Call SendMessage (hWnd, 514, 0, l1) 'WM_LBUTTONUP
+End Function
+
+'++LotusScript Development Environment:2:1:ShowScrollBars:2:8
+
+Function ShowScrollBars (hwnd As Long, vScroll As Variant, hScroll As Variant) As Variant
+	Dim style As Long
+	style=GetWindowLong(hwnd, -16)
+	
+	Style=Style Or &H200000 Or &H100000
+	If vScroll=False Then Style=Style Xor &H200000
+	If hScroll=False Then Style=Style Xor &H100000
+	Call SetWindowLong (hwnd, -16, style)
+'	Call SendMessage(hwnd,&H47,0, 0) 
+End Function
+
+'++LotusScript Development Environment:2:1:IsWindowZoomed:2:8
+
+Function IsWindowZoomed (hwnd As Long) As Variant
+	If IsZoomed(hwnd)=1 Then IsWindowZoomed=True Else IsWindowZoomed=False
+End Function
+
+'++LotusScript Development Environment:2:1:KeyPressed:1:8
+Function KeyPressed (keyCode As Variant) As Integer
+	If GetAsyncKeyState(Clng (keyCode))=1 Then KeyPressed=True
+End Function
+
+'++LotusScript Development Environment:2:1:WinLib_GetRegistryValue:1:8
+Public Function WinLib_GetRegistryValue ( hKey As Variant , strPath As Variant , strVariable As Variant ) As String
+	On Error Goto Handler	
+	Dim FuncName As String	
+	Dim ErrorString As String	
+	FuncName="WinLib_GetRegistryValue"
+'// Retrieves a value from the Windows registry
+	
+	Dim hCurKey As Long
+	Dim lResult As Long
+	Dim lValueType As Long
+	Dim strBuffer As String
+	Dim lDataBufferSize As Long
+	Dim intZeroPos As Integer
+	Dim lRegResult As Long
+	lRegResult = RegOpenKey(hKey, strPath, hCurKey)
+	lRegResult = RegQueryValueSizeEx(hCurKey, strVariable, 0&, lValueType, 0, lDataBufferSize)
+	If lRegResult = REG_ERROR_SUCCESS Then
+		If lValueType <= 2 Then
+			strBuffer = String(lDataBufferSize, " ")
+'			strBuffer = Space(lDataBufferSize)
+			lResult = RegQueryValueEx(hCurKey, strVariable, 0&, 0&, strBuffer, lDataBufferSize)
+			intZeroPos = Instr(strBuffer, Chr$(0))
+			If intZeroPos > 0 Then
+				WinLib_GetRegistryValue = Left$(strBuffer, intZeroPos - 1)
+			Else
+				WinLib_GetRegistryValue = strBuffer
+			End If
+		End If
+	Else
+	End If
+	
+	Goto endh	
+handler:	
+	If hCurKey<>0 Then lRegResult = RegCloseKey(hCurKey) : hCurKey = 0
+	
+	ErrorString="("+LibName+") "+FuncName+", стр. "+Cstr(Erl)+Chr(10)+Error$	
+	Error Err, ErrorString
+	Resume endh
+endh:	
+	If hCurKey<>0 Then lRegResult = RegCloseKey(hCurKey) : hCurKey = 0
+End Function
+
+'++LotusScript Development Environment:2:1:WinLib_SetRegistryValue:1:8
+Public Function WinLib_SetRegistryValue ( hKey As Variant , strPath As Variant , strVariable As Variant, strValue As Variant) As Long
+	On Error Goto Handler
+	Dim FuncName As String	
+	Dim ErrorString As String	
+	FuncName="WinLib_SetRegistryValue"
+	
+	Dim hCurKey As Long
+	Dim lResult As Long
+	Dim lValueType As Long
+	Dim lDataSize As Long
+	Dim lRegResult As Long
+	lDataSize = Len(strValue)+1
+	lValueType = 1
+	lRegResult = RegOpenKey(hKey, strPath, hCurKey)
+	If lRegResult <> REG_ERROR_SUCCESS Then Error 4000, "Не удалось открыть ключ в реестре!"
+	lRegResult = RegSetValueEx(hCurKey, strVariable, 0, lValueType, strValue, lDataSize)
+	If lRegResult <> REG_ERROR_SUCCESS Then Error 4000, "Не удалось сохранить ключ в реестре!"
+	
+	Goto endh
+handler:	
+	WinLib_SetRegistryValue = lRegResult
+	If hCurKey<>0 Then lRegResult = RegCloseKey(hCurKey) : hCurKey = 0
+	
+	ErrorString="("+LibName+") "+FuncName+", стр. "+Cstr(Erl)+Chr(10)+Error$	
+	Error Err, ErrorString
+	Resume endh
+endh:
+	If hCurKey<>0 Then lRegResult = RegCloseKey(hCurKey) : hCurKey = 0
+End Function
+
+'++LotusScript Development Environment:2:1:WinLib_DelRegistryValue:1:8
+Public Function WinLib_DelRegistryValue ( hKey As Variant , strPath As Variant, strVariable As Variant) As Long
+	On Error Goto Handler
+	Dim FuncName As String	
+	Dim ErrorString As String	
+	FuncName="WinLib_DelRegistryValue"
+	
+	Dim hCurKey As Long
+	Dim lRegResult As Long
+	lRegResult = RegOpenKey(hKey, strPath, hCurKey)
+	If lRegResult <> REG_ERROR_SUCCESS Then Error 4000, "Не удалось открыть ключ в реестре!"
+	lRegResult = RegDeleteValue(hCurKey, strVariable)
+	If lRegResult <> REG_ERROR_SUCCESS Then Error 4000, "Не удалось удалить значение в реестре!"
+	
+	Goto endh
+handler:
+	WinLib_DelRegistryValue = lRegResult
+	If hCurKey<>0 Then lRegResult = RegCloseKey(hCurKey) : hCurKey = 0
+	
+	ErrorString="("+LibName+") "+FuncName+", стр. "+Cstr(Erl)+Chr(10)+Error$
+	Error Err, ErrorString
+	Resume endh
+endh:
+	If hCurKey<>0 Then lRegResult = RegCloseKey(hCurKey) : hCurKey = 0
+End Function
+
+'++LotusScript Development Environment:2:1:WinLib_GetTempDirectory:1:8
+Public Function WinLib_GetTempDirectory() As String
+	On Error Goto Handler
+	FuncName="WinLib_GetTempDirectory"
+	Dim result As Long
+	Dim buff As String
+	
+	buff = Space$(256)
+	result = GetTempPath(256, buff)
+	WinLib_GetTempDirectory = Left$(buff, result)
+	
+	Goto endh
+handler:
+	ErrorString="("+LibName+") "+FuncName+", стр. "+Cstr(Erl)+Chr(10)+Error$
+	Error Err, ErrorString
+	Resume endh
+endh:
+End Function 

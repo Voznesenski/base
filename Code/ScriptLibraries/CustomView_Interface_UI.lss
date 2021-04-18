@@ -1,0 +1,177 @@
+'++LotusScript Development Environment:2:5:(Options):0:74
+Option Public
+Use "Dll_Lib"
+Use "DocCollection_Lib"
+
+'++LotusScript Development Environment:2:5:(Forward):0:1
+Declare Sub Initialize
+Declare Function InitCustomView_Interface_UI
+Declare Function CustomView_PickCollection(dc As Variant, ChangeRespHierarchy As Variant, multiSelection As Variant, ServerName As Variant, filePath As Variant, ViewName As Variant, windowTitle As Variant, windowPrompt As Variant, SingleCategory As Variant) As DocumentCollection
+
+'++LotusScript Development Environment:2:5:(Declarations):0:10
+Private Const LibName="CustomView_Lib"
+Private CacheDb As NotesDatabase
+Private LibInit As Integer
+
+'++LotusScript Development Environment:2:2:Initialize:1:10
+Sub Initialize
+	InitCustomView_Interface_UI
+End Sub
+
+'++LotusScript Development Environment:2:1:InitCustomView_Interface_UI:1:8
+Function InitCustomView_Interface_UI
+	If LibInit=1 Then Exit Function
+	Call InitDll_Lib
+	LibInit=1
+End Function
+
+'++LotusScript Development Environment:2:1:CustomView_PickCollection:1:8
+Function CustomView_PickCollection(dc As Variant, ChangeRespHierarchy As Variant, multiSelection As Variant, ServerName As Variant, filePath As Variant, ViewName As Variant, windowTitle As Variant, windowPrompt As Variant, SingleCategory As Variant) As DocumentCollection
+'Показывает PickList по выбранным документам (для отображения используется дизайн указанного вида)
+'dc - отображаемые документы (NotesDocument или коллекции)
+'RespHierarchy=1 - у респонзов при отсутствии в коллекции парента не удалять $ref
+	On Error Goto handler
+	FuncName="CustomView_PickCollection"
+	Dim doc As NotesDocument, newDoc As NotesDocument, viewDoc As NotesDocument, parentDoc  As NotesDocument
+	Dim db As NotesDatabase
+	Dim i As Long
+	If CacheDb Is Nothing Then
+		Dim session As New NotesSession
+		cachePath=session.GetEnvironmentString("Cache", True)
+		If cachePath="" Then
+			ver=session.NotesVersion
+			ver=Trim(Strleft(ver,"|"))
+			ver=StrRight(ver," ") 'ver=Strrightback(ver," ")
+			ver=Strleft(ver,".")
+			Dim iVer As Integer
+			iVer = CInt(ver)
+			If iVer => 6 Then
+				CachePath="cache.ndk"
+			Else
+				CachePath="cache.dsk"
+			End If
+		End If
+		Set cacheDb=New NotesDatabase ("", CachePath)
+	End If
+	
+	If Not cacheDb.IsOpen Then Error 5000, "Ошибка при открытии БД: "+CachePath
+	
+	Set db=New NotesDatabase(ServerName, filePath)
+	If Not db.isOpen Then Error 5000, "Ошибка при открытии БД: "+ServerName+"/"+filePath
+	Set SourceView=db.GetView(ViewName)
+	If SourceView Is Nothing Then Error 5000, "Ошибка при открытии вида: "+ViewName
+	
+	Set view1=CacheDb.GetView("CacheTmpView_PickList")
+	If Not view1 Is Nothing Then Call view1.Remove
+' Set view1=CacheDb.GetView(ViewName)
+' If Not view1 Is Nothing Then Call view1.Remove
+	
+	Set doc=db.GetDocumentbyUNID(SourceView.UniversalId)
+	Set viewDoc=doc.CopyToDatabase(CacheDb)
+	Call viewDoc.ReplaceItemValue("$Title",viewDoc.GetItemValue("$Title")(0)+"|CacheTmpView_PickList")
+	Call viewDoc.Save(True,False)
+	unid=CacheDb.Createdocument.UniversalId
+	Set view1=CacheDb.GetView("CacheTmpView_PickList")
+	view1.SelectionFormula = {SELECT CacheTmpView="}+unid+{"}
+	'Call Dll_ChangeSelectionFormula (SourceView, viewDoc, {SELECT CacheTmpView="}+unid+{"})
+	
+	
+	If dc Is Nothing Then
+		Set SourceDc=New DocumentCollection
+	Elseif dc Isa "DocumentCollection" Then
+		Set SourceDc=dc
+	Elseif dc Isa "NotesDocumentCollection" Then
+		Set SourceDc=New documentCollection
+		Call SourceDc.AddDocumentCollection(dc)
+	Elseif dc Isa "NotesDocument" Then
+		Set SourceDc=New documentCollection
+		Set doc=dc
+		Call SourceDc.AddDocument(doc)
+	End If
+	
+	Dim CacheDc As New DocumentCollection
+	Set doc=SourceDc.GetFirstDocument
+	Dim newDocFlag As Integer
+	newDocFlag=0
+	While Not doc Is Nothing
+		If doc.Authors(0)<>"" Then
+			Set newDoc=doc.CopyToDatabase(CacheDb)
+		Else
+			newDocFlag=1
+			Set newDoc=CacheDb.CreateDocument
+			Call doc.CopyAllItems(newDoc)
+		End If
+		Call newDoc.ReplaceItemValue("CacheTmpView",unid)
+		Call newDoc.ReplaceItemValue("CacheTmpUNID",doc.UniversalId)
+		Call newDoc.Save(True,False, True)
+		Call CacheDc.AddDocument(newDoc)
+		Set doc=SourceDc.GetNextDocument
+	Wend
+	
+	If newDocFlag=1 Then
+		Set doc=SourceDc.GetFirstDocument
+		For i=1 To SourceDc.Count
+			Set doc=SourceDc.GetNthDocument(i)
+			If doc.ParentDocumentUNID<>"" Then
+				Set parentDoc=SourceDc.GetParentDocument(doc)
+				If Not parentDoc Is Nothing Then
+					Set newDoc=CacheDc.GetNthDocument(i)
+					Set parentDoc=CacheDc.GetNthDocument(SourceDc.GetDocumentIndex(ParentDoc))
+					Call newdoc.MakeResponse(parentDoc)
+					Call newDoc.Save(True, False, True)
+				Elseif ChangeRespHierarchy=1 Then
+					Call newDoc.RemoveItem("$Ref")
+					Call newDoc.Save(True, False, True)
+				End If
+			End If
+		Next i
+	Elseif ChangeRespHierarchy=1 Then
+		Set doc=CacheDc.GetFirstDocument
+		While Not doc Is Nothing
+			If doc.ParentDocumentUNID<>"" Then
+				If CacheDc.GetParentDocument(doc) Is Nothing Then
+					Call doc.RemoveItem("$Ref")
+					Call doc.Save(True,False, True)
+				End If
+			End If
+			Set doc=CacheDc.GetNextDocument
+		Wend
+	End If
+	
+	Set ws=New NotesUIWorkspace
+	Set dc1=ws.PickListCollection(0, multiSelection, CacheDb.Server, CacheDb.FilePath, "CacheTmpView_PickList", WindowTitle, WindowPrompt, SingleCategory)
+	
+	Dim resultDc As New DocumentCollection
+	Set doc=dc1.GetFirstDocument
+	While Not doc Is Nothing
+		Call resultDc.AddDocument(SourceDc.GetDocumentByUniversalId(doc.CacheTmpUNID(0)))
+		Set doc=dc1.GetNextDocument(doc)
+	Wend
+	Set CustomView_PickCollection=resultDc
+	
+	Set view=CacheDb.GetView("CacheTmpView_PickList")
+	If Not view Is Nothing Then Call view.Remove
+	Call viewDoc.Remove(True)
+	
+	Set doc=CacheDc.GetFirstDocument
+	While Not doc Is Nothing
+		Call doc.Remove(True)
+		Set doc=CacheDc.GetNextDocument
+	Wend
+	
+	Goto endh
+handler:
+	Set view=CacheDb.GetView("CacheTmpView_PickList")
+	If Not view Is Nothing Then	Call view.Remove
+	If Not viewDoc Is Nothing Then Call viewDoc.Remove(True)
+	If Not CacheDc Is Nothing Then
+		Set doc=CacheDc.GetFirstDocument
+		While Not doc Is Nothing
+			Call doc.Remove(True)
+			Set doc=CacheDc.GetNextDocument
+		Wend
+	End If
+	ErrorString="("+LibName+") "+FuncName+", стр. "+Cstr(Erl)+Chr(10)+Error$
+	Error Err, ErrorString
+endh:
+End Function

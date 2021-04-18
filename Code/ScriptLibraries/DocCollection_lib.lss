@@ -1,0 +1,962 @@
+'++LotusScript Development Environment:2:5:(Options):0:74
+Option Public
+
+
+'++LotusScript Development Environment:2:5:(Forward):0:1
+Declare Public Class DocumentCollection
+Declare Public Class CustomCollection
+Declare Private Function DC_RemoveElement (arr As Variant, pos As Variant)
+Declare Function DC_CanEditDocument(cdoc As Variant) As Integer
+Declare Private Function DC_Implode (SourceArray As Variant, Delimiter As Variant) As String
+Declare Private Function DC_AppendElement(arr As Variant, element As Variant) As Variant
+
+'++LotusScript Development Environment:2:5:(Declarations):0:10
+Declare Private Sub W32_NSFNoteGetInfo Lib "nnotes.dll" Alias "NSFNoteGetInfo" ( Byval hNote As Long, _ 
+Byval Note_Member As Integer, Value_ptr As Integer )
+Private Const NOTE_FLAGS% = 7 
+Private Const NOTE_FLAG_READONLY% = &H0001
+
+Public Class DocumentCollection
+	Private DocArrayIndex As Long
+	Private DocArray As Variant
+	Private UNIDArray As Variant
+	Private ParentUNIDArray As Variant
+	Private FieldUNIDArray As Variant
+	Private ColValues As Variant
+	
+	Private Position As Long
+	Private Counter As Long
+	Private SortDone As Integer
+	Public Sub New
+		DocArrayIndex=0
+		Position=-1
+		Counter=0
+		Redim DocArray (0 To 0) As NotesDocument
+		Redim UNIDArray (0 To 0)
+		Redim ParentUNIDArray (0 To 0)
+		Redim FieldUNIDArray (0 To 0)
+		Redim ColValues (0 To 0)
+		ColValues(0)=Null
+		Set DocArray(0)=Nothing
+		UNIDArray(0)=""
+		ParentUNIDArray(0)=""
+		FieldUNIDArray(0)=""
+		SortDone=0
+	End Sub
+	
+	Public Function AddDocument(doc As NotesDocument) As Variant
+		AddDocument=False
+		
+		If doc Is Nothing Then
+			AddDocument=True
+			Exit Function
+		End If
+		If Not Me.IsDocumentInCollection(doc) Then
+			SortDone=0
+			If Not DocArray(DocArrayIndex) Is Nothing Then
+				DocArrayIndex=DocArrayIndex+1
+				Redim Preserve DocArray(0 To DocArrayIndex)
+				Redim Preserve UNIDArray(0 To DocArrayIndex)
+				Redim Preserve ParentUNIDArray(0 To DocArrayIndex)
+				Redim Preserve FieldUNIDArray (0 To DocArrayIndex)
+				Redim Preserve ColValues (0 To DocArrayIndex)
+			End If
+			Set DocArray(DocArrayIndex)=doc
+			UNIDArray(DocArrayIndex)=doc.UniversalId
+			FieldUNIDArray(DocArrayIndex)=doc.GetItemValue("UNID")(0)
+			ParentUNIDArray(DocArrayIndex)=doc.ParentDocumentUNID
+			ColValues(DocArrayIndex)=Null
+			Counter=Counter+1
+		End If
+		AddDocument=True	
+	End Function
+	
+	Public Function AddDocumentCollection (dc As Variant) As Variant
+		AddDocumentCollection=False
+		If dc Is Nothing Then
+			AddDocumentCollection=True
+			Exit Function
+		End If
+		If dc.Count<1 Then
+			AddDocumentCollection=True
+			Exit Function
+		End If
+		Dim doc As NotesDocument
+		If dc Isa "DocumentCollection" Then
+			Set doc=dc.GetFirstDocument
+			While Not doc Is Nothing
+				Call Me.AddDocument(doc)
+				Set doc=dc.GetNextDocument
+			Wend
+			AddDocumentCollection=True
+		Elseif dc Isa "NotesDocumentCollection" Then
+			Set doc=dc.GetFirstDocument
+			While Not doc Is Nothing
+				Call Me.AddDocument(doc)
+				Set doc=dc.GetNextDocument(doc)
+			Wend
+			AddDocumentCollection=True
+		Elseif dc Isa "CustomCollection" Then
+			Set doc1=dc.GetFirstEntry
+			While Not doc1 Is Nothing
+				If doc1 Isa "NotesDocument" Then
+					Set doc=doc1
+					Call Me.AddDocument(doc)
+				End If
+				Set doc1=dc.GetNextEntry
+			Wend
+			AddDocumentCollection=True
+		End If
+	End Function
+	
+	Public Function GetDocument (doc As NotesDocument) As NotesDocument
+		pos=Arraygetindex(UNIDArray,doc.UniversalId)
+		If Isnull(pos) Then
+			Set GetDocument=Nothing
+		Else
+			Set GetDocument=DocArray(pos)
+			Position=pos
+		End If
+	End Function
+	
+	Public Function GetDocumentIndex(doc As NotesDocument) As Integer
+		GetDocumentIndex=Arraygetindex(UNIDArray,doc.UniversalId)
+		If Not Isnull(GetDocumentIndex) Then
+			GetDocumentIndex=GetDocumentIndex+1
+		End If
+	End Function
+	
+	Public Function DeleteDocument (doc As NotesDocument) As Variant
+		DeleteDocument=False
+		If doc Is Nothing Then
+			DeleteDocument=True
+			Exit Function
+		End If
+		pos=Arraygetindex(UNIDArray,doc.UniversalId)
+		If Isnull(pos) Then
+			Exit Function
+		End If
+		Call DC_RemoveElement (UNIDArray, pos)
+		Call DC_RemoveElement (DocArray, pos)
+		Call DC_RemoveElement(ParentUNIDArray, pos)
+		Call DC_RemoveElement(FieldUNIDArray, pos)
+		Call DC_RemoveElement(ColValues, pos)
+		lb=Lbound(ColValues)
+		If pos=lb Then colValues(lb)=Null
+		
+		DocArrayIndex=Ubound(DocArray)
+		If position=pos Then
+			position=position-1
+		Elseif position>DocArrayIndex Then
+			position=position-1
+		End If
+		If position<-1 Then position=-1
+		
+		Counter=Counter-1
+		DeleteDocument=True
+	End Function
+	
+	Public Function GetFirstDocument As NotesDocument
+		Position=0
+		Set GetFirstDocument=DocArray(Position)
+	End Function
+	
+	Public Function GetLastDocument As NotesDocument
+		Position=DocArrayIndex
+		Set GetLastDocument=DocArray(Position)
+	End Function
+	
+	Public Function GetNthDocument (pos As Long) As NotesDocument
+		Dim pos1 As Long
+		pos1=pos-1
+		If pos1>DocArrayIndex Or pos1<0 Then
+			Set GetNthDocument=Nothing
+		Else
+			Set GetNthDocument=DocArray(pos1)
+			Position=pos1
+		End If
+	End Function
+	
+	Public Function GetNextDocument As NotesDocument
+		If Position+1>DocArrayIndex Then
+			Set GetNextDocument=Nothing
+		Else
+			Position=Position+1			
+			Set GetNextDocument=DocArray(Position)
+		End If
+	End Function
+	
+	Public Function GetPrevDocument As NotesDocument
+		If Position-1<0 Then
+			Set GetPrevDocument=Nothing
+		Else
+			Position=Position-1
+			Set GetPrevDocument=DocArray(Position)
+		End If
+	End Function
+	
+	Property Get Count As Long
+		Count=Counter
+	End Property
+	
+	Public Function IsDocumentInCollection (doc As NotesDocument) As Variant
+		If doc Is Nothing Then Exit Function
+		If Not Isnull(Arraygetindex(UNIDArray,doc.UniversalId)) Then
+			IsDocumentInCollection=True
+		Else
+			IsDocumentInCollection=False
+		End If
+	End Function
+	
+	Public Function CanEdit As Variant
+		CanEdit=False
+		Forall doc In DocArray
+			If Not doc Is Nothing Then
+				If DC_CanEditDocument(doc)<>1 Then Exit Function
+			End If
+		End Forall
+		CanEdit=True
+	End Function
+	
+	Public Function SaveAll (flag1 As Variant, flag2 As Variant, flag3 As Variant) As Variant
+		SaveAll=False
+		Forall doc In DocArray
+			If Not doc Is Nothing Then
+				Call doc.Save(flag1, flag2, flag3)
+			End If
+		End Forall
+		SaveAll=True
+	End Function
+	
+	Public Function GetResponses (doc As NotesDocument) As DocumentCollection
+		If doc Is Nothing Then
+			Exit Function
+		End If
+		unid=doc.UniversalId
+		Set newDc=New DocumentCollection
+		For i=0 To DocArrayIndex
+			If ParentUNIDArray(i)=unid Then
+				Call newDc.AddDocument(DocArray(i))
+			End If
+		Next i
+		Set GetResponses=newDc
+	End Function
+	
+	Public Function GetDescendants (doc As NotesDocument) As DocumentCollection
+		If doc Is Nothing Then
+			Exit Function
+		End If
+		unid=doc.UniversalId
+		Set newDc=Me.GetResponses(doc)
+		Dim rDoc As NotesDocument
+		Set rDoc=newDc.GetFirstDocument
+		While Not rDoc Is Nothing
+			Call newDc.AddDocumentCollection(Me.GetResponses(rDoc))
+			Set rDoc=newDc.GetNextDocument
+		Wend
+		Set GetDescendants=newDc
+	End Function
+	
+	Public Function GetDocumentByUNID (unid As Variant) As NotesDocument
+		Set GetDocumentByUNID=Nothing
+		pos=Arraygetindex(FieldUNIDArray,unid)
+		If Isnull(pos) Then Exit Function
+		Set GetDocumentByUNID=DocArray(pos)
+		Position=pos
+	End Function
+	
+	Public Function GetDocumentByUniversalId (unid As Variant) As NotesDocument
+		Set GetDocumentByUniversalId=Nothing
+		pos=Arraygetindex(UNIDArray,unid)
+		If Isnull(pos) Then Exit Function
+		Set GetDocumentByUniversalId=DocArray(pos)
+		Position=pos
+	End Function
+	
+	Public Function GetParentDocument (doc As NotesDocument) As NotesDocument
+		Set GetParentDocument=Nothing
+		If doc Is Nothing Then
+			Exit Function
+		End If
+		pos=Arraygetindex(UNIDArray,doc.ParentDocumentUNID)
+		If Isnull(pos) Then Exit Function
+		Set GetParentDocument=DocArray(pos)
+	End Function
+	
+	Public Function StampAll (ItemName As Variant, ItemValue As Variant) As Variant 
+		StampAll=False
+		Forall doc In DocArray
+			If Not doc Is Nothing Then
+				Call doc.ReplaceItemValue(itemName,itemValue)
+			End If
+		End Forall
+		StampAll=True
+	End Function
+	
+	Public Function GetItemValues (ItemName As Variant) As Variant
+		Dim arr As Variant
+		Redim arr(0) As Variant
+		arr(0)=""
+		Forall doc In DocArray
+			If Not doc Is Nothing Then
+				v=doc.GetItemValue(itemName)
+				Forall x In v
+					Call DC_AppendElement(arr,x)
+				End Forall
+			End If
+		End Forall
+		GetItemValues=arr
+	End Function
+	
+	Public Function Sort (formulas As Variant, modes As Variant) As Variant
+'mode=1 - по возрастанию, 2 - по убыванию
+		If Counter=0 Then Exit Function
+'		If SortDone=1 Then
+		SortDone=0
+		Forall x In ColValues
+			x=Null
+		End Forall
+'		End If
+		Call QuickSort(0, DocArrayIndex, formulas, modes)
+		SortDone=1
+	End Function
+	
+	Private Function QuickSort (first As Long, last As Long, formulas As Variant, modes As Variant) As Variant
+		Dim low As Long
+		Dim high As Long
+		Dim mdl As Long
+		low=first
+		high=last
+		mdl=Clng((first+last)/2)
+		
+		Do
+			While CompareDocs(low, mdl, formulas, modes)=2
+				low=low+1
+			Wend
+			
+			While CompareDocs(high, mdl, formulas, modes)=1
+				high=high-1
+			Wend
+			
+			If low<=high Then
+				Call SwapDocs(low, high)
+				If mdl=high Then
+					mdl=low
+				Elseif mdl=low Then
+					mdl=high
+				End If
+				low=low+1
+				high=high-1
+			End If
+		Loop While low<=high
+		If first<high Then
+			Call QuickSort(first, high, formulas, modes)
+		End If
+		If low<last Then
+			Call QuickSort(low, last, formulas, modes)
+		End If
+	End Function
+	
+	Property Get IsSorted
+		If sortDone=0 Then IsSorted=False Else IsSorted=True
+	End Property
+	
+	Private Function CreateValuesArray (doc As NotesDocument, formulas As Variant) As Variant
+		If Not Isarray(formulas) Then
+			Redim v (0) As Variant
+			v1=Evaluate(formulas, doc)
+			v(0)=Lcase(DC_Implode(v1,""))
+		Else
+			lb=Lbound(formulas)
+			ub=Ubound(formulas)
+			Redim  v(lb To Ub) As Variant
+			For i=lb To ub
+				v1=Evaluate(formulas(i), doc)
+				v(i)=Lcase(DC_Implode(v1,""))
+			Next
+		End If
+		CreateValuesArray=v
+	End Function
+	
+	Private Function CompareDocs (n1 As Long, n2 As Long, formulas As Variant, modes As Variant) As Integer
+'1 - первый документ по очереди первый, 2 - второй, 0 - одинаковые
+		Dim doc1 As NotesDocument
+		Dim doc2 As NotesDocument
+		
+		If Isnull (ColValues(n1)) Then
+			Set doc1=DocArray(n1)
+			ColValues(n1)=CreateValuesArray(doc1, formulas)
+		End If
+		If Isnull (ColValues(n2)) Then
+			Set doc2=DocArray(n2)
+			ColValues(n2)=CreateValuesArray(doc2, formulas)
+		End If
+		
+		CompareDocs=-1
+		If Isarray(formulas) Then
+			lb=Lbound(formulas)
+			ub=Ubound(formulas)
+			For i=lb To ub
+				r1=ColValues(n1)
+				r1=r1(i)
+				r2=ColValues(n2)
+				r2=r2(i)
+				r=Strcompare(r1, r2, 5)
+				If r=0 Then
+					CompareDocs=0
+				Elseif r>0 Then
+					If modes(i)=1 Then
+						CompareDocs=1
+						Exit Function
+					Else
+						CompareDocs=2
+						Exit Function
+					End If
+				Else
+					If modes(i)=1 Then
+						CompareDocs=2
+						Exit Function
+					Else
+						CompareDocs=1
+						Exit Function
+					End If
+				End If
+			Next
+		Else
+			r1=ColValues(n1)
+			r1=r1(0)
+			r2=ColValues(n2)
+			r2=r2(0)
+			r=Strcompare(r1, r2, 5)
+			If r=0 Then
+				CompareDocs=0
+				Exit Function
+			Elseif r>0 Then
+				If modes=1 Then
+					CompareDocs=1
+					Exit Function
+				Else
+					CompareDocs=2
+					Exit Function
+				End If
+			Else
+				If modes=1 Then
+					CompareDocs=2
+					Exit Function
+				Else
+					CompareDocs=1
+					Exit Function
+				End If
+			End If
+		End If
+	End Function	
+	
+	Private Function SwapDocs (n1 As Long, n2 As Long) As Variant
+		If n1=n2 Then Exit Function
+		Set Doc=DocArray(n1)
+		Set DocArray(n1)=DocArray(n2)
+		Set DocArray(n2)=Doc
+		
+		UNID=UNIDArray(n1)
+		UNIDArray(n1)=UNIDArray(n2)
+		UNIDArray(n2)=UNID
+		
+		UNID=ParentUNIDArray(n1)
+		ParentUNIDArray(n1)=ParentUNIDArray(n2)
+		ParentUNIDArray(n2)=UNID
+		
+		UNID=FieldUNIDArray(n1)
+		FieldUNIDArray(n1)=FieldUNIDArray(n2)
+		FieldUNIDArray(n2)=UNID
+		
+		UNID=ColValues(n1)
+		ColValues(n1)=ColValues(n2)
+		ColValues(n2)=UNID
+	End Function
+	
+	Public Function GetDocumentByKey (keyArray As Variant) As NotesDocument
+		Set GetDocumentByKey=Nothing
+		If SortDone=0 Then Exit Function
+		If Isnull (ColValues(0)) Then Exit Function
+		Dim keys As Variant
+		If Isarray(keyArray) Then
+			keys=keyArray
+		Else
+			Redim keys(0)
+			keys(0)=keyArray
+		End If
+		Forall x In keys
+			x=Lcase(Cstr(x))
+		End Forall
+		
+		Dim newDc As New DocumentCollection
+		lb=Lbound(keys)
+		ub=Ubound(keys)
+		
+		lbc=Lbound(ColValues(0))
+		ubc=Ubound(ColValues(0))
+		If ubc-lbc<ub-lb Then
+			Redim Preserve keys (lb To lb+ubc-lbc)
+		End If
+		
+		For i=0 To DocArrayIndex
+			v=ColValues(i)
+			f1=True
+			For k=lb To ub
+				value=v(lbc+k-lb)
+				If value<>keys(k) Then
+					If f=1 Then f=2
+					f1=False
+					Exit For
+				End If
+			Next k
+			If f1=True Then
+				Set GetDocumentByKey=DocArray(i)
+				Position=i
+				Exit Function
+			End If
+		Next i
+	End Function
+	
+	Public Function GetAllDocumentsByKey (keyArray As Variant) As DocumentCollection
+		Dim newDc As New DocumentCollection		
+		Set GetAllDocumentsByKey=newDc
+		
+'		Set GetAllDocumentsByKey=Nothing
+		If SortDone=0 Then Exit Function
+		If Isnull (ColValues(0)) Then Exit Function
+		Dim keys As Variant
+		If Isarray(keyArray) Then
+			keys=keyArray
+		Else
+			Redim keys(0)
+			keys(0)=keyArray
+		End If
+		Forall x In keys
+			x=Lcase(Cstr(x))
+		End Forall
+		
+		lb=Lbound(keys)
+		ub=Ubound(keys)
+		
+		lbc=Lbound(ColValues(0))
+		ubc=Ubound(ColValues(0))
+		If ubc-lbc<ub-lb Then
+			Redim Preserve keys (lb To lb+ubc-lbc)
+		End If
+		
+		f=0
+		For i=0 To DocArrayIndex
+			v=ColValues(i)			
+			f1=True
+			For k=lb To ub
+				value=v(lbc+k-lb)
+				If value<>keys(k) Then
+					If f=1 Then f=2
+					f1=False
+					Exit For
+				End If
+			Next k
+			If f1=True Then
+				Call newDc.AddDocument(DocArray(i))
+				f=1
+			Else
+				If f=2 Then Exit For
+			End If
+		Next i
+'		If newDc.Count>0 Then Set GetAllDocumentsByKey=newDc
+	End Function
+	
+	Public Function ColumnValues (doc As NotesDocument) As Variant
+		ColumnValues=Null
+		If doc Is Nothing Then
+			Exit Function
+		End If
+'		If SortDone=0 Then Exit Function
+		p=Arraygetindex(UNIDArray, doc.UniversalId)
+		If Isnull(p) Then Exit Function
+		ColumnValues=Me.ColValues(p)
+	End Function
+	
+	Public Function Clear As Variant
+		Erase DocArray
+		Erase UNIDArray
+		Erase ParentUNIDArray
+		Erase FieldUNIDArray
+		Forall x In ColValues
+			If Not Isnull(x) Then Erase x
+		End Forall
+		Erase ColValues
+		
+		Redim DocArray (0 To 0) As NotesDocument
+		Redim UNIDArray (0 To 0)
+		Redim ParentUNIDArray (0 To 0)
+		Redim FieldUNIDArray (0 To 0)
+		Redim ColValues (0 To 0)
+		ColValues(0)=Null
+		
+		Set DocArray(0)=Nothing
+		DocArrayIndex=0
+		Position=-1
+		Counter=0
+		SortDone=0
+	End Function
+	
+	Public Sub Delete
+		Erase DocArray
+		Erase UNIDArray
+		Erase ParentUNIDArray
+		Erase FieldUNIDArray
+		Forall x In ColValues
+			If Not Isnull(x) Then Erase x
+		End Forall
+		Erase ColValues
+		DocArrayIndex=0
+		Position=0
+		Counter=0
+	End Sub
+	
+	Public Function GetUNIDArray As Variant
+		GetUNIDArray=UNIDArray
+	End Function
+	
+	Public Function GetFieldUNIDArray As Variant
+		GetFieldUNIDArray=FieldUNIDArray
+	End Function
+	
+	Public Function GetParentUNIDArray As Variant
+		GetParentUNIDArray=ParentUNIDArray
+	End Function
+	
+	Public Function GetDocumentArray As Variant
+		GetDocumentArray=DocArray
+	End Function
+End Class
+
+
+'-------------------------------------------------------------------------------
+Const TYPE_NOTESDOCUMENT=1
+Const TYPE_NOTESACL=2
+Const TYPE_NOTESVIEW=3
+Const TYPE_NOTESDOCUMENTCOLLECTION=4
+Const TYPE_DOCUMENTCOLLECTION=5
+Const TYPE_NOTESDATABASE=6
+
+Const TYPE_OTHER=0
+
+Public Class CustomCollection
+	Private DocArrayIndex As Long
+	Private DocArray As Variant
+	Private TypeArray As Variant
+	Private UNIDArray As Variant
+	
+	Private Position As Long
+	Private Counter As Long
+	Public Sub New
+		DocArrayIndex=0
+		Position=-1
+		Counter=0
+		Redim DocArray (0 To 0)
+		Redim UNIDArray (0 To 0)
+		Redim TypeArray (0 To 0) As Integer
+		Set DocArray(0)=Nothing
+		TypeArray(0)=-1
+		UNIDArray(0)=""
+	End Sub
+	
+	Public Function AddEntry(doc As Variant) As Variant
+		AddEntry=False
+		unid=""
+		If doc Isa "NotesDocument" Then
+			typ=TYPE_NOTESDOCUMENT
+			unid=doc.UniversalId
+		Elseif doc Isa "NotesView" Then
+			typ=TYPE_NOTESVIEW			
+			unid=doc.UniversalId
+		Elseif doc Isa "NotesDatabase" Then
+			typ=TYPE_NOTESDATABASE
+			unid=doc.ReplicaId
+		Elseif doc Isa "NotesACL" Then
+			typ=TYPE_NOTESACL
+			Set db=doc.Parent
+			unid="ACL_"+db.ReplicaId
+		End If
+		If unid<>"" Then
+			p=Arraygetindex(UNIDArray,unid)
+			If Not Isnull(p) Then
+				If doc Is DocArray(p) Then
+					AddEntry=True
+					Exit Function
+				Elseif typ<>TYPE_NOTESDATABASE Then
+					AddEntry=True
+					Exit Function
+				End If
+			End If
+		End If
+		
+		If Not DocArray(DocArrayIndex) Is Nothing Then
+			DocArrayIndex=DocArrayIndex+1
+			Redim Preserve DocArray(0 To DocArrayIndex)
+			Redim Preserve UNIDArray(0 To DocArrayIndex)
+			Redim Preserve TypeArray(0 To DocArrayIndex)
+		End If
+		Set DocArray(DocArrayIndex)=doc
+		TypeArray(DocArrayIndex)=typ
+		UNIDArray(DocArrayIndex)=unid
+		Counter=Counter+1
+		
+		If doc Isa "NotesACL" Then AddEntry=Me.AddEntry(db)
+	End Function
+	
+	Public Function GetDocument (doc As Variant) As Variant
+		pos=Arraygetindex(UNIDArray,doc.UniversalId)
+		If Isnull(pos) Then
+			Set GetDocument=Nothing
+		Else
+			Set GetDocument=DocArray(pos)
+		End If
+	End Function
+	
+	Public Function DeleteEntry (pos As Integer) As Variant
+		DeleteEntry=False
+'		pos=positionInArray(UNIDArray,doc.UniversalId)
+		If pos >DocArrayIndex Then
+			Exit Function
+		End If
+		If pos<0 Then Exit Function
+		Call DC_RemoveElement (UNIDArray, pos)
+		Call DC_RemoveElement (DocArray, pos)
+		Call DC_RemoveElement (TypeArray, pos)
+		DocArrayIndex=Ubound(DocArray)
+		If position=pos Then
+			position=position-1
+		Elseif position>DocArrayIndex Then
+			position=position-1
+		End If
+		If position<-1 Then position=-1
+		
+		Counter=Counter-1
+		DeleteEntry=True
+	End Function
+	
+	Public Function GetFirstEntry As Variant
+		Position=0
+		Set GetFirstEntry=DocArray(Position)
+	End Function
+	
+	Public Function GetLastEntry As Variant
+		Position=DocArrayIndex
+		Set GetLastEntry=DocArray(Position)
+	End Function
+	
+	Public Function GetNthEntry (pos As Long) As Variant
+		Dim pos1 As Long
+		pos1=pos-1
+		If pos1>DocArrayIndex Or pos1<0 Then
+			Set GetNthEntry=Nothing
+		Else
+			Set GetNthEntry=DocArray(pos1)
+			Position=pos1
+		End If
+	End Function
+	
+	Public Function GetNextEntry As Variant
+		If Position+1>DocArrayIndex Then
+			Set GetNextEntry=Nothing
+		Else
+			Position=Position+1			
+			Set GetNextEntry=DocArray(Position)
+		End If
+	End Function
+	
+	Public Function GetPrevEntry As Variant
+		If Position-1<0 Then
+			Set GetPrevDocument=Nothing
+		Else
+			Position=Position-1
+			Set GetPrevEntry=DocArray(Position)
+		End If
+	End Function
+	
+	Public Function GetType As Integer
+		If Not DocArray(position) Is Nothing Then
+			GetType=TypeArray(position)
+		End If
+	End Function
+	
+	Public Function GetPosition As Integer
+		If Not DocArray(position) Is Nothing Then
+			GetPosition=position
+		Else
+			position=-1
+		End If
+	End Function
+	
+	Property Get Count As Long
+		Count=Counter
+	End Property
+	
+	Public Function IsEntryInCollection (doc As Variant) As Variant
+		If Not Isnull(Arraygetindex(UNIDArray,doc.UniversalId)) Then
+			IsEntryInCollection=True
+		Else
+			IsEntryInCollection=False
+		End If
+	End Function
+	
+	Public Function CanEdit As Variant
+		CanEdit=False
+		Dim i As Long
+		For i=0 To DocArrayIndex
+			Set doc=DocArray(i)
+			If Not doc Is Nothing Then
+				Select Case TypeArray(i)
+				Case TYPE_NOTESDOCUMENT:
+					If DC_CanEditDocument(doc)<>1 Then
+						CanEdit=False
+						Exit Function
+					End If
+				Case TYPE_NOTESACL:
+					Set db=Me.GetEntryByUNID(Mid(Me.UnidArray(i),5,16))
+					If db.CurrentAccessLevel<>ACLLEVEL_MANAGER Then
+						CanEdit=False
+						Exit Function
+					End If
+				End Select
+			End If
+		Next
+		CanEdit=True
+	End Function
+	
+	Public Function SaveAll (flag1 As Variant, flag2 As Variant, flag3 As Variant) As Variant
+		SaveAll=False
+		Dim i As Long
+		For i=0 To DocArrayIndex
+			Set doc=DocArray(i)
+			If Not doc Is Nothing Then
+				Select Case TypeArray(i)
+				Case TYPE_NOTESDOCUMENT: Call doc.Save(flag1, flag2, flag3)
+				Case TYPE_ACL: Call doc.Save
+				End Select
+			End If
+		Next
+		SaveAll=True
+	End Function
+	
+	Public Function GetEntryByUnid (unid As Variant) As Variant
+		Set GetEntryByUNID=Nothing
+		pos=Arraygetindex(UNIDArray,unid)
+		If Isnull(pos) Then Exit Function
+		Set GetEntryByUNID=DocArray(pos)
+	End Function
+	
+	Public Function Clear As Variant
+		Erase DocArray
+		Erase TypeArray
+		Erase UNIDArray
+		Redim DocArray (0 To 0)
+		Redim TypeArray (0 To 0)
+		Redim UNIDArray (0 To 0)
+		Set DocArray(0)=Nothing
+		UNIDArray(0)=""
+		TypeArray(0)=-1
+		DocArrayIndex=0
+		Position=-1
+		Counter=0
+	End Function
+	
+	Public Sub Delete
+		Erase DocArray
+		Erase TypeArray
+		Erase UNIDArray
+		DocArrayIndex=0
+		Position=0
+		Counter=0
+	End Sub
+End Class
+
+'++LotusScript Development Environment:2:1:DC_RemoveElement:1:8
+Private Function DC_RemoveElement (arr As Variant, pos As Variant)
+	On Error Goto handler
+	ub=Ubound(arr)
+	lb=Lbound(arr)
+	If pos>ub Then Exit Function
+	If ub=lb Then
+		If Isobject(arr(lb)) Then
+			Set arr(lb)=Nothing
+		Else
+			arr(lb)=""
+		End If
+	Elseif pos=ub Then
+		Redim Preserve arr(lb To ub-1)
+	Else
+		For i=pos+1 To ub
+			On Error Goto handler1
+			arr(i-1)=arr(i)
+			Goto endh1
+handler1:
+			Set arr(i-1)=arr(i)
+			Resume endh1
+endh1:
+		Next
+		Redim Preserve arr(lb To ub-1)
+	End If
+	Goto endh
+handler:
+	Error Err, Error$
+	Resume endh
+endh:
+End Function
+'++LotusScript Development Environment:2:1:DC_CanEditDocument:1:8
+Function DC_CanEditDocument(cdoc As Variant) As Integer
+	' проверка документа на чтение/запись
+	' возврат : 0 - чтение, 1 - запись
+	Dim NoteFlags As Integer
+	
+	hNote& = cdoc.HANDLE
+	If hNote& <> 0 Then 
+		Call W32_NSFNoteGetInfo(hNote&, NOTE_FLAGS%, NoteFlags)
+		If NoteFlags And NOTE_FLAG_READONLY% Then
+			DC_CanEditDocument = 0
+		Else
+			DC_CanEditDocument = 1
+		End If
+	End If
+End Function
+'++LotusScript Development Environment:2:1:DC_Implode:1:8
+Private Function DC_Implode (SourceArray As Variant, Delimiter As Variant) As String
+	If (Isarray(SourceArray)) Then
+		Forall TempStr In SourceArray
+			If ( Len(DC_Implode)=0) Then
+				DC_Implode=Cstr(TempStr)
+			Else
+				DC_Implode=DC_Implode+Delimiter+Cstr(TempStr)
+			End If
+		End Forall
+		
+	Else
+		If (Len(Cstr(SourceArray))>0) Then
+			DC_Implode=SourceArray
+		Else
+			DC_Implode=""
+		End If
+	End If
+End Function
+'++LotusScript Development Environment:2:1:DC_AppendElement:1:8
+Private Function DC_AppendElement(arr As Variant, element As Variant) As Variant
+	lb=Lbound(arr)
+	ub=Ubound(arr)
+	If lb=ub Then
+		If Isnull (arr(lb)) Then
+			arr(lb)=element
+			Exit Function
+		Elseif Datatype(arr(lb))=8 Then
+			If arr(lb)="" Then
+				arr(lb)=element
+				Exit Function
+			End If
+		End If
+	End If
+	Redim Preserve arr (lb To ub+1)
+	arr(ub+1)=element
+End Function

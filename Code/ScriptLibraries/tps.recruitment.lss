@@ -1,0 +1,3424 @@
+'++LotusScript Development Environment:2:5:(Options):0:74
+Option Public
+Option Declare
+Use "fbyte"
+Use "tps.common"
+
+'++LotusScript Development Environment:2:5:(Forward):0:1
+Declare Public Class TPS_RecruitmentService As FBase_Abstract_Service
+Declare Class TPS_Recruitment_Request As Fbase_abstract_object_doc
+Declare Class TPS_Recruitment_Candidate As Fbase_abstract_object_doc
+Declare Class TPS_Recruitment_MethodsLink As Fbase_abstract_object_doc
+Declare Class TPS_Recruitment_ProbationTask As Fbase_abstract_object_doc
+Declare Public Class TPS_Recruitment_Company As FBase_Abstract_Object_Doc
+Declare Class TPS_Recruitment_PositionCategory As Fbase_abstract_object_doc
+Declare Class TPS_Recruitment_Request_InitObj As Fbase_abstract_service
+Declare Class TPS_Recruitment_EventType As Fbase_abstract_object_doc
+Declare Class TPS_Recruitment_CandidateCard As Fbase_abstract_object_doc
+Declare Class TPS_Recruitment_Event As Fbase_abstract_object_doc
+Declare Class TPS_Recruitment_FeedBack As Fbase_abstract_object_doc
+Declare Class TPS_Recruitment_EventReport As Fbase_abstract_object_doc
+Declare Class TPS_Recruitment_ContractStage As Fbase_abstract_object_doc
+Declare Class TPS_Recruitment_Competence As Fbase_abstract_object_doc
+Declare Class TPS_Recruitment_Resume As Fbase_abstract_object_doc
+Declare Class TPS_Recruitment_Question As Fbase_abstract_object_doc
+Declare Class TPS_Recruitment_ProbationTaskReport As Fbase_abstract_object_doc
+Declare Class TPS_Recruitment_CompetenceQuestion As Fbase_abstract_object_doc
+Declare Class TPS_Recruitment_FileLink As Fbase_abstract_object_doc
+Declare Class TPS_Recruitment_TestLink As Fbase_abstract_object_doc
+
+'++LotusScript Development Environment:2:5:(Declarations):0:10
+Private Const DATABASE_KEY = "tps.recruitment"
+Private Const DOMAIN_TPS_RECRUITMENT_REQUEST = "tps.recruitment.request"
+Private Const DOMAIN_TPS_RECRUITMENT_COMPANY = "tps.recruitment.company"
+Private Const DOMAIN_TPS_RECRUITMENT_POSCATEGORY = "tps.recruitment.poscategory"
+Private Const DOMAIN_TPS_RECRUITMENT_PROBATIONTASK = "tps.recruitment.probationtask"
+Private Const DOMAIN_TPS_RECRUITMENT_METHODSLINK = "tps.recruitment.methodslink"
+Private Const DOMAIN_TPS_RECRUITMENT_CANDIDATE = "tps.recruitment.candidate.agreement"
+Private Const DOMAIN_TPS_RECRUITMENT_CANDIDATE_CARD = "tps.recruitment.candidate.card"
+Private Const DOMAIN_TPS_RECRUITMENT_REF_EVENT = "tps.recruitment.event_type"
+Private Const DOMAIN_TPS_RECRUITMENT_EVENT = "tps.recruitment.event"
+Private Const DOMAIN_TPS_RECRUITMENT_EVENTREPORT = "tps.recruitment.event_report"
+Private Const DOMAIN_TPS_RECRUITMENT_CONTRACTSTAGE = "tps.recruitment.contractstage"
+Private Const DOMAIN_TPS_RECRUITMENT_COMPETENCE = "tps.recruitment.competence"
+Private Const DOMAIN_TPS_RECRUITMENT_COMPETENCEQUEST = "tps.recruitment.competence.question"
+Private Const DOMAIN_TPS_RECRUITMENT_RESUME = "tps.recruitment.resume"
+Private Const DOMAIN_TPS_RECRUITMENT_REF_QUESTION = "tps.recruitment.question"
+Private Const DOMAIN_TPS_RECRUITMENT_FEEDBACK = "tps.recruitment.feedback"
+Private Const DOMAIN_TPS_RECRUITMENT_TASKREPORT = "tps.recruitment.probationtask.report"
+Private Const DOMAIN_TPS_RECRUITMENT_LINK = "tps.recruitment.candidate.link"
+Private Const DOMAIN_TPS_RECRUITMENT_TEST = "tps.recruitment.request.test"
+'======================================================================================================================================
+'	CLASS TPS_RecruitmentService
+'======================================================================================================================================
+Public Class TPS_RecruitmentService As FBase_Abstract_Service
+	Private m_db As NotesDatabase
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Private Function getId( in_key As Variant ) As String
+		On Error GoTo error_point
+		Call Me.log.enter( TypeName( Me ) & "." & GetThreadInfo(1))
+		
+		Dim key As String
+		If ( LCase( TypeName( in_key )) = "objectlink" ) Then
+			key = in_key.id 
+		ElseIf IsScalar( in_key ) Then 
+			key = in_key
+		Else
+			Error 1001, "The type of data of parameter 'in_key' is '" & TypeName( in_key ) & "'. It is not supported"
+		End If
+		
+		getId = key
+		
+		Call Me.log.trace( "result: " & getId )
+		Call Me.log.exit( TypeName( Me ) & "." & GetThreadInfo(1))
+		Exit Function
+		
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Function
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	'	PUBLIC:
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Sub New( in_ps As Variant )
+	End Sub
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Property Get db As NotesDatabase
+		On Error GoTo error_point
+		Call Me.log.enter( TypeName( Me ) & "." & GetThreadInfo(1))
+		
+		If( m_db Is Nothing )Then
+			Set m_db = Me.sm.base.databases.get( DATABASE_KEY )
+		End If
+		Set db = m_db
+		
+		Call Me.log.traceObject( "result", db )		
+		Call Me.log.exit( TypeName( Me ) & "." & GetThreadInfo(1))
+		Exit Property
+		
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Property
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Function getObject( in_link As Variant ) As Variant
+		On Error GoTo error_point
+		Call Me.log.enter( TypeName( Me ) & "." & GetThreadInfo(1))
+		
+		Select Case in_link.domain
+
+		Case Else
+			Error 1001, "The data of type '" & in_link.domain & "' of parameter 'in_link.domain' is not supported"
+		End Select
+		
+		Call Me.log.traceObject( "result", getObject )
+		Call Me.log.exit( TypeName( Me ) & "." & GetThreadInfo(1))
+		Exit Function
+		
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Function
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Function getCompany (In_key As Variant) As Variant
+		On Error GoTo error_point
+		Call Me.log.enter( TypeName( Me ) & "." & GetThreadInfo(1))
+		
+		Set getCompany = Nothing
+		
+		Dim id As String
+		id = Me.getid(In_key)
+		
+		If Trim(id) <> "" Then
+			Dim getvw As NotesView
+			Set getvw = Me.db.GetView ("(UNID)")
+			
+			Dim companyDoc As NotesDocument
+			Set companyDoc = getvw.Getdocumentbykey(id, True)
+			If Not companyDoc Is Nothing Then
+				Set getCompany = Me.GetDocObject(companyDoc)
+			End If
+		End If
+		
+		Call Me.log.traceObject( "result", getCompany )
+		Call Me.log.exit( TypeName( Me ) & "." & GetThreadInfo(1))
+		Exit Function
+		
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Function
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Function getObjectBykey (In_key As Variant) As Variant
+		On Error GoTo error_point
+		Call Me.log.enter( TypeName( Me ) & "." & GetThreadInfo(1))
+		
+		Set getObjectBykey = Nothing
+		
+		Dim id As String
+		id = Me.getid(In_key)
+		
+		If Trim(id) <> "" Then
+			Dim getvw As NotesView
+			Set getvw = Me.db.GetView ("(UNID)")
+			
+			Dim objDoc As NotesDocument
+			Set objDoc = getvw.Getdocumentbykey(id, True)
+			If Not objDoc Is Nothing Then
+				Set getObjectBykey = Me.GetDocObject(objDoc)
+			End If
+		End If
+		
+		Call Me.log.traceObject( "result", getObjectBykey )
+		Call Me.log.exit( TypeName( Me ) & "." & GetThreadInfo(1))
+		Exit Function
+		
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Function
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Function getRequest (In_key As Variant) As Variant
+		On Error GoTo error_point
+		Call Me.log.enter( TypeName( Me ) & "." & GetThreadInfo(1))
+		
+		Set getRequest = Nothing
+		
+		Dim id As String
+		id = Me.getid(In_key)
+		
+		If Trim(id) <> "" Then
+			Dim getvw As NotesView
+			Set getvw = Me.db.GetView ("(UNID)")
+			
+			Dim requestDoc As NotesDocument
+			Set requestDoc = getvw.Getdocumentbykey(id, True)
+			If Not requestDoc Is Nothing Then
+				Set getRequest = Me.GetDocObject(requestDoc)
+			End If
+		End If
+		
+		Call Me.log.traceObject( "result", getRequest )
+		Call Me.log.exit( TypeName( Me ) & "." & GetThreadInfo(1))
+		Exit Function
+		
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Function
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Function getCandidate (In_key As Variant) As Variant
+		On Error GoTo error_point
+		Call Me.log.enter( TypeName( Me ) & "." & GetThreadInfo(1))
+		
+		Set getCandidate = Nothing
+		
+		Dim id As String
+		id = Me.getid(In_key)
+		
+		If Trim(id) <> "" Then
+			Dim getvw As NotesView
+			Set getvw = Me.db.GetView ("(UNID)") 
+			
+			Dim candidateDoc As NotesDocument
+			Set candidateDoc = getvw.Getdocumentbykey(id, True)
+			If Not candidateDoc Is Nothing Then
+				Set getCandidate = Me.GetDocObject(candidateDoc)
+			End If
+		End If
+		
+		Call Me.log.traceObject( "result", getCandidate )
+		Call Me.log.exit( TypeName( Me ) & "." & GetThreadInfo(1))
+		Exit Function
+		
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Function
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------	
+	Function getDocObject( in_doc As NotesDocument ) As Variant
+		On Error GoTo error_point
+		Call Me.log.enter( TypeName( Me ) & "." & GetThreadInfo(1))
+		
+		Select Case LCase(in_doc.form(0))
+			Case LCase("tps.recruitment.request"):
+				Set getDocObject =  New TPS_Recruitment_Request ( in_doc, Me.Me_variant )
+			Case LCase("Company"):
+				Set getDocObject =  New TPS_Recruitment_Company ( in_doc, Me.Me_variant )
+			Case LCase("tps.recruitment.position_category"):
+				Set getDocObject =  New TPS_Recruitment_PositionCategory ( in_doc, Me.Me_variant )
+			Case LCase("tps.recruitment.probationtask"):
+				Set getDocObject =  New TPS_Recruitment_ProbationTask ( in_doc, Me.Me_variant )
+			Case LCase("tps.recruitment.probationtask.report"):
+				Set getDocObject =  New TPS_Recruitment_ProbationTaskReport ( in_doc, Me.Me_variant )
+			Case LCase("tps.recruitment.ref.event"):
+				Set getDocObject =  New TPS_Recruitment_EventType ( in_doc, Me.Me_variant )
+			Case LCase("tps.recruitment.candidate.event"):
+				Set getDocObject =  New TPS_Recruitment_Event ( in_doc, Me.Me_variant )
+			Case LCase("LinkToDocument"):
+				Set getDocObject =  New TPS_Recruitment_MethodsLink ( in_doc, Me.Me_variant )
+			Case LCase("tps.recruitment.candidate.agreement"):
+				Set getDocObject =  New TPS_Recruitment_Candidate ( in_doc, Me.Me_variant )
+			Case LCase("tps.recruitment.candidate"):
+				Set getDocObject =  New TPS_Recruitment_CandidateCard ( in_doc, Me.Me_variant )
+			Case LCase("tps.recruitment.competence"):
+				Set getDocObject =  New TPS_Recruitment_Competence ( in_doc, Me.Me_variant )
+			Case LCase("tps.recruitment.competence.question"):
+				Set getDocObject =  New TPS_Recruitment_CompetenceQuestion ( in_doc, Me.Me_variant )
+			Case LCase("tps.recruitment.contractstage"):
+				Set getDocObject =  New TPS_Recruitment_ContractStage ( in_doc, Me.Me_variant )
+			Case LCase("tps.recruitment.report"):
+				Set getDocObject =  New TPS_Recruitment_EventReport ( in_doc, Me.Me_variant )
+			Case LCase("tps.recruitment.ref.question"):
+				Set getDocObject =  New TPS_Recruitment_Question ( in_doc, Me.Me_variant )
+			Case LCase ("tps.recruitment.feedback"):
+				Set getDocObject =  New TPS_Recruitment_FeedBack ( in_doc, Me.Me_variant )
+			Case LCase("LinkDoc"):
+				If in_doc.LinkType(0) = "resume" Then
+					Set getDocObject =  New TPS_Recruitment_Resume ( in_doc, Me.Me_variant )
+				ElseIf in_doc.LinkType(0) = "test" Then
+					Set getDocObject =  New TPS_Recruitment_TestLink ( in_doc, Me.Me_variant )
+				ElseIf in_doc.LinkType(0) = "" Then
+					Set getDocObject =  New TPS_Recruitment_FileLink ( in_doc, Me.Me_variant )
+				End If				
+		Case Else:
+			Error 1001, "Форма '" & in_doc.form(0) & "' не поддерживается"
+		End Select
+		
+		Call Me.log.traceObject( "result", getDocObject )
+		Call Me.log.exit( TypeName( Me ) & "." & GetThreadInfo(1))
+		Exit Function
+		
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Function
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Function dialogSelectCompanies( in_isMult As Boolean ) As MixCollection
+		On Error GoTo error_point
+		Call Me.log.enter( TypeName( Me ) & "." & GetThreadInfo(1))
+		
+		Dim mxResult As New MixCollection
+		Set dialogSelectCompanies = mxResult
+		
+		Dim ws As New NotesUIWorkspace, ndc As NotesDocumentCollection
+		Set ndc = ws.PickListCollection( 3, in_isMult, Me.db.Server, Me.db.FilePath, "(App.Company.Active)", "Окно выбора компании", "Выделите необходимые документы и нажмите OK" )
+		
+		Dim doc As NotesDocument
+		Set doc = ndc.GetFirstDocument
+		Do While Not ( doc Is Nothing )
+			Call mxResult.Append( Me.getDocObject( doc ))
+			Set doc = ndc.GetNextDocument( doc )
+		Loop
+		
+		Call Me.log.traceObject( "result", mxResult )
+		Call Me.log.exit( TypeName( Me ) & "." & GetThreadInfo(1))
+		Exit Function
+		
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$ 
+	End Function
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Function dialogSelectEventTypes( in_isMult As Boolean, in_company As Variant ) As MixCollection
+		On Error GoTo error_point
+		Call Me.log.enter( TypeName( Me ) & "." & GetThreadInfo(1))
+		
+		Dim mxResult As New MixCollection
+		Set dialogSelectEventTypes = mxResult
+		
+		Dim category As String
+		If IsObject (in_company) Then
+			category = in_company.id
+		Else
+			category = CStr(in_company)
+		End If
+		
+		Dim ws As New NotesUIWorkspace, ndc As NotesDocumentCollection
+		Set ndc = ws.PickListCollection( 3, in_isMult, Me.db.Server, Me.db.FilePath, "(App.Ref.Events.Active)", "Окно выбора мероприятия", "Выделите необходимые документы и нажмите OK", category)
+		
+		Dim doc As NotesDocument
+		Set doc = ndc.GetFirstDocument
+		Do While Not ( doc Is Nothing )
+			Call mxResult.Append( Me.getDocObject( doc ))
+			Set doc = ndc.GetNextDocument( doc )
+		Loop
+		
+		Call Me.log.traceObject( "result", mxResult )
+		Call Me.log.exit( TypeName( Me ) & "." & GetThreadInfo(1))
+		Exit Function
+		
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$ 
+	End Function
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Function dialogSelectCategories( in_isMult As Boolean, sourceCompany As Variant) As MixCollection
+		On Error GoTo error_point
+		Call Me.log.enter( TypeName( Me ) & "." & GetThreadInfo(1))
+		
+		Dim category As String
+		If IsObject (sourceCompany) Then
+			category = Trim(sourceCompany.id)
+		Else
+			category = Trim(CStr(sourceCompany))
+		End If
+		
+		Dim mxResult As New MixCollection
+		Set dialogSelectCategories = mxResult
+		
+		Dim ws As New NotesUIWorkspace, ndc As NotesDocumentCollection
+		If category <> "" Then
+			Set ndc = ws.PickListCollection (3, in_isMult, Me.db.Server, Me.db.FilePath, "(PositionCategories)", "Окно выбора категории должности", "Выделите необходимые документы и нажмите OK", category)
+		Else
+			Set ndc = ws.PickListCollection (3, in_isMult, Me.db.Server, Me.db.FilePath, "(PositionCategories)", "Окно выбора категории должности", "Выделите необходимые документы и нажмите OK")
+		End If
+		
+		Dim doc As NotesDocument
+		Set doc = ndc.GetFirstDocument
+		Do While Not (doc Is Nothing)
+			Call mxResult.Append (Me.getDocObject( doc ))
+			Set doc = ndc.GetNextDocument(doc)
+		Loop
+		
+		Call Me.log.traceObject( "result", mxResult )
+		Call Me.log.exit( TypeName( Me ) & "." & GetThreadInfo(1))
+		Exit Function
+		
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$ 
+	End Function
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Function dialogSelectRequests( in_isMult As Boolean) As MixCollection
+		On Error GoTo error_point
+		Call Me.log.enter( TypeName( Me ) & "." & GetThreadInfo(1))
+		
+		Dim mxResult As New MixCollection
+		Set dialogSelectRequests = mxResult
+		
+		Dim ws As New NotesUIWorkspace, ndc As NotesDocumentCollection
+		Set ndc = ws.PickListCollection (3, in_isMult, Me.db.Server, Me.db.FilePath, "App.Active.RequestsByStage", "Окно выбора заявки на подбор", "Выделите необходимые документы и нажмите OK")
+		
+		Dim doc As NotesDocument
+		Set doc = ndc.GetFirstDocument
+		Do While Not (doc Is Nothing)
+			Call mxResult.Append (Me.getDocObject( doc ))
+			Set doc = ndc.GetNextDocument(doc)
+		Loop
+		
+		Call Me.log.traceObject( "result", mxResult )
+		Call Me.log.exit( TypeName( Me ) & "." & GetThreadInfo(1))
+		Exit Function
+		
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$ 
+	End Function
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Function dialogSelectCompleteRequests ( in_isMult As Boolean) As MixCollection
+		On Error GoTo error_point
+		Call Me.log.enter( TypeName( Me ) & "." & GetThreadInfo(1))
+		
+		Dim mxResult As New MixCollection
+		Set dialogSelectCompleteRequests = mxResult
+		
+		Dim ws As New NotesUIWorkspace, ndc As NotesDocumentCollection
+		Set ndc = ws.PickListCollection (3, in_isMult, Me.db.Server, Me.db.FilePath, "App.Complete.RequestsByPosition", "Окно выбора заявки на подбор", "Выделите необходимые документы и нажмите OK")
+		
+		Dim doc As NotesDocument
+		Set doc = ndc.GetFirstDocument
+		Do While Not (doc Is Nothing)
+			Call mxResult.Append (Me.getDocObject( doc ))
+			Set doc = ndc.GetNextDocument(doc)
+		Loop
+		
+		Call Me.log.traceObject( "result", mxResult )
+		Call Me.log.exit( TypeName( Me ) & "." & GetThreadInfo(1))
+		Exit Function
+		
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$ 
+	End Function
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Function dialogSelectCandidates( in_isMult As Boolean) As MixCollection
+		On Error GoTo error_point
+		Call Me.log.enter( TypeName( Me ) & "." & GetThreadInfo(1))
+		
+		Dim mxResult As New MixCollection
+		Set dialogSelectCandidates = mxResult
+		
+		Dim ws As New NotesUIWorkspace, ndc As NotesDocumentCollection
+		Set ndc = ws.PickListCollection (3, in_isMult, Me.db.Server, Me.db.FilePath, "App.Ref.Candidates", "Окно выбора кандидата из списка ранее заведенных в системе", "Выделите необходимые документы и нажмите OK")
+		
+		Dim doc As NotesDocument
+		Set doc = ndc.GetFirstDocument
+		Do While Not (doc Is Nothing)
+			Call mxResult.Append (Me.getDocObject( doc ))
+			Set doc = ndc.GetNextDocument(doc)
+		Loop
+		
+		Call Me.log.traceObject( "result", mxResult )
+		Call Me.log.exit( TypeName( Me ) & "." & GetThreadInfo(1))
+		Exit Function
+		
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$ 
+	End Function
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Function getFinalCandidate (in_isMult As Boolean, in_Source As Variant) As MixCollection
+		On Error GoTo error_point
+		Call Me.log.enter( TypeName( Me ) & "." & GetThreadInfo(1))
+		
+		Dim mxResult As New MixCollection
+		Set getFinalCandidate = mxResult
+		
+		Dim key As String
+		If IsObject (in_Source) Then
+			key = in_Source.universalid
+		Else
+			key = CStr(in_Source)
+		End If
+		
+		Dim vw As NotesView
+		Set vw = Me.db.Getview("(Candidates.Complete.Agreed)")
+		
+		Dim ndc As NotesDocumentCollection
+		Set ndc = vw.Getalldocumentsbykey(key, True)
+		
+		Dim doc As NotesDocument
+		Set doc = ndc.GetFirstDocument
+		Do While Not (doc Is Nothing)
+			Call mxResult.Append (Me.getDocObject (doc))
+			Set doc = ndc.GetNextDocument (doc)
+		Loop
+		
+		Call Me.log.traceObject( "result", mxResult )
+		Call Me.log.exit( TypeName( Me ) & "." & GetThreadInfo(1))
+		Exit Function
+		
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$ 
+	End Function
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Function dialogSelectFinalCandidate (in_isMult As Boolean, in_Source As Variant) As MixCollection
+		On Error GoTo error_point
+		Call Me.log.enter( TypeName( Me ) & "." & GetThreadInfo(1))
+		
+		Dim mxResult As New MixCollection
+		Set dialogSelectFinalCandidate = mxResult
+		
+		Dim key As String
+		If IsObject (in_Source) Then
+			key = in_Source.universalid
+		Else
+			key = CStr(in_Source)
+		End If
+		
+		Dim ws As New NotesUIWorkspace, ndc As NotesDocumentCollection
+		Set ndc = ws.PickListCollection (3, in_isMult, Me.db.Server, Me.db.FilePath, "(Candidates.Complete.Agreed)", "Окно выбора кандидата", "Выделите необходимые документы и нажмите OK", key)
+		
+		Dim doc As NotesDocument
+		Set doc = ndc.GetFirstDocument
+		Do While Not (doc Is Nothing)
+			Call mxResult.Append (Me.getDocObject( doc ))
+			Set doc = ndc.GetNextDocument(doc)
+		Loop
+		
+		Call Me.log.traceObject( "result", mxResult )
+		Call Me.log.exit( TypeName( Me ) & "." & GetThreadInfo(1))
+		Exit Function
+		
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$ 
+	End Function
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Function dialogSelectExistCandidates (in_Source As Variant, positionPrefix As String) As MixCollection
+		On Error GoTo error_point
+		Call Me.log.enter( TypeName( Me ) & "." & GetThreadInfo(1))
+		
+		Dim mxResult As New MixCollection
+		Set dialogSelectExistCandidates = mxResult
+		
+		Dim dictRef As String
+		If IsObject (in_Source) Then
+			dictRef = in_Source.getItemValue (positionPrefix & "Position_dict_id")(0)
+		Else
+			dictRef = CStr(in_Source)
+		End If
+		
+		If dictRef = "" Then
+			Error 5000, "Нет информации о документе справочника должности"
+		End If
+		
+		Dim ws As New NotesUIWorkspace 
+		Dim ndc As NotesDocumentCollection
+		Dim dlgDoc As NotesDocument
+		
+		Set dlgDoc = Me.db.Createdocument()
+		Call dlgDoc.Replaceitemvalue("PosDictUNID", dictRef)
+		
+		If ws.Dialogbox("dialog_selectExistCandidates", True, True, True, False, False, False, "Кандидаты", dlgDoc, True, True) Then
+			
+			Dim unids As Variant
+			unids = Arrays_InitArray (dlgDoc.Getitemvalue("Documents"))
+						
+			If unids(0) <> "" Then
+				ForAll unid In unids
+					Call mxResult.Append (Me.getObjectBykey (unid))
+				End ForAll
+			End If
+		End If
+		
+		Call Me.log.traceObject( "result", mxResult )
+		Call Me.log.exit( TypeName( Me ) & "." & GetThreadInfo(1))
+		Exit Function
+		
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$ 
+	End Function
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Function dialogSelectTests( in_isMult As Boolean, Source As Variant) As MixCollection
+		On Error GoTo error_point
+		Call Me.log.enter( TypeName( Me ) & "." & GetThreadInfo(1))
+		
+		Dim mxResult As New MixCollection
+		Set dialogSelectTests = mxResult
+		
+		Dim key As String
+		If IsObject (source) Then
+			key = source.universalid
+		Else
+			key = CStr(source)
+		End If
+		
+		Dim ws As New NotesUIWorkspace, ndc As NotesDocumentCollection
+		Set ndc = ws.PickListCollection (3, in_isMult, Me.db.Server, Me.db.FilePath, "(emb_LinkDocsTests)", "Окно выбора файлов с тестами", "Выделите необходимые документы и нажмите OK", key)
+		
+		Dim doc As NotesDocument
+		Set doc = ndc.GetFirstDocument
+		Do While Not (doc Is Nothing)
+			Call mxResult.Append (doc)
+			Set doc = ndc.GetNextDocument(doc)
+		Loop
+		
+		Call Me.log.traceObject( "result", mxResult )
+		Call Me.log.exit( TypeName( Me ) & "." & GetThreadInfo(1))
+		Exit Function
+		
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$ 
+	End Function
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Function dialogSelectTasks( in_isMult As Boolean, source As Variant ) As MixCollection
+		On Error GoTo error_point
+		Call Me.log.enter( TypeName( Me ) & "." & GetThreadInfo(1))
+		
+		Dim mxResult As New MixCollection
+		Set dialogSelectTasks = mxResult
+		
+		Dim key As String
+		If IsObject (source) Then
+			key = source.universalid
+		Else
+			key = CStr(source)
+		End If
+		
+		Dim ws As New NotesUIWorkspace, ndc As NotesDocumentCollection
+		Set ndc = ws.PickListCollection( 3, in_isMult, Me.db.Server, Me.db.FilePath, "(emb.ProbationTasks)", "Окно выбора ключевых задач для должности", "Выделите необходимые документы и нажмите OK", key )
+		
+		Dim doc As NotesDocument
+		Set doc = ndc.GetFirstDocument
+		Do While Not ( doc Is Nothing )
+			Dim category As Variant
+			Set category = Me.getDocObject( doc )
+			Call mxResult.Append( category )
+			Set doc = ndc.GetNextDocument( doc )
+		Loop
+		
+		Call Me.log.traceObject( "result", mxResult )
+		Call Me.log.exit( TypeName( Me ) & "." & GetThreadInfo(1))
+		Exit Function
+		
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$ 
+	End Function
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Function dialogSelectCompetences ( competenceType As String, in_isMult As Boolean, source As Variant ) As MixCollection
+		On Error GoTo error_point
+		Call Me.log.enter( TypeName( Me ) & "." & GetThreadInfo(1))
+		
+		Dim mxResult As New MixCollection
+		Set dialogSelectCompetences = mxResult
+		
+		Dim key As String
+		If IsObject (source) Then
+			key = source.universalid
+		Else
+			key = CStr(source)
+		End If
+		
+		Dim viewName As String
+		If competenceType = "expertise" Then
+			viewName = "(emb.CompetenceExpertise)"
+		ElseIf competenceType = "personal" Then
+			viewName = "(emb.CompetencePersonal)"
+		End If
+		
+		Dim ws As New NotesUIWorkspace, ndc As NotesDocumentCollection
+		Set ndc = ws.PickListCollection( 3, in_isMult, Me.db.Server, Me.db.FilePath, viewName, "Окно выбора компетенций", "Выделите необходимые документы и нажмите OK", key )
+		
+		Dim doc As NotesDocument
+		Set doc = ndc.GetFirstDocument
+		Do While Not ( doc Is Nothing )
+			Dim category As Variant
+			Set category = Me.getDocObject( doc )
+			Call mxResult.Append( category )
+			Set doc = ndc.GetNextDocument( doc )
+		Loop
+		
+		Call Me.log.traceObject( "result", mxResult )
+		Call Me.log.exit( TypeName( Me ) & "." & GetThreadInfo(1))
+		Exit Function
+		
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$ 
+	End Function
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Function dialogSelectContractStages( in_isMult As Boolean, source As Variant ) As MixCollection
+		On Error GoTo error_point
+		Call Me.log.enter( TypeName( Me ) & "." & GetThreadInfo(1))
+		
+		Dim mxResult As New MixCollection
+		Set dialogSelectContractStages = mxResult
+		
+		Dim key As String
+		If IsObject (source) Then
+			key = source.universalid
+		Else
+			key = CStr(source)
+		End If
+		
+		Dim ws As New NotesUIWorkspace, ndc As NotesDocumentCollection
+		Set ndc = ws.PickListCollection( 3, in_isMult, Me.db.Server, Me.db.FilePath, "(emb.ContractStages)", "Окно выбора этапов по договору ГПХ", "Выделите необходимые документы и нажмите OK", key )
+		
+		Dim doc As NotesDocument
+		Set doc = ndc.GetFirstDocument
+		Do While Not ( doc Is Nothing )
+			Dim category As Variant
+			Set category = Me.getDocObject( doc )
+			Call mxResult.Append( category )
+			Set doc = ndc.GetNextDocument( doc )
+		Loop
+		
+		Call Me.log.traceObject( "result", mxResult )
+		Call Me.log.exit( TypeName( Me ) & "." & GetThreadInfo(1))
+		Exit Function
+		
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$ 
+	End Function
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Function dialogSelectMethodsLinks( in_isMult As Boolean, source As Variant ) As MixCollection
+		On Error GoTo error_point
+		Call Me.log.enter( TypeName( Me ) & "." & GetThreadInfo(1))
+		
+		Dim mxResult As New MixCollection
+		Set dialogSelectMethodsLinks = mxResult
+		
+		Dim key As String
+		If IsObject (source) Then
+			key = source.universalid
+		Else
+			key = CStr(source)
+		End If
+		
+		Dim ws As New NotesUIWorkspace, ndc As NotesDocumentCollection
+		Set ndc = ws.PickListCollection( 3, in_isMult, Me.db.Server, Me.db.FilePath, "(emb.methods)", "Окно выбора методик", "Выделите необходимые документы и нажмите OK", key )
+		
+		Dim doc As NotesDocument
+		Set doc = ndc.GetFirstDocument
+		Do While Not ( doc Is Nothing )
+			Dim category As Variant
+			Set category = Me.getDocObject( doc )
+			Call mxResult.Append( category )
+			Set doc = ndc.GetNextDocument( doc )
+		Loop
+		
+		Call Me.log.traceObject( "result", mxResult )
+		Call Me.log.exit( TypeName( Me ) & "." & GetThreadInfo(1))
+		Exit Function
+		
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$ 
+	End Function
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Function dialogSelectQuestions( in_isMult As Boolean, source As Variant ) As MixCollection
+		On Error GoTo error_point
+		Call Me.log.enter( TypeName( Me ) & "." & GetThreadInfo(1))
+		
+		Dim mxResult As New MixCollection
+		Set dialogSelectQuestions = mxResult
+		
+		Dim key As String
+		If IsObject (source) Then
+			key = source.universalid
+		Else
+			key = CStr(source)
+		End If
+		
+		Dim ws As New NotesUIWorkspace, ndc As NotesDocumentCollection
+		Set ndc = ws.PickListCollection( 3, in_isMult, Me.db.Server, Me.db.FilePath, "(emb.CompetenceQuestions)", "Окно выбора вопросов", "Выделите необходимые документы и нажмите OK", key )
+		
+		Dim doc As NotesDocument
+		Set doc = ndc.GetFirstDocument
+		Do While Not (doc Is Nothing)
+			
+			Dim question As Variant
+			Set question = Me.getDocObject (doc)
+			Call mxResult.Append (question)
+			
+			Set doc = ndc.GetNextDocument (doc)
+		Loop
+		
+		Call Me.log.traceObject( "result", mxResult )
+		Call Me.log.exit( TypeName( Me ) & "." & GetThreadInfo(1))
+		Exit Function
+		
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$ 
+	End Function	
+	'--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Function createTask( in_doc As NotesDocument ) As TPS_Recruitment_ProbationTask
+		On Error GoTo error_point
+		
+		Set createTask = Nothing
+		If ( Not ( in_doc Is Nothing ) ) Then
+			Dim cardAgree As Variant
+			Set cardAgree = Me.getDocObject( in_doc )
+			If Not IsEmpty( cardAgree ) Then
+				If ( cardAgree.domain = DOMAIN_TPS_RECRUITMENT_REQUEST ) Then
+					
+					Dim session As New NotesSession
+					Dim docNew As NotesDocument 
+					
+					Set docNew = Me.db.Createdocument()
+					Dim task As New TPS_Recruitment_ProbationTask (docNew, Me.Me_variant)
+					
+					Call task.nd.Replaceitemvalue("Form", "tps.recruitment.probationtask" )
+					Call task.nd.Replaceitemvalue("domain", DOMAIN_TPS_RECRUITMENT_PROBATIONTASK)
+					Call task.nd.Replaceitemvalue("id", task.nd.Universalid )
+					Call task.nd.Replaceitemvalue("CustomID", task.nd.Universalid )
+					Call task.nd.Replaceitemvalue("docKind", "ExtraDoc" )
+					
+					Dim item As NotesItem
+					Set item = in_doc.Getfirstitem("DWF$Authors")
+					If ( Not item Is Nothing ) Then
+						Call item.Copyitemtodocument( task.nd, item.Name )
+					End If
+					Set item = in_doc.Getfirstitem("DWF$Readers")
+					If ( Not item Is Nothing ) Then
+						Call item.Copyitemtodocument( task.nd, item.Name )
+					End If
+					Set item = in_doc.Getfirstitem("DWF$Server")
+					If ( Not item Is Nothing ) Then
+						Call item.Copyitemtodocument( task.nd, item.Name )
+					End If
+					
+					Dim docTemp As New NotesDocument( Me.db ), ItemRef As NotesItem
+					Call docTemp.Makeresponse( in_doc )
+					Set ItemRef = docTemp.Getfirstitem("$Ref") 
+					If Not ( ItemRef Is Nothing ) Then
+						Call ItemRef.Copyitemtodocument( task.nd, "MainRef" )
+					Else
+						Error 4001, {Не удалось сформировать поле "$Ref"}
+					End If
+					
+				Else
+					Error 4001, {Не верный входящий параметр: Домен не равен домену 'карточки заявки'. UNID: } & in_doc.Universalid & { / domain: } & cardAgree.domain
+				End If
+			Else
+				Error 4001, {Не удалось получить объект по входящему параметру (документу). UNID: } & in_doc.Universalid
+			End If
+			
+		End If
+		Set createTask = task
+		
+		Call Me.log.exit( "</" & TypeName( Me ) & "." & GetThreadInfo(1) & ">" )
+		Exit Function
+		
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Function
+	'--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Function createContractStage ( in_doc As NotesDocument ) As TPS_Recruitment_ContractStage
+		On Error GoTo error_point
+		
+		Set createContractStage = Nothing
+		If ( Not ( in_doc Is Nothing ) ) Then
+			Dim cardAgree As Variant
+			Set cardAgree = Me.getDocObject( in_doc )
+			If Not IsEmpty( cardAgree ) Then
+				If ( cardAgree.domain = DOMAIN_TPS_RECRUITMENT_REQUEST ) Then
+					
+					Dim session As New NotesSession
+					Dim docNew As NotesDocument 
+					
+					Set docNew = Me.db.Createdocument()
+					Dim task As New TPS_Recruitment_ContractStage (docNew, Me.Me_variant)
+					
+					Call task.nd.Replaceitemvalue("Form", "tps.recruitment.contractstage" )
+					Call task.nd.Replaceitemvalue("domain", DOMAIN_TPS_RECRUITMENT_CONTRACTSTAGE)
+					Call task.nd.Replaceitemvalue("id", task.nd.Universalid )
+					Call task.nd.Replaceitemvalue("CustomID", task.nd.Universalid )
+					Call task.nd.Replaceitemvalue("docKind", "ExtraDoc" )
+					
+					Dim item As NotesItem
+					Set item = in_doc.Getfirstitem("DWF$Authors")
+					If ( Not item Is Nothing ) Then
+						Call item.Copyitemtodocument( task.nd, item.Name )
+					End If
+					Set item = in_doc.Getfirstitem("DWF$Readers")
+					If ( Not item Is Nothing ) Then
+						Call item.Copyitemtodocument( task.nd, item.Name )
+					End If
+					Set item = in_doc.Getfirstitem("DWF$Server")
+					If ( Not item Is Nothing ) Then
+						Call item.Copyitemtodocument( task.nd, item.Name )
+					End If
+					
+					Dim docTemp As New NotesDocument( Me.db ), ItemRef As NotesItem
+					Call docTemp.Makeresponse( in_doc )
+					Set ItemRef = docTemp.Getfirstitem("$Ref") 
+					If Not ( ItemRef Is Nothing ) Then
+						Call ItemRef.Copyitemtodocument( task.nd, "MainRef" )
+					Else
+						Error 4001, {Не удалось сформировать поле "$Ref"}
+					End If
+					
+				Else
+					Error 4001, {Не верный входящий параметр: Домен не равен домену 'карточки заявки'. UNID: } & in_doc.Universalid & { / domain: } & cardAgree.domain
+				End If
+			Else
+				Error 4001, {Не удалось получить объект по входящему параметру (документу). UNID: } & in_doc.Universalid
+			End If
+			
+		End If
+		Set createContractStage = task
+		
+		Call Me.log.exit( "</" & TypeName( Me ) & "." & GetThreadInfo(1) & ">" )
+		Exit Function
+		
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Function
+	'--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Function createCompetence (in_doc As NotesDocument) As TPS_Recruitment_Competence
+		On Error GoTo error_point
+		
+		Set createCompetence = Nothing
+		If ( Not ( in_doc Is Nothing ) ) Then
+
+			Dim session As New NotesSession
+			Dim docNew As NotesDocument 
+			
+			Set docNew = Me.db.Createdocument()
+			Dim competence As New TPS_Recruitment_Competence (docNew, Me.Me_variant)
+			
+			Call competence.nd.Replaceitemvalue("Form", "tps.recruitment.competence" )
+			Call competence.nd.Replaceitemvalue("domain", DOMAIN_TPS_RECRUITMENT_COMPETENCE)
+			Call competence.nd.Replaceitemvalue("id", competence.nd.Universalid )
+			Call competence.nd.Replaceitemvalue("CustomID", competence.nd.Universalid )
+			Call competence.nd.Replaceitemvalue("docKind", "ExtraDoc" )
+			
+			Dim item As NotesItem
+			Set item = in_doc.Getfirstitem("DWF$Authors")
+			If ( Not item Is Nothing ) Then
+				Call item.Copyitemtodocument( competence.nd, item.Name )
+			End If
+			Set item = in_doc.Getfirstitem("DWF$Readers")
+			If ( Not item Is Nothing ) Then
+				Call item.Copyitemtodocument( competence.nd, item.Name )
+			End If
+			Set item = in_doc.Getfirstitem("DWF$Server")
+			If ( Not item Is Nothing ) Then
+				Call item.Copyitemtodocument( competence.nd, item.Name )
+			End If
+			
+			Dim docTemp As New NotesDocument( Me.db ), ItemRef As NotesItem
+			Call docTemp.Makeresponse( in_doc )
+			Set ItemRef = docTemp.Getfirstitem("$Ref") 
+			If Not ( ItemRef Is Nothing ) Then
+				Call ItemRef.Copyitemtodocument( competence.nd, "MainRef" )
+			Else
+				Error 4001, {Не удалось сформировать поле "$Ref"}
+			End If
+			
+		Else
+			Error 4001, {Не удалось получить объект по входящему параметру (документу). UNID: } & in_doc.Universalid
+		End If
+		
+		Set createCompetence = competence
+		
+		Call Me.log.exit( "</" & TypeName( Me ) & "." & GetThreadInfo(1) & ">" )
+		Exit Function
+		
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Function
+	'--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Function createCompetenceQuestion (in_doc As NotesDocument) As TPS_Recruitment_CompetenceQuestion
+		On Error GoTo error_point
+		
+		Set createCompetenceQuestion = Nothing
+		If ( Not ( in_doc Is Nothing ) ) Then
+			
+			Dim session As New NotesSession
+			Dim docNew As NotesDocument 
+			
+			Set docNew = Me.db.Createdocument()
+			Dim question As New TPS_Recruitment_CompetenceQuestion (docNew, Me.Me_variant)
+			
+			Call question.nd.Replaceitemvalue("Form", "tps.recruitment.competence.question")
+			Call question.nd.Replaceitemvalue("domain", DOMAIN_TPS_RECRUITMENT_COMPETENCEQUEST)
+			Call question.nd.Replaceitemvalue("id", question.nd.Universalid)
+			Call question.nd.Replaceitemvalue("CustomID", question.nd.Universalid)
+			Call question.nd.Replaceitemvalue("docKind", "ExtraDoc" )
+			
+			Dim item As NotesItem
+			Set item = in_doc.Getfirstitem("DWF$Authors")
+			If ( Not item Is Nothing ) Then
+				Call item.Copyitemtodocument( question.nd, item.Name )
+			End If
+			Set item = in_doc.Getfirstitem("DWF$Readers")
+			If ( Not item Is Nothing ) Then
+				Call item.Copyitemtodocument( question.nd, item.Name )
+			End If
+			Set item = in_doc.Getfirstitem("DWF$Server")
+			If ( Not item Is Nothing ) Then
+				Call item.Copyitemtodocument( question.nd, item.Name )
+			End If
+			
+			Dim docTemp As New NotesDocument( Me.db ), ItemRef As NotesItem
+			Call docTemp.Makeresponse( in_doc )
+			Set ItemRef = docTemp.Getfirstitem("$Ref") 
+			If Not ( ItemRef Is Nothing ) Then
+				Call ItemRef.Copyitemtodocument( question.nd, "MainRef" )
+			Else
+				Error 4001, {Не удалось сформировать поле "$Ref"}
+			End If
+			
+		Else
+			Error 4001, {Не удалось получить объект по входящему параметру (документу). UNID: } & in_doc.Universalid
+		End If
+		
+		Set createCompetenceQuestion = question
+		
+		Call Me.log.exit( "</" & TypeName( Me ) & "." & GetThreadInfo(1) & ">" )
+		Exit Function
+		
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Function
+	'--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Function createReport ( in_doc As NotesDocument ) As TPS_Recruitment_EventReport
+		On Error GoTo error_point
+		
+		Set createReport = Nothing
+		If ( Not ( in_doc Is Nothing ) ) Then
+			Dim EventObj As Variant
+			Set EventObj = Me.getDocObject( in_doc )
+			
+			Dim session As New NotesSession
+			Dim docNew As NotesDocument 
+			
+			Set docNew = Me.db.Createdocument()
+			Dim report As New TPS_Recruitment_EventReport (docNew, Me.Me_variant)
+			
+			Call report.nd.Replaceitemvalue("Form", "tps.recruitment.report" )
+			Call report.nd.Replaceitemvalue("domain", DOMAIN_TPS_RECRUITMENT_EVENTREPORT)
+			Call report.nd.Replaceitemvalue("id", report.nd.Universalid )
+			Call report.nd.Replaceitemvalue("CustomID", report.nd.Universalid )
+			Call report.nd.Replaceitemvalue("docKind", "ExtraDoc" )
+			
+			Dim item As NotesItem
+			Set item = in_doc.Getfirstitem("DWF$Authors")
+			If ( Not item Is Nothing ) Then
+				Call item.Copyitemtodocument( report.nd, item.Name )
+			End If
+			Set item = in_doc.Getfirstitem("DWF$Readers")
+			If ( Not item Is Nothing ) Then
+				Call item.Copyitemtodocument( report.nd, item.Name )
+			End If
+			Set item = in_doc.Getfirstitem("DWF$Server")
+			If ( Not item Is Nothing ) Then
+				Call item.Copyitemtodocument( report.nd, item.Name )
+			End If
+			
+			Dim docTemp As New NotesDocument( Me.db ), ItemRef As NotesItem
+			Call docTemp.Makeresponse( in_doc )
+			Set ItemRef = docTemp.Getfirstitem("$Ref") 
+			If Not ( ItemRef Is Nothing ) Then
+				Call ItemRef.Copyitemtodocument( report.nd, "MainRef" )
+			Else
+				Error 4001, {Не удалось сформировать поле "$Ref"}
+			End If
+			
+		Else
+			Error 4001, {Не удалось получить объект по входящему параметру (документу). UNID: } & in_doc.Universalid
+		End If
+			
+		Set createReport = report
+		
+		Call Me.log.exit( "</" & TypeName( Me ) & "." & GetThreadInfo(1) & ">" )
+		Exit Function
+		
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Function
+	'--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Function createTaskReport ( in_doc As NotesDocument ) As TPS_Recruitment_ProbationTaskReport
+		On Error GoTo error_point
+		
+		Set createTaskReport = Nothing
+		If ( Not ( in_doc Is Nothing ) ) Then
+			Dim TaskObj As Variant
+			Set TaskObj = Me.getDocObject( in_doc )
+			
+			Dim session As New NotesSession
+			Dim docNew As NotesDocument 
+			
+			Set docNew = Me.db.Createdocument()
+			Dim report As New TPS_Recruitment_ProbationTaskReport (docNew, Me.Me_variant)
+			
+			Call report.nd.Replaceitemvalue("Form", "tps.recruitment.probationtask.report" )
+			Call report.nd.Replaceitemvalue("domain", DOMAIN_TPS_RECRUITMENT_TASKREPORT)
+			Call report.nd.Replaceitemvalue("id", report.nd.Universalid )
+			Call report.nd.Replaceitemvalue("CustomID", report.nd.Universalid )
+			'Call report.nd.Replaceitemvalue("docKind", "ExtraDoc" )
+			
+			Dim item As NotesItem
+			Set item = in_doc.Getfirstitem("DWF$Authors")
+			If ( Not item Is Nothing ) Then
+				Call item.Copyitemtodocument( report.nd, item.Name )
+			End If
+			Set item = in_doc.Getfirstitem("DWF$Readers")
+			If ( Not item Is Nothing ) Then
+				Call item.Copyitemtodocument( report.nd, item.Name )
+			End If
+			Set item = in_doc.Getfirstitem("DWF$Server")
+			If ( Not item Is Nothing ) Then
+				Call item.Copyitemtodocument( report.nd, item.Name )
+			End If
+			
+			Dim docTemp As New NotesDocument( Me.db ), ItemRef As NotesItem
+			Call docTemp.Makeresponse( in_doc )
+			Set ItemRef = docTemp.Getfirstitem("$Ref") 
+			If Not ( ItemRef Is Nothing ) Then
+				Call ItemRef.Copyitemtodocument( report.nd, "ParentRef" )
+			Else
+				Error 4001, {Не удалось сформировать поле "$Ref"}
+			End If
+			
+		Else
+			Error 4001, {Не удалось получить объект по входящему параметру (документу). UNID: } & in_doc.Universalid
+		End If
+		
+		Set createTaskReport = report
+		
+		Call Me.log.exit( "</" & TypeName( Me ) & "." & GetThreadInfo(1) & ">" )
+		Exit Function
+		
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Function
+	'--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Function createMethodsLink( in_doc As NotesDocument, targetDoc As NotesDocument ) As TPS_Recruitment_MethodsLink
+		On Error GoTo error_point
+		
+		Set createMethodsLink = Nothing
+		If ( Not ( in_doc Is Nothing ) ) Then
+			Dim cardAgree As Variant
+			Set cardAgree = Me.getDocObject( in_doc )
+			If Not IsEmpty( cardAgree ) Then
+				If ( cardAgree.domain = DOMAIN_TPS_RECRUITMENT_REQUEST ) Then
+					
+					Dim session As New NotesSession
+					Dim docNew As NotesDocument 
+					
+					Set docNew = Me.db.Createdocument()
+					Dim link As New TPS_Recruitment_MethodsLink (docNew, Me.Me_variant)
+					
+					Call link.nd.Replaceitemvalue("Form", "LinkToDocument" )
+					Call link.nd.Replaceitemvalue("domain", DOMAIN_TPS_RECRUITMENT_METHODSLINK)
+					Call link.nd.Replaceitemvalue("id", link.nd.Universalid )
+					Call link.nd.Replaceitemvalue("CustomID", link.nd.Universalid )
+					Call link.nd.Replaceitemvalue("docKind", "ExtraDoc" )
+					
+					Call link.nd.Replaceitemvalue("targetdoc_id", targetDoc.Universalid )
+					Call link.nd.Replaceitemvalue("targetdoc_dbfilepath", targetDoc.Parentdatabase.Filepath )
+					Call link.nd.Replaceitemvalue("targetdoc_dbreplicaid", targetDoc.Parentdatabase.Replicaid )
+					
+					'Call link.nd.Replaceitemvalue("targetdoc_Name", targetDoc.Getitemvalue("Name")(0) )
+					'Call link.nd.Replaceitemvalue("targetdoc_Subject", targetDoc.Getitemvalue("Subject")(0) )
+					'Call link.nd.Replaceitemvalue("targetdoc_Keyword", targetDoc.Getitemvalue("keyword")(0) )
+					
+					Dim item As NotesItem
+					Set item = in_doc.Getfirstitem("DWF$Authors")
+					If ( Not item Is Nothing ) Then
+						Call item.Copyitemtodocument( link.nd, item.Name )
+					End If
+					Set item = in_doc.Getfirstitem("DWF$Readers")
+					If ( Not item Is Nothing ) Then
+						Call item.Copyitemtodocument( link.nd, item.Name )
+					End If
+					Set item = in_doc.Getfirstitem("DWF$Server")
+					If ( Not item Is Nothing ) Then
+						Call item.Copyitemtodocument( link.nd, item.Name )
+					End If
+					
+					Dim docTemp As New NotesDocument( Me.db ), ItemRef As NotesItem
+					Call docTemp.Makeresponse( in_doc )
+					Set ItemRef = docTemp.Getfirstitem("$Ref") 
+					If Not ( ItemRef Is Nothing ) Then
+						Call ItemRef.Copyitemtodocument( link.nd, "MainRef" )
+					Else
+						Error 4001, {Не удалось сформировать поле "$Ref"} 
+					End If
+					
+				Else
+					Error 4001, {Не верный входящий параметр: Домен не равен домену 'карточки заявки'. UNID: } & in_doc.Universalid & { / domain: } & cardAgree.domain
+				End If
+			Else
+				Error 4001, {Не удалось получить объект по входящему параметру (документу). UNID: } & in_doc.Universalid
+			End If
+			
+		End If
+		Set createMethodsLink = link
+		
+		Call Me.log.exit( "</" & TypeName( Me ) & "." & GetThreadInfo(1) & ">" )
+		Exit Function
+		
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Function
+	'--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Function createFeedBack (in_doc As NotesDocument, feedBackType As String, stage As String) As TPS_Recruitment_FeedBack
+		On Error GoTo error_point
+		
+		Set createFeedBack = Nothing
+		If Not (in_doc Is Nothing) Then
+			
+			Dim candidate As Variant
+			Set candidate = Me.getDocObject (in_doc)
+			
+			If Not IsEmpty (candidate) Then
+				If (candidate.domain = DOMAIN_TPS_RECRUITMENT_CANDIDATE) Then
+					
+					Dim session As New NotesSession
+					Dim docNew As NotesDocument 
+					
+					Set docNew = Me.db.Createdocument()
+					Dim fb As New TPS_Recruitment_FeedBack (docNew, Me.Me_variant)
+					
+					Call fb.nd.Replaceitemvalue("Form", "tps.recruitment.feedback")
+					Call fb.nd.Replaceitemvalue("domain", DOMAIN_TPS_RECRUITMENT_FEEDBACK)
+					Call fb.nd.Replaceitemvalue("id", fb.nd.Universalid )
+					Call fb.nd.Replaceitemvalue("CustomID", fb.nd.Universalid)
+					
+					Call fb.Nd.Replaceitemvalue("InterviewType", feedBackType)
+					Call fb.Nd.Replaceitemvalue("Stage", stage)
+					Call fb.Nd.Replaceitemvalue("DateCreate", fb.Nd.Created)
+					
+					'Dim questions As Mixcollection
+					'Set questions = Me.getQuestions(feedBackType, stage)
+					'If questions.Count = 0 Then
+					'	Error 5000, {Не найдено вопрос для анкетирования: } & feedBackType & {, стадия: } & stage
+					'End If
+										
+					'Call questions.Sort("questionNumber")
+					
+					'Dim i As Integer
+					'i = 0
+					
+					'ForAll question In questions.Array
+					'	i = i + 1
+						
+					'	Call fb.Nd.Replaceitemvalue("Question" & i, question.title)
+					'	Call fb.Nd.Replaceitemvalue("AnswerVariant" & i, question.answers)
+					'	Call fb.Nd.Replaceitemvalue("NegativeAnswers" & i, question.negative)
+												
+					'End ForAll
+					
+					Dim item As NotesItem
+					'Dim itemA As NotesItem
+
+					Set item = in_doc.Getfirstitem("DWF$Readers")
+					If ( Not item Is Nothing ) Then
+						Call item.Copyitemtodocument( fb.nd, item.Name )
+					End If
+					
+					Set item = in_doc.Getfirstitem("DWF$Authors")
+					If ( Not item Is Nothing ) Then
+						Call item.Copyitemtodocument( fb.nd, item.Name )
+					End If
+					
+					'Set itemA = in_doc.Getfirstitem("DWF$Authors")
+					'If ( Not itemA Is Nothing ) Then
+					'	
+					'	Set item = fb.Nd.Getfirstitem("DWF$Readers")
+					'	Call item.Appendtotextlist(itemA.Values)
+					'End If
+					
+					'If feedBackType = "candidate" Then
+					'	fb.Nd.Replaceitemvalue("DWF$Authors", in_doc.Getitemvalue("CandidateObjAccess")(0)).Isauthors = True
+					'Else
+					'	fb.Nd.Replaceitemvalue("DWF$Authors", in_doc.Getitemvalue("RequestInititorObjAccess")(0)).Isauthors = True
+					'End If
+					
+					Set item = in_doc.Getfirstitem("DWF$Server")
+					If ( Not item Is Nothing ) Then
+						Call item.Copyitemtodocument( fb.nd, item.Name )
+					End If
+					
+					Dim docTemp As New NotesDocument( Me.db ), ItemRef As NotesItem
+					Call docTemp.Makeresponse( in_doc )
+					Set ItemRef = docTemp.Getfirstitem("$Ref") 
+					If Not ( ItemRef Is Nothing ) Then
+						Call ItemRef.Copyitemtodocument( fb.nd, "MainRef" )
+					Else
+						Error 4001, {Не удалось сформировать поле "$Ref"} 
+					End If
+					
+				Else
+					Error 4001, {Не верный входящий параметр: Домен не равен домену 'карточки заявки'. UNID: } & in_doc.Universalid & { / domain: } & candidate.domain
+				End If
+			Else
+				Error 4001, {Не удалось получить объект по входящему параметру (документу). UNID: } & in_doc.Universalid
+			End If
+			
+		End If
+		Set createFeedBack = fb
+		
+		Call Me.log.exit( "</" & TypeName( Me ) & "." & GetThreadInfo(1) & ">" )
+		Exit Function
+		
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Function
+	'--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Function createCandidateAgreement( in_initObj As Variant ) As TPS_Recruitment_Candidate
+		On Error GoTo error_point
+		Call Me.log.enter( "<" & TypeName( Me ) & "." & GetThreadInfo(1) & ">" )
+		
+		Dim dbPC As NotesDatabase
+		Set dbPC = Me.getProcessCenter (in_initObj)
+		If ( dbPC Is Nothing ) Then
+			Call Me.log.exit( "</" & TypeName( Me ) & "." & GetThreadInfo(1) & ">" )
+			Exit Function
+		End If
+		
+		Dim session As New NotesSession
+		Dim docMail As NotesDocument
+		
+		Set docMail = dbPC.CreateDocument
+		docMail.Form 		= "Task"
+		docMail.Action 		= "InitProcess"
+		docMail.InitServer 	= Me.db.Server
+		docMail.AppPath 	= Me.db.FilePath
+		docMail.UserName 	= session.UserName
+		docMail.ProcessID 	= in_initObj.processID
+		docMail.InitPosID 	= in_initObj.initPositionID 
+		docMail.InitObjID 	= in_initObj.initObjID
+		
+		Call docMail.Save(True, True)
+		If ( DWFAAskForAction( docMail ) <> 1 ) Then
+			
+		ElseIf ( docMail.Error(0) <> "" ) Then
+			MsgBox docMail.Error(0), 48, ERR_MSG_TITLE
+		Else
+			Dim docMain As NotesDocument
+			Set docMain = Me.db.GetDocumentByUNID( docMail.docMainUNID(0))
+			If ( docMain Is Nothing ) Then
+				MsgBox {Ошибка при инициации процесса: docMain Is Nothing}, 48, ERR_MSG_TITLE
+			Else
+				docMain.form = "tps.recruitment.candidate.agreement"
+				docMain.domain = DOMAIN_TPS_RECRUITMENT_CANDIDATE
+				docMain.id = docMain.UniversalID
+				docMain.CustomID = docMain.UniversalID
+				
+				Set createCandidateAgreement = Me.getDocObject( docMain )
+			End If
+		End If
+		
+		Call Me.log.exit( "</" & TypeName( Me ) & "." & GetThreadInfo(1) & ">" )
+		Exit Function
+		
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Function
+	'--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Function createRequest( in_initObj As Variant ) As TPS_Recruitment_Request
+		On Error GoTo error_point
+		Call Me.log.enter( "<" & TypeName( Me ) & "." & GetThreadInfo(1) & ">" )
+		
+		Dim dbPC As NotesDatabase
+		Set dbPC = Me.getProcessCenter (in_initObj)
+		If ( dbPC Is Nothing ) Then
+			Call Me.log.exit( "</" & TypeName( Me ) & "." & GetThreadInfo(1) & ">" )
+			Exit Function
+		End If
+		
+		Dim session As New NotesSession
+		Dim docMail As NotesDocument
+		
+		Set docMail = dbPC.CreateDocument
+		docMail.Form 		= "Task"
+		docMail.Action 		= "InitProcess"
+		docMail.InitServer 	= Me.db.Server
+		docMail.AppPath 	= Me.db.FilePath
+		docMail.UserName 	= session.UserName
+		docMail.ProcessID 	= in_initObj.processID
+		docMail.InitPosID 	= in_initObj.initPositionID 
+		docMail.InitObjID 	= in_initObj.initObjID
+		
+		Call docMail.Save(True, True)
+		If ( DWFAAskForAction( docMail ) <> 1 ) Then
+			
+		ElseIf ( docMail.Error(0) <> "" ) Then
+			MsgBox docMail.Error(0), 48, ERR_MSG_TITLE
+		Else
+			Dim docMain As NotesDocument
+			Set docMain = Me.db.GetDocumentByUNID( docMail.docMainUNID(0))
+			If ( docMain Is Nothing ) Then
+				MsgBox {Ошибка при инициации процесса: docMain Is Nothing}, 48, ERR_MSG_TITLE
+			Else
+				docMain.form = "tps.recruitment.request"
+				docMain.domain = DOMAIN_TPS_RECRUITMENT_REQUEST
+				docMain.id = docMain.UniversalID
+				docMain.CustomID = docMain.UniversalID
+				
+				Set createRequest = Me.getDocObject( docMain )
+			End If
+		End If
+		
+		Call Me.log.exit( "</" & TypeName( Me ) & "." & GetThreadInfo(1) & ">" )
+		Exit Function
+		
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Function
+	'--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Function createEvent( in_initObj As Variant ) As TPS_Recruitment_Event
+		On Error GoTo error_point
+		Call Me.log.enter( "<" & TypeName( Me ) & "." & GetThreadInfo(1) & ">" )
+		
+		Dim dbPC As NotesDatabase
+		Set dbPC = Me.getProcessCenter (in_initObj)
+		If ( dbPC Is Nothing ) Then
+			Call Me.log.exit( "</" & TypeName( Me ) & "." & GetThreadInfo(1) & ">" )
+			Exit Function
+		End If
+		
+		Dim session As New NotesSession
+		Dim docMail As NotesDocument
+		
+		Set docMail = dbPC.CreateDocument
+		docMail.Form 		= "Task"
+		docMail.Action 		= "InitProcess"
+		docMail.InitServer 	= Me.db.Server
+		docMail.AppPath 	= Me.db.FilePath
+		docMail.UserName 	= session.UserName
+		docMail.ProcessID 	= in_initObj.processID
+		docMail.InitPosID 	= in_initObj.initPositionID 
+		docMail.InitObjID 	= in_initObj.initObjID
+		
+		Call docMail.Save(True, True)
+		If ( DWFAAskForAction( docMail ) <> 1 ) Then
+			
+		ElseIf ( docMail.Error(0) <> "" ) Then
+			MsgBox docMail.Error(0), 48, ERR_MSG_TITLE
+		Else
+			Dim docMain As NotesDocument
+			Set docMain = Me.db.GetDocumentByUNID( docMail.docMainUNID(0))
+			If ( docMain Is Nothing ) Then
+				MsgBox {Ошибка при инициации процесса: docMain Is Nothing}, 48, ERR_MSG_TITLE
+			Else
+				docMain.form = "tps.recruitment.candidate.event"
+				docMain.domain = DOMAIN_TPS_RECRUITMENT_EVENT
+				docMain.id = docMain.UniversalID
+				docMain.CustomID = docMain.UniversalID
+				
+				Set createEvent = Me.getDocObject( docMain )
+			End If
+		End If
+		
+		Call Me.log.exit( "</" & TypeName( Me ) & "." & GetThreadInfo(1) & ">" )
+		Exit Function
+		
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Function
+	'--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Function createCandidate ( in_doc As NotesDocument ) As TPS_Recruitment_Candidate
+		On Error GoTo error_point
+		
+		Set createCandidate = Nothing
+		If ( Not ( in_doc Is Nothing ) ) Then
+			Dim cardAgree As Variant
+			Set cardAgree = Me.getDocObject( in_doc )
+			If Not IsEmpty( cardAgree ) Then
+				If ( cardAgree.domain = DOMAIN_TPS_RECRUITMENT_REQUEST ) Then
+					
+					Dim session As New NotesSession
+					Dim docNew As NotesDocument 
+					
+					Set docNew = Me.db.Createdocument()
+					Dim candidate As New TPS_Recruitment_Candidate (docNew, Me.Me_variant)
+					
+					Call candidate.nd.Replaceitemvalue("Form", "tps.recruitment.candidate.agreement")
+					Call candidate.nd.Replaceitemvalue("domain", DOMAIN_TPS_RECRUITMENT_CANDIDATE)
+					Call candidate.nd.Replaceitemvalue("id", candidate.nd.Universalid)
+					Call candidate.nd.Replaceitemvalue("CustomID", candidate.nd.Universalid)
+					Call candidate.nd.Replaceitemvalue("docKind", "ExtraDoc")
+					
+					Dim item As NotesItem
+					Set item = in_doc.Getfirstitem("DWF$Authors")
+					If ( Not item Is Nothing ) Then
+						Call item.Copyitemtodocument( candidate.nd, item.Name )
+					End If
+					Set item = in_doc.Getfirstitem("DWF$Readers")
+					If ( Not item Is Nothing ) Then
+						Call item.Copyitemtodocument( candidate.nd, item.Name )
+					End If
+					Set item = in_doc.Getfirstitem("DWF$Server")
+					If ( Not item Is Nothing ) Then
+						Call item.Copyitemtodocument( candidate.nd, item.Name )
+					End If
+					
+					Dim docTemp As New NotesDocument( Me.db ), ItemRef As NotesItem
+					Call docTemp.Makeresponse( in_doc )
+					Set ItemRef = docTemp.Getfirstitem("$Ref") 
+					If Not ( ItemRef Is Nothing ) Then
+						Call ItemRef.Copyitemtodocument( candidate.nd, "MainRef" )
+					Else
+						Error 4001, {Не удалось сформировать поле "$Ref"}
+					End If
+					
+				Else
+					Error 4001, {Не верный входящий параметр: Домен не равен домену 'карточки заявки'. UNID: } & in_doc.Universalid & { / domain: } & cardAgree.domain
+				End If
+			Else
+				Error 4001, {Не удалось получить объект по входящему параметру (документу). UNID: } & in_doc.Universalid
+			End If
+			
+		End If
+		Set createCandidate = candidate
+		
+		Call Me.log.exit( "</" & TypeName( Me ) & "." & GetThreadInfo(1) & ">" )
+		Exit Function
+		
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Function
+	'--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Function createCandidateCard (in_doc As NotesDocument) As TPS_Recruitment_CandidateCard
+		On Error GoTo error_point
+		
+		Set createCandidateCard = Nothing
+		If Not (in_doc Is Nothing) Then
+					
+			Dim session As New NotesSession
+			Dim docNew As NotesDocument 
+			
+			Set docNew = Me.db.Createdocument()
+			Dim candidate As New TPS_Recruitment_CandidateCard (docNew, Me.Me_variant)
+			
+			Call candidate.nd.Replaceitemvalue("Form", "tps.recruitment.candidate" )
+			Call candidate.nd.Replaceitemvalue("domain", DOMAIN_TPS_RECRUITMENT_CANDIDATE_CARD)
+			Call candidate.nd.Replaceitemvalue("id", candidate.id )
+			Call candidate.nd.Replaceitemvalue("CustomID", candidate.id )
+			
+			Call candidate.nd.Replaceitemvalue("FIO", in_doc.Getitemvalue("FIO"))
+			Call candidate.nd.Replaceitemvalue("Sex", in_doc.Getitemvalue("Sex"))
+			
+			Set createCandidateCard = candidate
+		End If
+				
+		Call Me.log.exit( "</" & TypeName( Me ) & "." & GetThreadInfo(1) & ">" )
+		Exit Function
+		
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Function
+	'--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Function getProcessCenter (in_InitObj As Variant) As NotesDatabase
+		On Error GoTo error_point
+		
+		Dim dbPC As NotesDatabase
+		If in_InitObj.processDoc Is Nothing Then GoTo getProcessCenterByKey
+		
+		Dim fppc As String
+		
+		If Not in_InitObj.processDoc Is Nothing Then
+			fppc = in_InitObj.processDoc.getItemValue ("PCenter")(0)
+		Else
+			Dim processDoc As NotesDocument
+			On Error 4091 Resume Next
+			Set processDoc = Me.db.Getdocumentbyunid(in_InitObj.processID)
+			If Not processDoc Is Nothing Then
+				fppc = processDoc.getItemValue ("PCenter")(0)
+			End If
+		End If		
+		If Trim (fppc) = "" Then GoTo getProcessCenterByKey
+		
+		Dim s As New NotesSession
+		Set dbPc = s.Getdatabase(Me.db.server, Trim(fppc))
+		If ( dbPC Is Nothing ) Then
+			MsgBox "Не удалось получить БД 'tps.systems.process_center'", 64, "Системная ошибка"
+			GoTo exit_point
+		End If
+		
+		GoTo exit_point	
+getProcessCenterByKey:		
+		Set dbPC = Me.sm.base.databases.get( "tps.systems.process_center" )
+		If ( dbPC Is Nothing ) Then
+			MsgBox "Не удалось получить БД " & fppc, 64, "Системная ошибка"
+			GoTo exit_point
+		End If
+		
+exit_point:
+		Set getProcessCenter = dbPC
+		Call Me.log.exit( "</" & TypeName( Me ) & "." & GetThreadInfo(1) & ">" )
+		Exit Function
+		
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Function	
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Function getEvents (in_source As Variant, onlyActive As Boolean) As MixCollection
+		On Error GoTo error_point
+		Call Me.log.enter( TypeName( Me ) & "." & GetThreadInfo(1))
+		
+		Dim mxResult As New MixCollection
+		Set getEvents = mxResult
+
+		Dim key As String
+		If IsObject (in_source) Then
+			key = in_source.id
+		Else
+			key = CStr(in_source)
+		End If
+
+		Dim vw As NotesView, dc As NotesDocumentCollection
+		Set vw = Me.db.Getview ("(Events)")
+		If Not vw Is Nothing Then
+			Call vw.Refresh()
+			vw.Autoupdate = False
+			Set dc = vw.Getalldocumentsbykey( key )
+			If dc.Count > 0 Then
+				Dim doc As NotesDocument
+				Set doc = dc.Getfirstdocument()
+				While Not doc Is Nothing
+					Dim eventCard As Variant
+					Set eventCard = Me.getDocObject (doc)
+					If Not (eventCard Is Nothing) Then
+						If (Not (onlyActive)) Or ((onlyActive) And (eventCard.isActive)) Then
+							Call mxResult.Append (eventCard)
+						End If
+					End If
+					Set doc = dc.Getnextdocument(doc)
+				Wend
+			End If
+		Else
+			Error 5001, "View '(emb.Events)' is not exist"
+		End If
+		
+		Call Me.log.traceObject( "result", mxResult )		
+		Call Me.log.exit( "</" & TypeName( Me ) & "." & GetThreadInfo(1) & ">" )
+		Exit Function
+		
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Function
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Function getPositionCategories (in_source As Variant) As MixCollection
+		On Error GoTo error_point
+		Call Me.log.enter( TypeName( Me ) & "." & GetThreadInfo(1))
+		
+		Dim mxResult As New MixCollection
+		Set getPositionCategories = mxResult
+
+		Dim key As String
+		If IsObject (in_source) Then
+			key = in_source.id
+		Else
+			key = CStr(in_source)
+		End If
+
+		Dim vw As NotesView, dc As NotesDocumentCollection
+		Set vw = Me.db.Getview ("(PositionCategories)")
+		If Not vw Is Nothing Then
+			Call vw.Refresh()
+			vw.Autoupdate = False
+			Set dc = vw.Getalldocumentsbykey( key )
+			If dc.Count > 0 Then
+				Dim doc As NotesDocument
+				Set doc = dc.Getfirstdocument()
+				While Not doc Is Nothing
+
+					Call mxResult.Append (Me.getDocObject (doc))	
+
+					Set doc = dc.Getnextdocument(doc)
+				Wend
+			End If
+		Else
+			Error 5001, "View '(PositionCategories)' is not exist"
+		End If
+		
+		Call Me.log.traceObject( "result", mxResult )		
+		Call Me.log.exit( "</" & TypeName( Me ) & "." & GetThreadInfo(1) & ">" )
+		Exit Function
+		
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Function
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Function getActivePositionRequests (in_source As Variant) As MixCollection
+		On Error GoTo error_point
+		Call Me.log.enter( TypeName( Me ) & "." & GetThreadInfo(1))
+		
+		Dim mxResult As New MixCollection
+		Set getActivePositionRequests = mxResult
+
+		Dim key As String
+		If IsObject (in_source) Then
+			key = in_source.id
+		Else
+			key = CStr(in_source)
+		End If
+
+		Dim vw As NotesView, dc As NotesDocumentCollection
+		Set vw = Me.db.Getview ("(ActiveRequestsByPosition)")
+		If Not vw Is Nothing Then
+			Call vw.Refresh()
+			vw.Autoupdate = False
+			Set dc = vw.Getalldocumentsbykey( key )
+			If dc.Count > 0 Then
+				Dim doc As NotesDocument
+				Set doc = dc.Getfirstdocument()
+				While Not doc Is Nothing
+
+					Call mxResult.Append (Me.getDocObject (doc))	
+
+					Set doc = dc.Getnextdocument(doc)
+				Wend
+			End If
+		Else
+			Error 5001, "View '(ActiveRequestsByPosition)' is not exist"
+		End If
+		
+		Call Me.log.traceObject( "result", mxResult )		
+		Call Me.log.exit( "</" & TypeName( Me ) & "." & GetThreadInfo(1) & ">" )
+		Exit Function
+		
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Function
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Function checkIsExistActivePositionRequest (in_source As Variant) As Boolean
+		On Error GoTo error_point
+		Call Me.log.enter( TypeName( Me ) & "." & GetThreadInfo(1))
+		
+		Dim mxResult As New MixCollection
+		Set mxResult = Me.getActivePositionRequests(in_source)
+
+		checkIsExistActivePositionRequest = (mxresult.Count > 0)
+		
+		Call Me.log.traceObject( "result", mxResult )		
+		Call Me.log.exit( "</" & TypeName( Me ) & "." & GetThreadInfo(1) & ">" )
+		Exit Function
+		
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Function
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Function checkIsExistFeedBack (in_source As Variant, interviewType As String, stage As String) As Boolean
+		On Error GoTo error_point
+		Call Me.log.enter( TypeName( Me ) & "." & GetThreadInfo(1))
+		
+		checkIsExistFeedBack = False
+		
+		Dim mxResult As New MixCollection
+		Set mxResult = Me.getFeedBackDocs (in_source)
+		If mxResult.count > 0 Then
+			ForAll feedBack In mxResult.Array
+				If feedBack.fbType = LCase(interviewType) And feedBack.stage = LCase(stage) Then
+					checkIsExistFeedBack = True
+					Exit Function
+				End If
+			End ForAll
+		End If
+		
+		Call Me.log.traceObject( "result", mxResult )		
+		Call Me.log.exit( "</" & TypeName( Me ) & "." & GetThreadInfo(1) & ">" )
+		Exit Function
+		
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Function
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Function getFeedBackDocs (in_source As Variant) As Mixcollection
+		On Error GoTo error_point
+		Call Me.log.enter( TypeName( Me ) & "." & GetThreadInfo(1))
+		
+		Dim mxResult As New MixCollection
+		Set getFeedBackDocs = mxResult
+
+		Dim key As String
+		If IsObject (in_source) Then
+			key = in_source.id
+		Else
+			key = CStr(in_source)
+		End If
+
+		Dim vw As NotesView, dc As NotesDocumentCollection
+		Set vw = Me.db.Getview("(FeedBackDocs.All)")
+		If Not vw Is Nothing Then
+			Call vw.Refresh()
+			vw.Autoupdate = False
+			
+			Set dc = vw.Getalldocumentsbykey( key )
+			If dc.Count > 0 Then
+				Dim doc As NotesDocument
+				Set doc = dc.Getfirstdocument()
+				
+				While Not doc Is Nothing
+					
+					Call mxResult.Append (Me.Getdocobject(doc))	
+
+					Set doc = dc.Getnextdocument(doc)
+				Wend
+			End If
+		Else
+			Error 5001, "View '(FeedBackDocs.All)' is not exist"
+		End If
+		
+		Call Me.log.traceObject( "result", mxResult )		
+		Call Me.log.exit( "</" & TypeName( Me ) & "." & GetThreadInfo(1) & ">" )
+		Exit Function
+		
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Function
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Function getCandidates (in_source As Variant) As MixCollection
+		On Error GoTo error_point
+		Call Me.log.enter( TypeName( Me ) & "." & GetThreadInfo(1))
+		
+		Dim mxResult As New MixCollection
+		Set getCandidates = mxResult
+
+		Dim key As String
+		If IsObject (in_source) Then
+			key = in_source.id
+		Else
+			key = CStr(in_source)
+		End If
+
+		Dim vw As NotesView, dc As NotesDocumentCollection
+		Set vw = Me.db.Getview("(Candidates)")
+		If Not vw Is Nothing Then
+			Call vw.Refresh()
+			vw.Autoupdate = False
+			
+			Set dc = vw.Getalldocumentsbykey( key )
+			If dc.Count > 0 Then
+				Dim doc As NotesDocument
+				Set doc = dc.Getfirstdocument()
+				
+				While Not doc Is Nothing
+					
+					Call mxResult.Append (Me.Getdocobject(doc))	
+
+					Set doc = dc.Getnextdocument(doc)
+				Wend
+			End If
+		Else
+			Error 5001, "View '(Candidates)' is not exist"
+		End If
+		
+		Call Me.log.traceObject( "result", mxResult )		
+		Call Me.log.exit( "</" & TypeName( Me ) & "." & GetThreadInfo(1) & ">" )
+		Exit Function
+		
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Function
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Function getCompetenceQuestions (in_source As Variant) As MixCollection
+		On Error GoTo error_point
+		Call Me.log.enter( TypeName( Me ) & "." & GetThreadInfo(1))
+		
+		Dim mxResult As New MixCollection
+		Set getCompetenceQuestions = mxResult
+
+		Dim key As String
+		If IsObject (in_source) Then
+			key = in_source.id
+		Else
+			key = CStr(in_source)
+		End If
+
+		Dim vw As NotesView, dc As NotesDocumentCollection
+		Set vw = Me.db.Getview("(CompetenceQuestions)")
+		If Not vw Is Nothing Then
+			Call vw.Refresh()
+			vw.Autoupdate = False
+			
+			Set dc = vw.Getalldocumentsbykey( key )
+			If dc.Count > 0 Then
+				Dim doc As NotesDocument
+				Set doc = dc.Getfirstdocument()
+				
+				While Not doc Is Nothing
+					
+					Call mxResult.Append (Me.Getdocobject(doc))	
+
+					Set doc = dc.Getnextdocument(doc)
+				Wend
+			End If
+		Else
+			Error 5001, "View '(CompetenceQuestions)' is not exist"
+		End If
+		
+		Call Me.log.traceObject( "result", mxResult )		
+		Call Me.log.exit( "</" & TypeName( Me ) & "." & GetThreadInfo(1) & ">" )
+		Exit Function
+		
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Function
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Function getQuestions (in_Type As String, in_Stage As String) As MixCollection
+		On Error GoTo error_point
+		Call Me.log.enter( TypeName( Me ) & "." & GetThreadInfo(1))
+		
+		Dim mxResult As New MixCollection
+		Set getQuestions = mxResult
+
+		Dim key As String
+		key = LCase(in_Type & "~" & in_Stage)
+
+		Dim vw As NotesView, dc As NotesDocumentCollection
+		Set vw = Me.db.Getview("(App.Ref.QuestionsByKey)")
+		If Not vw Is Nothing Then
+			Call vw.Refresh()
+			vw.Autoupdate = False
+			
+			Set dc = vw.Getalldocumentsbykey( key, True )
+			If dc.Count > 0 Then
+				Dim doc As NotesDocument
+				Set doc = dc.Getfirstdocument()
+				
+				While Not doc Is Nothing
+					
+					Call mxResult.Append (Me.Getdocobject(doc))	
+
+					Set doc = dc.Getnextdocument(doc)
+				Wend
+			End If
+		Else
+			Error 5001, "View '(Candidates)' is not exist"
+		End If
+		
+		Call Me.log.traceObject( "result", mxResult )		
+		Call Me.log.exit( "</" & TypeName( Me ) & "." & GetThreadInfo(1) & ">" )
+		Exit Function
+		
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Function
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Function getResume (in_source As Variant) As MixCollection
+		On Error GoTo error_point
+		Call Me.log.enter( TypeName( Me ) & "." & GetThreadInfo(1))
+		
+		Dim mxResult As New MixCollection
+		Set getResume = mxResult
+
+		Dim key As String
+		If IsObject (in_source) Then
+			key = in_source.id
+		Else
+			key = CStr(in_source)
+		End If
+
+		Dim vw As NotesView, dc As NotesDocumentCollection
+		Set vw = Me.db.Getview("(emb_LinkDocsWithOutCategory)")
+		If Not vw Is Nothing Then
+			Call vw.Refresh()
+			vw.Autoupdate = False
+			Set dc = vw.Getalldocumentsbykey( key )
+			If ( dc.Count > 0 ) Then
+				Dim doc As NotesDocument
+				Set doc = dc.Getfirstdocument()
+				While Not doc Is Nothing
+
+					Call mxResult.Append (Me.Getdocobject (doc))	
+
+					Set doc = dc.Getnextdocument(doc)
+				Wend
+			End If
+		Else
+			Error 5001, "View '(emb_LinkDocsWithOutCategory)' is not exist"
+		End If
+		
+		Call Me.log.traceObject( "result", mxResult )		
+		Call Me.log.exit( "</" & TypeName( Me ) & "." & GetThreadInfo(1) & ">" )
+		Exit Function
+		
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Function
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	'<added by DB http://jira.tpsgroup.ru/browse/TLD-5104>
+	'Возвращает резюме финального кандидата. иначе nothing
+	Function getResumeFinal(in_source As Variant) As TPS_Recruitment_Resume
+		On Error GoTo error_point
+		Call Me.log.enter( TypeName( Me ) & "." & GetThreadInfo(1))
+		Dim mxResult As New MixCollection
+		Set getResumeFinal = Nothing
+		Dim mx As New MixCollection				
+		Dim linkObj As TPS_Recruitment_Resume
+		
+		Set mx = me.getResume (in_source)
+		If ( mx.Count > 0 ) Then
+			Dim i As Integer
+			For i = 1 To mx.Count
+				Set linkObj = mx.element(i)
+				If in_source.nd.GetItemValue ("FinalCandidate_id")(0) = linkObj.nd.GetItemValue ("CandidateUNID")(0) Then
+					Set getResumeFinal = linkObj
+					Exit For
+				End If
+			Next
+		End If		
+		
+		Call Me.log.traceObject( "result", mxResult )		
+		Call Me.log.exit( "</" & TypeName( Me ) & "." & GetThreadInfo(1) & ">" )
+		Exit Function
+		
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Function
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+	Function getLinks (in_source As Variant) As MixCollection
+		On Error GoTo error_point
+		Call Me.log.enter( TypeName( Me ) & "." & GetThreadInfo(1))
+		
+		Dim mxResult As New MixCollection
+		Set getLinks = mxResult
+
+		Dim key As String
+		If IsObject (in_source) Then
+			key = in_source.id
+		Else
+			key = CStr(in_source)
+		End If
+
+		Dim vw As NotesView, dc As NotesDocumentCollection
+		Set vw = Me.db.Getview("(emb_LinkDocs)")
+		If Not vw Is Nothing Then
+			Call vw.Refresh()
+			vw.Autoupdate = False
+			Set dc = vw.Getalldocumentsbykey( key )
+			If ( dc.Count > 0 ) Then
+				Dim doc As NotesDocument
+				Set doc = dc.Getfirstdocument()
+				While Not doc Is Nothing
+
+					Call mxResult.Append (Me.Getdocobject (doc))	
+
+					Set doc = dc.Getnextdocument(doc)
+				Wend
+			End If
+		Else
+			Error 5001, "View '(emb_LinkDocsWithOutCategory)' is not exist"
+		End If
+		
+		Call Me.log.traceObject( "result", mxResult )		
+		Call Me.log.exit( "</" & TypeName( Me ) & "." & GetThreadInfo(1) & ">" )
+		Exit Function
+		
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Function
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Function getMethods (in_source As Variant) As MixCollection
+		On Error GoTo error_point
+		Call Me.log.enter( TypeName( Me ) & "." & GetThreadInfo(1))
+		
+		Dim mxResult As New MixCollection
+		Set getMethods = mxResult
+
+		Dim key As String
+		If IsObject (in_source) Then
+			key = in_source.id
+		Else
+			key = CStr(in_source)
+		End If
+
+		Dim vw As NotesView, dc As NotesDocumentCollection
+		Set vw = Me.db.Getview("(LinkToDocuments)")
+		If Not vw Is Nothing Then
+			Call vw.Refresh()
+			vw.Autoupdate = False
+			Set dc = vw.Getalldocumentsbykey( key )
+			If ( dc.Count > 0 ) Then
+				Dim doc As NotesDocument
+				Set doc = dc.Getfirstdocument()
+				While Not doc Is Nothing
+
+					Call mxResult.Append (Me.Getdocobject (doc))	
+
+					Set doc = dc.Getnextdocument(doc)
+				Wend
+			End If
+		Else
+			Error 5001, "View '(LinkToDocuments)' is not exist"
+		End If
+		
+		Call Me.log.traceObject ("result", mxResult)		
+		Call Me.log.exit( "</" & TypeName( Me ) & "." & GetThreadInfo(1) & ">" )
+		Exit Function
+		
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Function
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Function getProbationTasks (in_source As Variant) As MixCollection
+		On Error GoTo error_point
+		Call Me.log.enter( TypeName( Me ) & "." & GetThreadInfo(1))
+		
+		Dim mxResult As New MixCollection
+		Set getProbationTasks = mxResult
+
+		Dim key As String
+		If IsObject (in_source) Then
+			key = in_source.id
+		Else
+			key = CStr(in_source)
+		End If
+
+		Dim vw As NotesView, dc As NotesDocumentCollection
+		Set vw = Me.db.Getview("(emb.ProbationTasks)")
+		If Not vw Is Nothing Then
+			Call vw.Refresh()
+			vw.Autoupdate = False
+			Set dc = vw.Getalldocumentsbykey( key )
+			If ( dc.Count > 0 ) Then
+				Dim doc As NotesDocument
+				Set doc = dc.Getfirstdocument()
+				While Not doc Is Nothing
+
+					Call mxResult.Append (Me.Getdocobject (doc))	
+
+					Set doc = dc.Getnextdocument(doc)
+				Wend
+			End If
+		Else
+			Error 5001, "View '(emb.ProbationTasks)' is not exist"
+		End If
+		
+		Call Me.log.traceObject( "result", mxResult )		
+		Call Me.log.exit( "</" & TypeName( Me ) & "." & GetThreadInfo(1) & ">" )
+		Exit Function
+		
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Function
+End Class
+'======================================================================================================================================
+'	CLASS TPS_Recruitment_Request
+'======================================================================================================================================
+
+Class TPS_Recruitment_Request As Fbase_abstract_object_doc
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	'	PUBLIC:
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Sub New (in_doc As NotesDocument, in_ps As Variant)
+	End Sub
+	
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Property Get id As String
+		On Error GoTo error_point
+		If (m_doc.HasItem( "id" )) Then
+			id = m_doc.id(0)
+		Else
+			id = m_doc.UniversalID
+		End If
+		Exit Property 
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Property
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Property Get domain As String
+		On Error GoTo error_point
+		domain = DOMAIN_TPS_RECRUITMENT_REQUEST
+		Exit Property 
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Property
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Property Get title As String
+		On Error GoTo error_point
+
+			title = "Заявка на подбор № " & m_doc.numbertotal(0)
+		
+		Exit Property 
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Property
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------	
+	
+End Class
+'======================================================================================================================================
+'	CLASS TPS_Recruitment_Candidate
+'======================================================================================================================================
+
+Class TPS_Recruitment_Candidate As Fbase_abstract_object_doc
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	'	PUBLIC:
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Sub New (in_doc As NotesDocument, in_ps As Variant)
+	End Sub
+	
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Property Get id As String
+		On Error GoTo error_point
+		If (m_doc.HasItem( "id" )) Then
+			id = m_doc.id(0)
+		Else
+			id = m_doc.UniversalID
+		End If
+		Exit Property 
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Property
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Property Get domain As String
+		On Error GoTo error_point
+		domain = DOMAIN_TPS_RECRUITMENT_CANDIDATE
+		Exit Property 
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Property
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Property Get title As String
+		On Error GoTo error_point
+
+		title = m_doc.FIO(0)
+		
+		Exit Property 
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Property
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------	
+	Property Get solution As String
+		On Error GoTo error_point
+
+		solution = m_doc.CandidateSolutionValue(0)
+		
+		Exit Property 
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Property
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------	
+	Property Get isComplete As Boolean
+		On Error GoTo error_point
+
+		isComplete = (UCase(m_doc.StatusState(0)) = UCase("Complete"))
+		
+		Exit Property 
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Property
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------	
+	Property Get onEvents As Boolean
+		On Error GoTo error_point
+
+		onEvents = (UCase(m_doc.CandidateStatus(0)) = UCase("events"))
+		
+		Exit Property 
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Property
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------	
+	Property Get stageType As String
+		On Error GoTo error_point
+
+		stageType = m_doc.CandidateStatus(0)
+		
+		Exit Property 
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Property
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------	
+	Property Set stageType As String
+		On Error GoTo error_point
+
+		Call m_doc.Replaceitemvalue("CandidateStatus", stageType)
+		
+		Exit Property 
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Property
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------	
+	Property Get ODObjAccess As String
+		On Error GoTo error_point
+
+		ODObjAccess = m_doc.CandidateObjAccess(0)
+		
+		Exit Property 
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Property
+End Class
+'======================================================================================================================================
+'	CLASS TPS_Recruitment_MethodsLink
+'======================================================================================================================================
+
+Class TPS_Recruitment_MethodsLink As Fbase_abstract_object_doc
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	'	PUBLIC:
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Sub New (in_doc As NotesDocument, in_ps As Variant)
+	End Sub
+	
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Property Get id As String
+		On Error GoTo error_point
+		If (m_doc.HasItem( "id" )) Then
+			id = m_doc.id(0)
+		Else
+			id = m_doc.UniversalID
+		End If
+		Exit Property 
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Property
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Property Get domain As String
+		On Error GoTo error_point
+		domain = DOMAIN_TPS_RECRUITMENT_METHODSLINK
+		Exit Property 
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Property
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Property Get title As String
+		On Error GoTo error_point
+
+		title = m_doc.targetdoc_Name(0)
+		
+		Exit Property 
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Property
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------	
+	
+End Class
+'======================================================================================================================================
+'	CLASS TPS_Recruitment_ProbationTask
+'======================================================================================================================================
+
+Class TPS_Recruitment_ProbationTask As Fbase_abstract_object_doc
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	'	PUBLIC:
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Sub New (in_doc As NotesDocument, in_ps As Variant)
+	End Sub
+	
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Property Get id As String
+		On Error GoTo error_point
+		If (m_doc.HasItem( "id" )) Then
+			id = m_doc.id(0)
+		Else
+			id = m_doc.UniversalID
+		End If
+		Exit Property 
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Property
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Property Get domain As String
+		On Error GoTo error_point
+		domain = DOMAIN_TPS_RECRUITMENT_PROBATIONTASK
+		Exit Property 
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Property
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Property Get title As String
+		On Error GoTo error_point
+
+			title = m_doc.task(0)
+		
+		Exit Property 
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Property
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------	
+	Property Get period As String
+		On Error GoTo error_point
+		
+		If m_doc.PeriodFixDate(0) = "1" Then
+			period = m_doc.Period(0)
+		Else
+			period = CStr(m_doc.PeriodDate(0))
+		End If
+		
+		Exit Property 
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Property
+End Class
+'======================================================================================================================================
+'	CLASS TPS_Recruitment_Company
+'======================================================================================================================================
+Public Class TPS_Recruitment_Company As FBase_Abstract_Object_Doc
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------	
+	' PUBLIC
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------	
+	Sub New( in_doc As NotesDocument, in_ps As Variant )
+	End Sub
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Property Get id As String
+		On Error GoTo error_point
+		Call Me.log.enter( TypeName( Me ) & "." & GetThreadInfo(1))
+		
+		id = Me.nd.Universalid
+		
+		Call Me.log.trace( "result: " & id )
+		Call Me.log.exit( TypeName( Me ) & "." & GetThreadInfo(1))
+		Exit Property
+		
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Property
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------	
+	Property Get title As String
+		On Error GoTo error_point
+		Call Me.log.enter( TypeName( Me ) & "." & GetThreadInfo(1))
+		
+		title = Me.nd.Title(0)
+		
+		
+		Call Me.log.trace( "result: " & title )
+		Call Me.log.exit( TypeName( Me ) & "." & GetThreadInfo(1))
+		Exit Property
+		
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$		
+	End Property
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Property Get domain As String
+		On Error GoTo error_point
+		Call Me.log.enter( TypeName( Me ) & "." & GetThreadInfo(1))
+		
+		domain = DOMAIN_TPS_RECRUITMENT_COMPANY
+		
+		Call Me.log.trace( "result: " & domain )
+		Call Me.log.exit( TypeName( Me ) & "." & GetThreadInfo(1))
+		Exit Property
+		
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Property
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------	
+	Property Get contragent As Variant
+		On Error GoTo error_point
+		Call Me.log.enter( TypeName( Me ) & "." & GetThreadInfo(1))
+		
+		If Me.nd.Hasitem("contragent_id") Then
+			Set contragent = New ObjectLink( Me.nd.contragent_id(0), Me.nd.contragent_title(0), Me.nd.contragent_domain(0))
+		Else
+			Set contragent = Nothing
+		End If 
+		
+		Call Me.log.traceObject( "result", contragent )
+		Call Me.log.exit( TypeName( Me ) & "." & GetThreadInfo(1))
+		Exit Property
+		
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$		
+	End Property
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------	
+	
+End Class
+'======================================================================================================================================
+'	CLASS TPS_Recruitment_PositionCategory
+'======================================================================================================================================
+
+Class TPS_Recruitment_PositionCategory As Fbase_abstract_object_doc
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	'	PUBLIC:
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Sub New (in_doc As NotesDocument, in_ps As Variant)
+	End Sub
+	
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Property Get id As String
+		On Error GoTo error_point
+		If (m_doc.HasItem( "id" )) Then
+			id = m_doc.id(0)
+		Else
+			id = m_doc.UniversalID
+		End If
+		Exit Property 
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Property
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Property Get domain As String
+		On Error GoTo error_point
+		domain = DOMAIN_TPS_RECRUITMENT_POSCATEGORY
+		Exit Property 
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Property
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Property Get title As String
+		On Error GoTo error_point
+
+		title = m_doc.Category(0)
+		
+		Exit Property 
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Property
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------	
+	Property Get agrType As String
+		On Error GoTo error_point
+		agrType = m_doc.Getitemvalue("AgreementType")(0)
+		Exit Property 
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Property
+End Class
+'======================================================================================================================================
+'	CLASS TPS_Recruitment_Request_InitObj
+'======================================================================================================================================
+Class TPS_Recruitment_Request_InitObj As Fbase_abstract_service
+	Private m_processID As String
+	Private m_initPositionID As String
+	Private m_initObjID As String
+	Private m_processDoc As NotesDocument
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	'	PUBLIC:
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Sub New( in_ps As Variant )
+	End Sub
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Property Get processID As String
+		On Error GoTo error_point
+		processID = m_processID
+		Exit Property 
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Property
+		'-----------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Property Set processID As String
+		On Error GoTo error_point
+		m_processID = processID
+		Exit Property 
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Property
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Property Get initPositionID As String
+		On Error GoTo error_point
+		initPositionID = m_initPositionID
+		Exit Property 
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Property
+	'-----------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Property Set initPositionID As String
+		On Error GoTo error_point
+		m_initPositionID = initPositionID
+		Exit Property 
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Property
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Property Get initObjID As String
+		On Error GoTo error_point
+		initObjID = m_initObjID
+		Exit Property 
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Property
+	'-----------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Property Set initObjID As String
+		On Error GoTo error_point
+		m_initObjID = initObjID
+		Exit Property 
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Property
+	'-----------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Property Get processDoc As NotesDocument
+		On Error GoTo error_point
+		Set processDoc = m_processDoc
+		Exit Property 
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Property
+	'-----------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Property Set processDoc As NotesDocument
+		On Error GoTo error_point
+		Set m_processDoc = processDoc
+		Exit Property 
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Property
+	
+End Class
+'======================================================================================================================================
+'	CLASS TPS_Recruitment_EventType
+'======================================================================================================================================
+
+Class TPS_Recruitment_EventType As Fbase_abstract_object_doc
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	'	PUBLIC:
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Sub New (in_doc As NotesDocument, in_ps As Variant)
+	End Sub
+	
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Property Get id As String
+		On Error GoTo error_point
+		If (m_doc.HasItem( "id" )) Then
+			id = m_doc.id(0)
+		Else
+			id = m_doc.UniversalID
+		End If
+		Exit Property 
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Property
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Property Get domain As String
+		On Error GoTo error_point
+		domain = DOMAIN_TPS_RECRUITMENT_REF_EVENT
+		Exit Property 
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Property
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Property Get title As String
+		On Error GoTo error_point
+
+		title = m_doc.Name(0)
+		
+		Exit Property 
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Property
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------	
+	
+End Class
+'======================================================================================================================================
+'	CLASS TPS_Recruitment_CandidateCard
+'======================================================================================================================================
+
+Class TPS_Recruitment_CandidateCard As Fbase_abstract_object_doc
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	'	PUBLIC:
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Sub New (in_doc As NotesDocument, in_ps As Variant)
+	End Sub
+	
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Property Get id As String
+		On Error GoTo error_point
+		If (m_doc.HasItem( "id" )) Then
+			id = m_doc.id(0)
+		Else
+			id = m_doc.UniversalID
+		End If
+		Exit Property 
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Property
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Property Get domain As String
+		On Error GoTo error_point
+		domain = DOMAIN_TPS_RECRUITMENT_CANDIDATE_CARD
+		Exit Property 
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Property
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Property Get title As String
+		On Error GoTo error_point
+
+		title = m_doc.FIO(0)
+		
+		Exit Property 
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Property
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------	
+	
+End Class
+'======================================================================================================================================
+'	CLASS TPS_Recruitment_Event
+'======================================================================================================================================
+
+Class TPS_Recruitment_Event As Fbase_abstract_object_doc
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	'	PUBLIC:
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Sub New (in_doc As NotesDocument, in_ps As Variant)
+	End Sub
+	
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Property Get id As String
+		On Error GoTo error_point
+		If (m_doc.HasItem( "id" )) Then
+			id = m_doc.id(0)
+		Else
+			id = m_doc.UniversalID
+		End If
+		Exit Property 
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Property
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Property Get domain As String
+		On Error GoTo error_point
+		domain = DOMAIN_TPS_RECRUITMENT_EVENT
+		Exit Property 
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Property
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Property Get title As String
+		On Error GoTo error_point
+
+		title = m_doc.Event_title(0)
+		
+		Exit Property 
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Property
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Property Get isActive As Boolean
+		On Error GoTo error_point
+
+		isActive = (UCase(m_doc.StatusState(0)) <> UCase("Complete"))
+		
+		Exit Property 
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Property
+
+End Class
+'======================================================================================================================================
+'	CLASS TPS_Recruitment_Event
+'======================================================================================================================================
+
+Class TPS_Recruitment_FeedBack As Fbase_abstract_object_doc
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	'	PUBLIC:
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Sub New (in_doc As NotesDocument, in_ps As Variant)
+	End Sub
+	
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Property Get id As String
+		On Error GoTo error_point
+		If (m_doc.HasItem( "id" )) Then
+			id = m_doc.id(0)
+		Else
+			id = m_doc.UniversalID
+		End If
+		Exit Property 
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Property
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Property Get domain As String
+		On Error GoTo error_point
+		domain = DOMAIN_TPS_RECRUITMENT_FEEDBACK
+		Exit Property 
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Property
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Property Get title As String
+		On Error GoTo error_point
+
+		title = "Анкета "
+		If Me.fbType = "chief" Then
+			title = title & "руководителя."
+		ElseIf Me.fbType = "candidate" Then
+			title = title & "кандидата."
+		End If
+		
+		If Me.stage = "stage1" Then
+			title = title & " Первый этап"
+		ElseIf Me.stage = "stage2" Then
+			title = title & " Второй этап"
+		ElseIf Me.stage = "stagefinal" Then
+			title = title & " Заключительный этап"
+		End If
+		
+		Exit Property 
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Property
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Property Get stage As String
+		On Error GoTo error_point
+
+		stage = LCase(m_doc.Stage(0))
+		
+		Exit Property 
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Property
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Property Get fbType As String
+		On Error GoTo error_point
+
+		fbType = LCase(m_doc.InterviewType(0))
+		
+		Exit Property 
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Property
+	
+End Class
+'======================================================================================================================================
+'	CLASS TPS_Recruitment_EventReport
+'======================================================================================================================================
+
+Class TPS_Recruitment_EventReport As Fbase_abstract_object_doc
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	'	PUBLIC:
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Sub New (in_doc As NotesDocument, in_ps As Variant)
+	End Sub
+	
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Property Get id As String
+		On Error GoTo error_point
+		If (m_doc.HasItem( "id" )) Then
+			id = m_doc.id(0)
+		Else
+			id = m_doc.UniversalID
+		End If
+		Exit Property 
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Property
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Property Get domain As String
+		On Error GoTo error_point
+		domain = DOMAIN_TPS_RECRUITMENT_EVENTREPORT
+		Exit Property 
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Property
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Property Get title As String
+		On Error GoTo error_point
+
+		title = "Отчет по мероприятию " & m_doc.Event_title(0)
+		
+		Exit Property 
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Property
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+End Class
+'======================================================================================================================================
+'	CLASS TPS_Recruitment_ContractStage
+'======================================================================================================================================
+
+Class TPS_Recruitment_ContractStage As Fbase_abstract_object_doc
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	'	PUBLIC:
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Sub New (in_doc As NotesDocument, in_ps As Variant)
+	End Sub
+	
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Property Get id As String
+		On Error GoTo error_point
+		If (m_doc.HasItem( "id" )) Then
+			id = m_doc.id(0)
+		Else
+			id = m_doc.UniversalID
+		End If
+		Exit Property 
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Property
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Property Get domain As String
+		On Error GoTo error_point
+		domain = DOMAIN_TPS_RECRUITMENT_CONTRACTSTAGE
+		Exit Property 
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Property
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Property Get title As String
+		On Error GoTo error_point
+
+			title = m_doc.Subject(0)
+		
+		Exit Property 
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Property
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------	
+	
+End Class
+'======================================================================================================================================
+'	CLASS TPS_Recruitment_Competence
+'======================================================================================================================================
+
+Class TPS_Recruitment_Competence As Fbase_abstract_object_doc
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	'	PUBLIC:
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Sub New (in_doc As NotesDocument, in_ps As Variant)
+	End Sub
+	
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Property Get id As String
+		On Error GoTo error_point
+		If (m_doc.HasItem( "id" )) Then
+			id = m_doc.id(0)
+		Else
+			id = m_doc.UniversalID
+		End If
+		Exit Property 
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Property
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Property Get domain As String
+		On Error GoTo error_point
+		domain = DOMAIN_TPS_RECRUITMENT_COMPETENCE
+		Exit Property 
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Property
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Property Get title As String
+		On Error GoTo error_point
+
+			title = m_doc.Title(0)
+		
+		Exit Property 
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Property
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------	
+	Property Get competence_type As String
+		On Error GoTo error_point
+
+		competence_type = m_doc.Type(0)
+		
+		Exit Property 
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Property
+End Class
+'======================================================================================================================================
+'	CLASS TPS_Recruitment_Resume
+'======================================================================================================================================
+
+Class TPS_Recruitment_Resume As Fbase_abstract_object_doc
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	'	PUBLIC:
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Sub New (in_doc As NotesDocument, in_ps As Variant)
+	End Sub
+	
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Property Get id As String
+		On Error GoTo error_point
+		If (m_doc.HasItem( "id" )) Then
+			id = m_doc.id(0)
+		Else
+			id = m_doc.UniversalID
+		End If
+		Exit Property 
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Property
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Property Get domain As String
+		On Error GoTo error_point
+		domain = DOMAIN_TPS_RECRUITMENT_RESUME
+		Exit Property 
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Property
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Property Get title As String
+		On Error GoTo error_point
+
+		If (Trim(m_doc.getItemValue("FIO")(0)) <> "") Then
+			title = m_doc.FIO(0)
+		Else
+			title = m_doc.FileName(0)
+		End If
+		
+		Exit Property 
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Property
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------	
+
+End Class
+'======================================================================================================================================
+'	CLASS TPS_Recruitment_EventReport
+'======================================================================================================================================
+
+Class TPS_Recruitment_Question As Fbase_abstract_object_doc
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	'	PUBLIC:
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Sub New (in_doc As NotesDocument, in_ps As Variant)
+	End Sub
+	
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Property Get id As String
+		On Error GoTo error_point
+		If (m_doc.HasItem( "id" )) Then
+			id = m_doc.id(0)
+		Else
+			id = m_doc.UniversalID
+		End If
+		Exit Property 
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Property
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Property Get domain As String
+		On Error GoTo error_point
+		domain = DOMAIN_TPS_RECRUITMENT_REF_QUESTION
+		Exit Property 
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Property
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Property Get title As String
+		On Error GoTo error_point
+
+		title = "Вопрос: " & m_doc.Question(0)
+		
+		Exit Property 
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Property
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Property Get answers As Variant
+		On Error GoTo error_point
+
+		answers = m_doc.Answers
+		
+		Exit Property 
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Property
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Property Get negative As Variant
+		On Error GoTo error_point
+
+		negative = m_doc.NegativeAnswers
+		
+		Exit Property 
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Property
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Property Get questionNumber As Integer
+		On Error GoTo error_point
+
+		questionNumber = m_doc.QuestionNumber(0)
+		
+		Exit Property 
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Property
+End Class
+'======================================================================================================================================
+'	CLASS TPS_Recruitment_ProbationTask
+'======================================================================================================================================
+
+Class TPS_Recruitment_ProbationTaskReport As Fbase_abstract_object_doc
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	'	PUBLIC:
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Sub New (in_doc As NotesDocument, in_ps As Variant)
+	End Sub
+	
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Property Get id As String
+		On Error GoTo error_point
+		If (m_doc.HasItem( "id" )) Then
+			id = m_doc.id(0)
+		Else
+			id = m_doc.UniversalID
+		End If
+		Exit Property 
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Property
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Property Get domain As String
+		On Error GoTo error_point
+		domain = DOMAIN_TPS_RECRUITMENT_TASKREPORT
+		Exit Property 
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Property
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Property Get title As String
+		On Error GoTo error_point
+
+			title = m_doc.task(0)
+		
+		Exit Property 
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Property
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------	
+	
+End Class
+'======================================================================================================================================
+'	CLASS TPS_Recruitment_Competence
+'======================================================================================================================================
+
+Class TPS_Recruitment_CompetenceQuestion As Fbase_abstract_object_doc
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	'	PUBLIC:
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Sub New (in_doc As NotesDocument, in_ps As Variant)
+	End Sub
+	
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Property Get id As String
+		On Error GoTo error_point
+		If (m_doc.HasItem( "id" )) Then
+			id = m_doc.id(0)
+		Else
+			id = m_doc.UniversalID
+		End If
+		Exit Property 
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Property
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Property Get domain As String
+		On Error GoTo error_point
+		domain = DOMAIN_TPS_RECRUITMENT_COMPETENCEQUEST
+		Exit Property 
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Property
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Property Get title As String
+		On Error GoTo error_point
+
+		title = m_doc.Question(0)
+		
+		Exit Property 
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Property
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Property Get answers As String
+		On Error GoTo error_point
+
+		answers = m_doc.Answers(0)
+		
+		Exit Property 
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Property
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------	
+	Property Get competence As String
+		On Error GoTo error_point
+
+		competence = m_doc.Competence(0) & ", " & m_doc.CompetenceValue(0) & "%"
+		
+		Exit Property 
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Property
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Property Set title As String
+		On Error GoTo error_point
+
+		Call m_doc.Replaceitemvalue("Question", title)
+		
+		Exit Property 
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Property
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Property Set answers As String
+		On Error GoTo error_point
+
+		Call m_doc.Replaceitemvalue("Answers", answers)
+		
+		Exit Property 
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Property
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------	
+	Property Set competence As String
+		On Error GoTo error_point
+
+		Call m_doc.Replaceitemvalue("Competence", competence)
+		
+		Exit Property 
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Property
+End Class
+'======================================================================================================================================
+'	CLASS TPS_Recruitment_FileLink
+'======================================================================================================================================
+
+Class TPS_Recruitment_FileLink As Fbase_abstract_object_doc
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	'	PUBLIC:
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Sub New (in_doc As NotesDocument, in_ps As Variant)
+	End Sub
+	
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Property Get id As String
+		On Error GoTo error_point
+		If (m_doc.HasItem( "id" )) Then
+			id = m_doc.id(0)
+		Else
+			id = m_doc.UniversalID
+		End If
+		Exit Property 
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Property
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Property Get domain As String
+		On Error GoTo error_point
+		domain = DOMAIN_TPS_RECRUITMENT_LINK
+		Exit Property 
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Property
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Property Get title As String
+		On Error GoTo error_point
+
+		If (Trim(m_doc.getItemValue("FIO")(0)) <> "") Then
+			title = m_doc.FIO(0)
+		Else
+			title = m_doc.FileName(0)
+		End If
+		
+		Exit Property 
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Property
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------	
+
+End Class
+'======================================================================================================================================
+'	CLASS TPS_Recruitment_FileLink
+'======================================================================================================================================
+
+Class TPS_Recruitment_TestLink As Fbase_abstract_object_doc
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	'	PUBLIC:
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Sub New (in_doc As NotesDocument, in_ps As Variant)
+	End Sub
+	
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Property Get id As String
+		On Error GoTo error_point
+		If (m_doc.HasItem( "id" )) Then
+			id = m_doc.id(0)
+		Else
+			id = m_doc.UniversalID
+		End If
+		Exit Property 
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Property
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Property Get domain As String
+		On Error GoTo error_point
+		domain = DOMAIN_TPS_RECRUITMENT_TEST
+		Exit Property 
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Property
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Property Get title As String
+		On Error GoTo error_point
+
+		If (Trim(m_doc.getItemValue("FIO")(0)) <> "") Then
+			title = m_doc.FIO(0)
+		Else
+			title = m_doc.FileName(0)
+		End If
+		
+		Exit Property 
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Property
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------	
+
+End Class

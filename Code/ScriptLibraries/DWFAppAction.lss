@@ -1,0 +1,1356 @@
+'++LotusScript Development Environment:2:5:(Options):0:74
+Option Public
+Option Declare
+
+Use "DWFODLib.UI"
+Use "ArrayTools"
+Use "DWFRequest"
+Use "VersionAdapter" '"fbyte"
+
+'++LotusScript Development Environment:2:5:(Forward):0:1
+Declare Class UIAppStore
+Declare Sub Initialize
+Declare Function DWFAAInitContractExecutionAction() As Integer
+Declare Function DWFAAXmlUpdateMailDb() As Integer
+
+'++LotusScript Development Environment:2:5:(Declarations):0:10
+Class UIAppStore
+	Public ws As NotesUIWorkspace
+	Public docUI As NotesUIDocument
+	Public doc As NotesDocument
+	Public ODStoreUI As ODStoreUI
+	
+'	Private m_odpath As String
+	
+	Sub New()
+		Set ws 	= New NotesUIWorkspace
+		Set docUI	= ws.CurrentDocument
+		Set doc 	= docUI.Document
+		
+		%REM		
+		Dim fByte As Servicesmanager, fBase As Fbaseservice, fBaseDatabases As Fbase_databasesservice, fBaseDatabase As Fbase_databasesetting
+		Set fByte = Getservicesmanager()
+		Set fBase = fByte.Base
+		Set fBaseDatabases = fBase.Databases
+		Set fBaseDatabase = fBaseDatabases.getSetting( "tps.core.directory" )
+		If Not ( fBaseDatabase Is Nothing ) Then
+			m_odpath = fBaseDatabase.Filepath
+		End If
+		%ENDREM
+		Dim ErrorStr$
+		If doc.dbODPath(0) <> "" Then
+			Set Me.ODStoreUI = New ODStoreUI(doc.dbODPath(0), ErrorStr)
+		Else
+			Set Me.ODStoreUI = New ODStoreUI(getODdb.Filepath, ErrorStr)
+		End If
+'		If ErrorStr <> "" Then MsgBox ErrorStr, 48, ERR_MSG_TITLE
+		If ErrorStr <> "" Then Error 1000, "DWFAppAction::UIAppStore.New - Ошибка получения Орг. директории: " & ErrorStr
+	End Sub
+	
+	Function AddODObj(multi As Boolean, ItemPrefix As String) As Integer
+		On Error GoTo errh
+		
+		Dim ErrorStr As String
+		
+%REM
+		If ( m_odpath = "" ) Then
+			Set Me.ODStoreUI = New ODStoreUI(doc.dbODPath(0), ErrorStr)
+		Else
+			Set Me.ODStoreUI = New ODStoreUI(m_odpath, ErrorStr)
+		End If
+		
+		If (ErrorStr <> "") Then
+			MsgBox ErrorStr, 48, ERR_MSG_TITLE
+			Exit Function
+		End If
+%ENDREM		
+		If (Me.ODStoreUI.AddODObj(Me.doc, multi, ItemPrefix, ErrorStr) <> 1) Then
+			If (ErrorStr <> "") Then MsgBox ErrorStr, 48, ERR_MSG_TITLE
+		Else
+			Call Me.docUI.Refresh()			
+			AddODObj = 1
+		End If
+		Exit Function
+errh:
+		MsgBox Error$ & {. Error # } & CStr(Err) & { on line # } & CStr(Erl) & { in (AddODObj) "UIAppStore" class}
+		Resume endh
+endh:
+	End Function
+	
+	Function AddODObjBySetType(ODObjType As String, multi As Boolean, ItemPrefix As String) As Integer
+		On Error GoTo errh
+		
+		Dim ErrorStr As String
+		
+%REM
+		If ( m_odpath = "" ) Then
+			Set Me.ODStoreUI = New ODStoreUI(doc.dbODPath(0), ErrorStr)
+		Else
+			Set Me.ODStoreUI = New ODStoreUI(m_odpath, ErrorStr)
+		End If
+
+		If (ErrorStr <> "") Then
+			MsgBox ErrorStr, 48, ERR_MSG_TITLE
+			Exit Function
+		End If
+%ENDREM		
+		If (Me.ODStoreUI.AddODObjBySetType(Me.doc, ODObjType, multi, ItemPrefix, ErrorStr) <>1) Then
+			If (ErrorStr <> "") Then MsgBox ErrorStr, 48, ERR_MSG_TITLE
+		else
+			Call Me.docUI.Refresh()
+			AddODObjBySetType = 1
+		End If
+		Exit Function
+errh:
+		MsgBox Error$ & {. Error # } & CStr(Err) & { on line # } & CStr(Erl) & { in (AddODObjBySetType) "UIAppStore" class}
+		Resume endh
+endh:	
+	End Function
+	
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Function AddODObjBySetTypes(ODObjTypes As Variant, multi As Boolean, ItemPrefix As String) As Integer
+		On Error GoTo errh
+		
+		Dim ErrorStr As String
+		
+%REM
+		If ( m_odpath = "" ) Then
+			Set Me.ODStoreUI = New ODStoreUI(doc.dbODPath(0), ErrorStr)
+		Else
+			Set Me.ODStoreUI = New ODStoreUI(m_odpath, ErrorStr)
+		End If
+
+		If (ErrorStr <> "") Then
+			MsgBox ErrorStr, 48, ERR_MSG_TITLE
+			Exit Function
+		End If
+%ENDREM		
+		If (Me.ODStoreUI.AddODObjBySetTypes(Me.doc, ODObjTypes, multi, ItemPrefix, ErrorStr) <>1) Then
+			If (ErrorStr <> "") Then MsgBox ErrorStr, 48, ERR_MSG_TITLE
+		else
+			Call Me.docUI.Refresh()
+			AddODObjBySetTypes = 1
+		End If
+		Exit Function
+errh:
+		MsgBox Error$ & {. Error # } & CStr(Err) & { on line # } & CStr(Erl) & { in (AddODObjBySetType) "UIAppStore" class}
+		Resume endh
+endh:	
+	End Function
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Function AddODObjPrimary( multi As Boolean, ItemPrefix As String) As Integer
+		On Error GoTo error_point
+		
+		Dim db As NotesDatabase
+		Dim v As Variant
+		Dim docTemp As NotesDocument
+		Dim colOD As NotesDocumentCollection
+		Dim docOD As NotesDocument
+		Dim ODObj As ODObj
+		Dim i As Integer
+		
+		Set db = doc.ParentDatabase
+		Set docTemp = db.CreateDocument
+		docTemp.select_step = "1"
+		If ( ws.DialogBox("DWF103", True, True, False, False, False, False, db.Title, docTemp, True, False, True) ) Then
+			
+			Dim ErrorStr As String
+%REM
+			If ( m_odpath = "" ) Then
+				Set Me.ODStoreUI = New ODStoreUI(doc.dbODPath(0), ErrorStr)
+			Else
+				Set Me.ODStoreUI = New ODStoreUI(m_odpath, ErrorStr)
+			End If
+			If ( ErrorStr = "" ) Then
+%ENDREM			
+			Dim isSuccess As Boolean
+			
+			Select Case docTemp.List(0)
+			Case "fulllist"
+				If ( Me.ODStoreUI.AddODObj( Me.doc, multi, ItemPrefix, ErrorStr ) = 1) Then
+					isSuccess = True
+				Else 	
+					If ( ErrorStr <> "" ) Then
+						Error 1001, ErrorStr
+					End If
+				End If
+			Case "chiefs"
+				isSuccess = (Me.ODStoreUI.AddODObjGetChiefs( Me.doc, multi, Itemprefix, Errorstr, True, "" ) = 1 )
+			Case "subordinates"
+				isSuccess = ( Me.ODStoreUI.AddODObjGetSubordinates( Me.doc, multi, Itemprefix, Errorstr, True, "" ) = 1 )
+			End Select
+				
+			If ( isSuccess ) Then
+				Call Me.docUI.Refresh()
+				AddODObjPrimary = 1	
+			End If
+				
+		Else
+			Error 1001, ErrorStr
+		End If
+'		End If
+		
+		Exit Function
+		
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Function
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Function RemoveODObj(multi As Boolean, ItemPrefix As String) As Integer
+		On Error GoTo errh
+		
+		Dim ErrorStr As String
+
+%REM		
+		If ( m_odpath = "" ) Then
+			Set Me.ODStoreUI = New ODStoreUI(doc.dbODPath(0), ErrorStr)
+		Else
+			Set Me.ODStoreUI = New ODStoreUI(m_odpath, ErrorStr)
+		End If
+		
+		If (ErrorStr <> "") Then
+			MsgBox ErrorStr, 48, ERR_MSG_TITLE
+			Exit Function
+		End If
+%ENDREM		
+		If (Me.ODStoreUI.RemoveODObj(Me.doc, multi, ItemPrefix, ErrorStr) <>1) Then
+			If (ErrorStr <> "") Then MsgBox ErrorStr, 48, ERR_MSG_TITLE
+		else
+			Call Me.docUI.Refresh()
+			RemoveODObj = 1
+		End If
+		Exit Function
+errh:
+		MsgBox Error$ & {. Error # } & CStr(Err) & { on line # } & CStr(Erl) & { in (RemoveODObj) "UIAppStore" class}
+		Resume endh
+endh:
+	End Function
+	
+	Function SetDirectory(DirectoryUniqueName As String, ItemName As String) As Integer
+		On Error GoTo errh
+		
+		Dim v As String
+		
+		Dim s As New NotesSession, cdb As NotesDatabase
+		Set cdb = s.Currentdatabase
+		
+		'<patch author="Ramazan Salpagarov" date="2016.05.27">
+		'переводим на FByte.Platform
+'		Dim sm As Servicesmanager, fBase As Fbaseservice, fBaseDatabases As Fbase_databasesservice, fBaseDatabase As Fbase_databasesetting
+'		Set sm = getServicesManager()
+		
+		Select Case LCase( DirectoryUniqueName )
+			Case LCase("ProjectList")
+				SetDirectory = setProjectInDoc( Me.doc, "Project", False )
+%REM				
+			Case LCase("ProjectList")
+				'используем ПМ Проекты, если есть соответствующая настройка
+				Dim isUseOld As Boolean
+				Dim isUseNew As Boolean
+				
+				Dim result As String
+
+				result = Me.getSingleSettingValueByKey( sm, "tps.projects.isUse")
+				isUseOld = (CStr(result) = "1")
+				
+				result = Me.getSingleSettingValueByKey( sm, "tps.projects20.isUse")
+				isUseNew = (CStr(result) = "1")
+				
+				If( isUseNew )Then
+					SetDirectory = Me.setDirectoryByProjects20Sevice( sm, Me.doc )
+				ElseIf ( isUseOld ) Then
+					SetDirectory = Me.setDirectoryByProjectsSevice( sm, Me.doc )
+				Else
+					GoTo setdir
+				End If
+%ENDREM
+			Case Else
+setdir:				
+				'<patch author="Ramazan Salpagarov" date="2016.05.27">
+				'продолжение..
+'				Set fBase = sm.Base
+'				Set fBaseDatabases = fBase.Databases
+'				Set fBaseDatabase = fBaseDatabases.Getsetting( "tps.core.dictionaries" )
+				
+'				If ( fBaseDatabase Is Nothing ) Then
+					Dim ProcessID As String
+					ProcessID = Me.doc.PROCESSID(0)
+					If (ProcessID = "") Then
+						MsgBox {Нет информации о документе "Процесса"}, 48, ERR_MSG_TITLE
+						Exit Function
+					End If
+					On Error 4091 Resume Next 'bad unid
+					Dim docProcess As NotesDocument
+					Set docProcess = cdb.GetDocumentByUNID( ProcessID )
+					On Error GoTo errh
+					If (docProcess Is Nothing) Then
+						MsgBox {Не найден документ "Процесса"}, 48, ERR_MSG_TITLE
+						Exit Function
+					End If
+					v = docProcess.Directory(0)
+					
+					If (v = "") Then
+						MsgBox {В документе "Процесса" нет информации о базе "Справочников"}, 48, ERR_MSG_TITLE
+						Exit Function
+					End If
+'				Else
+'					v = fBaseDatabase.Filepath
+'				End If
+				'</patch>
+				
+				Dim ErrorStr As String
+				
+				Dim DirectoryStore As DirectoryStore
+				Set DirectoryStore = New DirectoryStore(CStr(v), ErrorStr)
+				If (ErrorStr <> "") Then
+					MsgBox ErrorStr, 48, ERR_MSG_TITLE
+					Exit Function
+				End If
+				
+				Dim Directory As Directory
+				Set Directory = DirectoryStore.GetDirectoryByUniqueName(DirectoryUniqueName, ErrorStr)
+				If (ErrorStr <> "") Then
+					MsgBox ErrorStr, 48, ERR_MSG_TITLE
+					Exit Function
+				End If
+				
+				If (Directory.SetUp(Me.doc, ItemName, ErrorStr)<> 1) Then
+					If (ErrorStr <> "") Then
+						MsgBox ErrorStr, 48, ERR_MSG_TITLE
+					End If
+					Exit Function
+				End If
+				
+				SetDirectory = 1
+				
+		End Select
+		
+		If ( SetDirectory = 1 ) Then
+			Call Me.docUI.Refresh()	
+		End If
+		
+		
+		Exit Function
+errh:
+		MsgBox Error$ & {. Error # } & CStr(Err) & { on line # } & CStr(Erl) & { in (SetDirectory) "UIAppStore" class}
+		Resume endh
+endh:
+	End Function
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------	
+%REM
+	Private Function setDirectoryByProjectsSevice( in_sm As Variant, in_doc As NotesDocument ) As Integer
+		On Error GoTo error_point
+		
+		Dim pckgTPS As Variant
+		Set pckgTPS = getPackageObject( "tps", "getTPSService" )
+		Call in_sm.set( pckgTPS )
+		
+		Dim tps As Variant
+		Set tps = in_sm.get( "tps" )
+		
+		If ( tps.projects.setProjectInDoc( in_doc, False ) = 1 ) Then
+			setDirectoryByProjectsSevice = 1
+		End If
+		
+		Exit Function
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Function
+%END REM
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------	
+%REM
+	Private Function setDirectoryByProjects20Sevice( in_sm As Variant, in_doc As NotesDocument ) As Integer
+		On Error GoTo error_point
+		
+		Dim pckgTPS As Variant
+		Set pckgTPS = getPackageObject( "tps", "getTPSService" )
+		Call in_sm.set( pckgTPS )
+		
+		Dim tps As Variant
+		Set tps = in_sm.get( "tps" )
+		
+		If ( tps.projects20.setProjectInDoc( in_doc, False ) = 1 ) Then
+			setDirectoryByProjects20Sevice = 1
+		End If
+		
+		Exit Function
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Function
+%ENDREM	
+%REM
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Private Function getSingleSettingValueByKey( in_sm As Variant, in_key As String ) As String
+		On Error GoTo error_point
+		
+		Dim s As New NotesSession, cdb As NotesDatabase
+		Set cdb = s.Currentdatabase
+		Dim setting As Variant, mxValues As Variant, value As String, continue As Boolean
+		
+		Set setting = in_sm.core.settings( cdb ).get( in_key )
+		If ( setting Is Nothing ) Then
+			Print {Не найдена настройка '} & in_key & {'}
+		Else
+			Set mxValues = setting.values
+			If ( mxValues.Count > 0 ) Then
+				continue = True
+				
+				If ( mxValues.Count = 1 ) Then
+					If ( InStr( mxValues.Element( 1 ), "|" ) <> 0 ) Then
+						value = StrRight( mxValues.Element( 1 ), "|" )
+					Else
+						value = mxValues.Element( 1 )
+					End If
+				Else
+					continue = False
+					Error 1001, {Настройка '} & in_key & {' содержит множественное значение. Обратитесь к администратору}
+				End If
+				
+				If ( continue ) Then
+					If ( value <> "" ) Then
+						'-----------------------------------------
+						getSingleSettingValueByKey = value
+						'-----------------------------------------
+					Else
+						Print {Warning: setting value is empty}
+					End If
+				End If
+				
+			Else
+				Error 1001, {Настройка '} & in_key & {' пустая. Обратитесь к администратору}
+			End If
+			
+		End If
+		
+		Exit Function
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Function
+%ENDREM
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Function RemoveDirectory(DirectoryUniqueName As String, ItemName As String) As Integer
+		On Error GoTo errh
+		
+		'<patch author="Ramazan Salpagarov" date="2016.05.27"> copied from SetDirectory by Igor Tomnov on 2018.08.16
+		'переводим на FByte.Platform
+		'Dim sm As Servicesmanager, fBase As Fbaseservice, fBaseDatabases As Fbase_databasesservice, fBaseDatabase As Fbase_databasesetting
+		'Set sm = getServicesManager()
+
+		Select Case LCase( DirectoryUniqueName )
+%REM				
+			Case LCase("ProjectList")
+				'<patch author="Tambiev" date="2016.12.03">
+				'используем ПМ Проекты, если есть соответствующая настройка
+				
+				Dim key As String
+				key = "tps.projects.isUse"
+				Dim result As String
+				result = Me.getSingleSettingValueByKey( sm, key )
+				If ( result = "" ) Then result = "0"
+				If ( CInt( result ) = 1 ) Then
+					
+					RemoveDirectory = Me.RemoveDirectoryByProjectService( sm, Me.doc )
+					
+				Else
+					GoTo removedir
+				End If
+				'</patch>
+%END REM
+			Case Else
+removedir:
+			
+				Dim db As NotesDatabase
+				Set db = doc.ParentDatabase
+
+				Dim ErrorStr As String
+				Dim v As Variant
+				
+				Dim DirectoryStore As DirectoryStore
+				Dim Directory As Directory
+				
+				'<patch author="Ramazan Salpagarov" date="2016.05.27"> .... 2018.08.16
+				'продолжение..
+'				Set fBase = sm.Base
+'				Set fBaseDatabases = fBase.Databases
+'				Set fBaseDatabase = fBaseDatabases.Getsetting( "tps.core.dictionaries" )
+				
+'				If ( fBaseDatabase Is Nothing ) Then
+					Dim ProcessID As String
+					ProcessID = Me.doc.PROCESSID(0)
+					If (ProcessID = "") Then
+						MsgBox {Нет информации о документе "Процесса"}, 48, ERR_MSG_TITLE
+						Exit Function
+					End If
+					On Error 4091 Resume Next 'bad unid
+					Dim docProcess As NotesDocument
+					Set docProcess = db.GetDocumentByUNID( ProcessID )
+					On Error GoTo errh
+					If (docProcess Is Nothing) Then
+						MsgBox {Не найден документ "Процесса"}, 48, ERR_MSG_TITLE
+						Exit Function
+					End If
+					v = docProcess.Directory(0)
+					
+					If (v = "") Then
+						MsgBox {В документе "Процесса" нет информации о базе "Справочников"}, 48, ERR_MSG_TITLE
+						Exit Function
+					End If
+'				Else
+'					v = fBaseDatabase.Filepath
+'				End If
+				'</patch>
+				
+				Set DirectoryStore = New DirectoryStore(CStr(v), ErrorStr)
+				If (ErrorStr <> "") Then
+					MsgBox ErrorStr, 48, ERR_MSG_TITLE
+					Exit Function
+				End If
+				Set Directory = DirectoryStore.GetDirectoryByUniqueName(DirectoryUniqueName, ErrorStr)
+				If (ErrorStr <> "") Then
+					MsgBox ErrorStr, 48, ERR_MSG_TITLE
+					Exit Function
+				End If
+				
+				
+				Dim docSub As NotesDocument
+				Dim MergedList List As Variant
+				Dim vTemp As Variant, vTemp2 As Variant
+				Dim sTemp As String
+				Dim i As Integer
+				'		1) получить содержание справочника
+				Select Case LCase(Directory.ValueType)
+				Case LCase("simple")
+					Select Case LCase(Directory.DataFormat)
+					Case LCase("text")
+						v = Directory.doc.GetFirstItem("Text").Values
+					Case LCase("number")
+						v = Directory.doc.GetFirstItem("Number").Values
+					Case LCase("date")
+						v = Directory.doc.GetFirstItem("Date").Values
+					End Select
+				Case LCase("complex")
+					
+					Set docSub = Directory.colChild.GetFirstDocument
+					While (Not (docSub Is Nothing))
+						Select Case LCase(Directory.DataFormat)
+						Case LCase("text")
+							vTemp = docSub.GetFirstItem("Text").Values
+						Case LCase("number")
+							vTemp = docSub.GetFirstItem("Number").Values
+						Case LCase("date")
+							vTemp = docSub.GetFirstItem("Date").Values
+						Case LCase("odobj")
+							vTemp = Evaluate({ODObjID}, docSub)
+					End Select
+						
+						sTemp = docSub.Name(0)
+						If (sTemp = "") Then
+							sTemp = {<наименование справочника не определено>}
+						End If
+						If IsElement(MergedList(sTemp)) Then
+							ReDim v(0) As Variant
+							ForAll Value In MergedList(sTemp)
+								If (v(0) <> "") Then
+									ReDim Preserve v(UBound(v)+1) As Variant
+								End If
+								v(UBound(v)) = Value
+							End ForAll
+							For i=LBound(vTemp) To UBound(vTemp)
+								If (vTemp(i) <> "") Then
+									If (v(0) <> "") Then
+										ReDim Preserve v(UBound(v)+1) As Variant
+									End If
+									v(UBound(v)) = vTemp(i)
+								End If
+							Next
+						Else
+							v = vTemp
+						End If
+						MergedList(sTemp) = v
+						Set docSub = Directory.colChild.GetNextDocument(docSub)
+					Wend
+					
+				End Select
+				
+				'		2) получить тек. данные
+				Dim vCur As Variant
+				Dim DirSubName As Variant
+				ReDim v(0) As Variant
+				Dim docTemp As NotesDocument
+				Dim j As Integer
+				Dim ODObj As ODObj
+				Dim ID As String
+				
+				Select Case LCase(Directory.ValueType)
+				Case LCase("simple")
+					vCur = Me.doc.GetFirstItem(ItemName).Values
+					If (LCase(Directory.ListWriteInType) = LCase("checkvalue")) Then
+						
+						Set docTemp = db.CreateDocument
+						docTemp.Members = vCur
+						docTemp.Promt = "КЛИКНИТЕ МЫШКОЙ НА НУЖНОМ(ЫХ) ЗНАЧЕНИИ(ЯХ)"
+						
+						If Not (ws.DialogBox("DWF105", True, True, False, False, False, False, {Список значений из справочника}, docTemp, True, False, True)) Then
+							Exit Function
+						End If
+						v = docTemp.GetFirstItem("List").Values
+						If (v(0) = "") Then
+							Exit Function
+						End If
+						
+						For i=LBound(vCur) To UBound(vCur)
+							For j=LBound(v) To UBound(v)
+								If (LCase(vCur(i)) = LCase(v(j))) Then
+									vCur(i) = ""
+								End If
+							Next
+						Next
+						vCur = FullTrim(vCur)
+						Call Me.doc.ReplaceItemValue(ItemName, vCur)
+					Else
+						Call Me.doc.ReplaceItemValue(ItemName, "")
+					End If
+				Case LCase("complex")
+					Select Case LCase(Directory.DataFormat)
+					Case LCase("odobj")
+						If (Not(Me.doc.HasItem(ItemName))) Then
+							MsgBox {На форме не найдено поле "} & ItemName & {"}, 48, ERR_MSG_TITLE
+							Exit Function
+						End If
+						DirSubName = Me.doc.GetFirstItem(ItemName).Values
+						If (DirSubName(0) = "") Then
+							Exit Function
+						End If
+%REM						
+						If ( m_odpath = "" ) Then
+							Set Me.ODStoreUI = New ODStoreUI(doc.dbODPath(0), ErrorStr)
+						Else
+							Set Me.ODStoreUI = New ODStoreUI(m_odpath, ErrorStr)
+						End If
+						
+						If (ErrorStr <> "") Then
+							MsgBox ErrorStr, 48, ERR_MSG_TITLE
+							Exit Function
+						End If
+%ENDREM
+						If (UBound(DirSubName) > 0) Then
+							
+							Set docTemp = db.CreateDocument
+							docTemp.Members = DirSubName
+							docTemp.Promt = "КЛИКНИТЕ МЫШКОЙ НА НУЖНОМ(ЫХ) ЗНАЧЕНИИ(ЯХ)"
+							
+							If Not (ws.DialogBox("DWF105", True, True, False, False, False, False, {Список значений из справочника}, docTemp, True, False, True)) Then
+								Exit Function
+							End If
+							v = docTemp.GetFirstItem("List").Values
+							If (v(0) = "") Then
+								Exit Function
+							End If
+							
+							For i=LBound(DirSubName) To UBound(DirSubName)
+								For j=LBound(v) To UBound(v)
+									If (LCase(DirSubName(i)) = LCase(v(j))) Then
+										DirSubName(i) = ""
+									End If
+								Next
+							Next
+							DirSubName = FullTrim(DirSubName)
+							
+							For i=LBound(v) To UBound(v)
+								ForAll Tag In MergedList
+									If (ListTag(Tag) <> "") Then
+										If (LCase(v(i)) = LCase(ListTag(Tag))) Then
+											ForAll Value In Tag
+												If (InStr(Value, {|}) <> 0) Then
+													ID = StrRight(Value, {|})
+												Else
+													ID = Value
+												End If
+												Set ODObj = Me.ODStoreUI.GetObjByValue(CStr(ID), ErrorStr)
+												If (ErrorStr <> "") Then
+													MsgBox ErrorStr, 48, ERR_MSG_TITLE
+													Exit Function
+												End If
+												If (ODObj.RemoveFromItem(Me.doc, ItemName, ErrorStr) <> 1) Then
+													If (ErrorStr <> "") Then
+														MsgBox ErrorStr, 48, ERR_MSG_TITLE
+														Exit Function
+													End If
+												End If
+											End ForAll
+										End If
+									End If
+								End ForAll			
+							Next
+							Call Me.doc.ReplaceItemValue(ItemName, DirSubName)
+						Else
+							If (ODStoreUI.ClearItem(Me.doc, ItemName, ErrorStr) <> 1) Then
+								Exit Function
+							End If
+							Call Me.doc.RemoveItem(ItemName)
+						End If			
+					Case Else
+						vCur = Me.doc.GetFirstItem(ItemName).Values
+						If (UBound(vCur) > 0) Then
+							If (LCase(Directory.ListWriteInType) = LCase("checkvalue")) Then
+								
+								Set docTemp = db.CreateDocument
+								docTemp.Members = vCur
+								docTemp.Promt = "КЛИКНИТЕ МЫШКОЙ НА НУЖНОМ(ЫХ) ЗНАЧЕНИИ(ЯХ)"
+								
+								If Not (ws.DialogBox("DWF105", True, True, False, False, False, False, {Список значений из справочника}, docTemp, True, False, True)) Then
+									Exit Function
+								End If
+								v = docTemp.GetFirstItem("List").Values
+								If (v(0) = "") Then
+									Exit Function
+								End If
+								
+								For i=LBound(vCur) To UBound(vCur)
+									For j=LBound(v) To UBound(v)
+										If (LCase(vCur(i)) = LCase(v(j))) Then
+											vCur(i) = ""
+										End If
+									Next
+								Next
+								vCur = FullTrim(vCur)
+								Call Me.doc.ReplaceItemValue(ItemName, vCur)
+							Else
+								Call Me.doc.ReplaceItemValue(ItemName, "")
+							End If
+						Else
+							Call Me.doc.ReplaceItemValue(ItemName, "")
+						End If
+					End Select
+				
+				End Select
+				
+				RemoveDirectory = 1
+				
+		End Select 		
+		
+		If ( RemoveDirectory = 1 ) Then
+			Call Me.docUI.Refresh()	
+		End If
+		
+		Exit Function
+errh:
+		MsgBox Error$ & {. Error # } & CStr(Err) & { on line # } & CStr(Erl) & { in (RemoveDirectory) "UIAppStore" class}
+		Resume endh
+endh:
+	End Function
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------	
+%REM	
+	Private Function RemoveDirectoryByProjectService( in_sm As Variant, in_doc As NotesDocument ) As Integer
+		On Error GoTo error_point
+		
+		Dim pckgTPS As Variant
+		Set pckgTPS = getPackageObject( "tps", "getTPSService" )
+		Call in_sm.set( pckgTPS )
+		
+		Dim tps As Variant
+		Set tps = in_sm.get( "tps" )
+		
+		If ( tps.projects.clearProjectInDoc( in_doc ) = 1 ) Then
+			RemoveDirectoryByProjectService = 1
+		End If
+		
+		Exit Function
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$		
+	End Function
+%ENDREM
+		'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Function ProcessPopUpMenuAction(ItemName As String) As Integer
+		On Error GoTo errh
+		
+		Dim PopUpStore As New PopUpStore(Me.docUI)
+		Dim ErrorStr As String
+		
+		If (PopUpStore.SetUp(Me.doc, ItemName, ErrorStr) <> 1) Then
+			If (ErrorStr <> "") Then
+				MsgBox ErrorStr, 48, ERR_MSG_TITLE	
+			End If
+			Exit Function
+		End If
+		
+		
+		Exit Function
+errh:
+		MsgBox Error$ & {. Error # } & CStr(Err) & { on line # } & CStr(Erl) & { in (GenetratePopUpMenu) "UIAppStore" class}
+		Resume endh
+endh:
+	End Function
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Function AddODObjAndExtBySetType(ODObjType As String, multi As Boolean, ItemPrefix As String) As Integer
+		On Error GoTo errh
+		
+		Dim docDialog As NotesDocument, db As NotesDatabase, colOD As NotesDocumentCollection, docOD As NotesDocument, ODObj As ODObj
+		Dim yesno As Integer, ErrorStr As String
+%REM		
+		If (m_odpath = "") Then
+			Set Me.ODStoreUI = New ODStoreUI(doc.dbODPath(0), ErrorStr)
+		Else
+			Set Me.ODStoreUI = New ODStoreUI(m_odpath, ErrorStr)
+		End If
+		
+		If (ErrorStr <> "") Then
+			MsgBox ErrorStr, 48, ERR_MSG_TITLE
+			Exit Function
+		End If
+%ENDREM		
+		Set db = Me.doc.Parentdatabase
+		Set docDialog = db.CreateDocument()
+		If (Me.ws.Dialogbox("dialog.add_user.choise", True, True, False, False, False, False, db.Title, docDialog, True, False, True)) Then	
+			
+			If (docDialog.UserType(0) = "1") Then
+				If (Me.ODStoreUI.PickObject(ODObjType, True, "", colOD, ErrorStr) <>1) Then
+					Exit Function
+				End If
+				If ( (Me.doc.Getitemvalue(ItemPrefix & "ExtName")(0) <> "") Or (Me.doc.getItemValue(ItemPrefix & "ObjName")(0) <> "") ) Then
+					yesno = MsgBox("Заменить содержимое поля?", 3 + 32, "Внимание!")
+					If (yesno = 6 ) Then
+						Call Me.doc.Replaceitemvalue(ItemPrefix & "ExtName", "")
+						Call Me.ODStoreUI.ClearItem(Me.doc, ItemPrefix, ErrorStr)
+					ElseIf (yesno = 2) Then
+						Exit Function
+					End If
+				End If
+				
+				Set docOD = colOD.GetFirstDocument
+				While (Not (docOD Is Nothing))
+					Set ODObj = New ODObj
+					If (ODObj.Init(docOD, ErrorStr) <> 1) Then
+						Exit Function
+					End If
+					If (ODObj.WriteInAppend(Me.doc, ItemPrefix, ErrorStr) <> 1) Then
+						Exit Function
+					End If
+					Set docOD = colOD.GetNextDocument(docOD)
+				Wend		
+				Call Me.docUI.Refresh()
+				
+			Else 
+				Dim mxName As New Mixcollection
+				ForAll user In Me.doc.Getitemvalue(ItemPrefix & "ExtName")
+					Call mxName.Append(user)
+				End ForAll	
+				
+				Call ws.DialogBox("dialog.add_user.fio", True, True, True, False, False, False, db.Title, docDialog, True, True, True)
+				If (docDialog.HasItem("OK")) Then
+					If (docDialog.FIO(0) <> "") Then
+						If ( (Me.doc.Getitemvalue(ItemPrefix & "ExtName")(0) <> "") Or (Me.doc.getItemValue(ItemPrefix & "ObjName")(0) <> "") ) Then
+							yesno = MsgBox("Заменить содержимое поля?", 3 + 32, "Внимание!")
+							If (yesno = 6 ) Then
+								Call mxName.clear()
+								Call Me.ODStoreUI.ClearItem(Me.doc, ItemPrefix, ErrorStr)
+							ElseIf (yesno = 2) Then
+								Exit Function
+							End If
+						End If
+						
+						Call mxName.Append("<Внешн.> " + FullTrim(docDialog.FIO(0)))
+						Call mxName.Trim()
+						Call mxName.Unique()
+						Call Me.doc.Replaceitemvalue(ItemPrefix & "ExtName", mxName.Array)
+					End If				
+					Call me.docUI.Refresh()
+				End If
+				
+			End If
+		End If
+		
+		AddODObjAndExtBySetType = 1
+		
+		Exit Function
+errh:
+		MsgBox Error$ & {. Error # } & CStr(Err) & { on line # } & CStr(Erl) & { in (AddODObjAndExtBySetType) "UIAppStore" class}
+		Resume endh
+endh:	
+		
+	End Function
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Function RemoveODObjAndExt(multi As Boolean, ItemPrefix As String) As Integer
+		On Error GoTo errh
+		
+		Dim docDialog As NotesDocument, db As NotesDatabase, colOD As NotesDocumentCollection, docOD As NotesDocument, ODObj As ODObj
+		Dim itemObjName, itemObjID, itemObjAccess, itemObjPath, itemExtName As Variant, yesno, i As Integer, ErrorStr As String
+%REM		
+		If (m_odpath = "") Then
+			Set Me.ODStoreUI = New ODStoreUI(doc.dbODPath(0), ErrorStr)
+		Else
+			Set Me.ODStoreUI = New ODStoreUI(m_odpath, ErrorStr)
+		End If
+		
+		If (ErrorStr <> "") Then
+			MsgBox ErrorStr, 48, ERR_MSG_TITLE
+			Exit Function
+		End If
+%ENDREM		
+		Set db = Me.doc.Parentdatabase
+		Set docDialog = db.CreateDocument()
+		itemObjName = Me.doc.Getitemvalue(ItemPrefix & "ObjName")
+		itemObjID = Me.doc.Getitemvalue(ItemPrefix & "ObjID")
+		itemObjAccess = Me.doc.Getitemvalue(ItemPrefix & "ObjAccess")
+		itemObjPath = Me.doc.Getitemvalue(ItemPrefix & "ObjPath")
+		itemExtName = Me.doc.Getitemvalue(ItemPrefix & "ExtName")
+		
+		ReDim v(0) As String
+		If (itemObjName(0) <> "") Then
+			For  i= 0 To UBound(itemObjName)
+				v(UBound(v)) = itemObjName(i) & {|} & itemObjID(i)
+				ReDim Preserve v(UBound(v)+1)
+			Next i
+		End If
+		If (itemExtName(0) <> "") Then
+			For  i = 0 To UBound(itemExtName)
+				v(UBound(v)) = itemExtName(i) & {|} & itemExtName(i)
+				ReDim Preserve v(UBound(v)+1)
+			Next i
+		End If
+		
+		If v(0) = "" Then 
+			Exit Function
+		End If
+		
+		docDialog.Members = FullTrim(v)
+		docDialog.promt = "Выберите значение для удаления"
+		
+		If Not (Me.ws.DialogBox("DWF105", True, True, False, False, False, False, db.Title, docDialog, True, False, True)) Then
+			Exit Function
+		End If
+		If (docDialog.List(0) = "") Then
+			Exit Function
+		End If
+		
+		ForAll user In docDialog.List
+			If (Left(user, 8) = "<Внешн.>") Then
+				For i = 0 To UBound(itemExtName)
+					If (LCase(itemExtName(i)) = LCase(user)) Then
+						itemExtName(i) 	= ""
+					End If
+				Next
+			Else
+				For i = 0 To UBound(itemObjName)
+					If (LCase(itemObjID(i)) = LCase(user)) Then
+						itemObjAccess(i) = ""
+						itemObjID(i) = ""
+						itemObjName(i) = ""
+						itemObjPath(i) = ""
+					End If
+				Next
+			End If	
+		End ForAll
+		
+		Call Me.doc.replaceItemValue(ItemPrefix & "ObjAccess", FullTrim(itemObjAccess))
+		Call Me.doc.replaceItemValue(ItemPrefix & "ObjID", FullTrim(itemObjID))
+		Call Me.doc.replaceItemValue(ItemPrefix & "ObjName", FullTrim(itemObjName))
+		Call Me.doc.replaceItemValue(ItemPrefix & "ObjPath", FullTrim(itemObjPath))
+		Call Me.doc.replaceItemValue(ItemPrefix & "ExtName", FullTrim(itemExtName))
+		Call Me.docUI.Refresh()
+		
+		RemoveODObjAndExt = 1
+		
+		Exit Function
+errh:
+		MsgBox Error$ & {. Error # } & CStr(Err) & { on line # } & CStr(Erl) & { in (RemoveODObjAndExt) "UIAppStore" class}
+		Resume endh
+endh:	
+		
+	End Function
+End Class
+'++LotusScript Development Environment:2:2:Initialize:1:10
+Sub Initialize
+	
+End Sub
+
+
+'++LotusScript Development Environment:2:1:DWFAAInitContractExecutionAction:1:8
+Function DWFAAInitContractExecutionAction() As Integer
+	On Error GoTo errh
+	
+	Dim ws As New NotesUIWorkspace
+	Dim session As New NotesSession
+	Dim docUI As NotesUIDocument
+	Dim doc As NotesDocument
+	Dim db As NotesDatabase
+	Dim ViewID As NotesView
+	Dim docProcess As NotesDocument
+	Dim docSubMain As NotesDocument
+	
+	Dim docParentProcess As NotesDocument
+	Dim ParentProcessID As String
+	Dim ContractExecutionActions As Variant
+	Dim ContractType As String
+	
+	Dim DirectoryStore As DirectoryStore
+	Dim Directory As Directory
+	Dim IsMulti As Integer
+	Dim v As Variant
+	Dim sTemp As String
+	Dim ErrorStr As String
+	
+	Dim ID As String
+	Dim docClaim As NotesDocument
+	Dim IsClaim As Integer
+	
+	
+	
+	
+	Set db = session.CurrentDatabase
+	Set docUI = ws.CurrentDocument
+	Set doc = docUI.Document
+	ParentProcessID = doc.PROCESSID(0)
+	
+	If (ParentProcessID = "") Then
+		MsgBox {Нет информации о документе процесса}, 48, ERR_MSG_TITLE	
+		Exit Function
+	End If
+	On Error 4091 Resume Next 'bad unid
+	Set docParentProcess = db.GetDocumentByUNID(ParentProcessID)
+	On Error GoTo errh
+	If (docParentProcess Is Nothing) Then
+		MsgBox {Не найден документ процесса}, 48, ERR_MSG_TITLE	
+		Exit Function
+	End If
+	Set ViewID = db.GetView("(UNID)")
+	
+	
+	If (DWFAGetSubProcessDoc(docParentProcess, docProcess) <> 1) Then
+		DWFAAInitContractExecutionAction = 0
+		Exit Function
+	End If
+	
+	ContractType = doc.GetItemValue("ContractType")(0)
+	
+	v = docProcess.Directory(0)
+	If (v = "") Then
+		MsgBox {В документе "Процесса" нет информации о базе "Справочников"}, 48, ERR_MSG_TITLE
+		Exit Function
+	End If
+	Set DirectoryStore = New DirectoryStore(CStr(v), ErrorStr)
+	If (ErrorStr <> "") Then
+		MsgBox ErrorStr, 48, ERR_MSG_TITLE
+		Exit Function
+	End If
+	Set Directory = DirectoryStore.GetDirectoryByUniqueName(ContractType, ErrorStr)
+	If (ErrorStr = "") Then
+		If (Directory.GenerateValue("",v,sTemp,ErrorStr)<>1) Then
+			Exit Function
+		End If	
+		IsMulti =1
+	End If
+	
+	If (IsMulti =1) Then
+		ForAll actionName In v
+			If (DWFAInitSubProcess(docProcess, doc, docSubMain) <> 1) Then
+				DWFAAInitContractExecutionAction = 0
+				Exit Function
+			End If
+%REM
+			If (DWFAClaim(docSubMain) <> 1) Then
+				DWFAAInitContractExecutionAction = 0
+				Exit Function
+			End If
+			Call ViewID.Refresh()
+			ViewID.AutoUpdate = False
+			
+			ID = docSubMain.UniversalID
+			Set docClaim = ViewID.GetDocumentByKey(ID)
+			
+			Call docClaim.ReplaceItemValue("ContractType", ContractType)
+			Call docClaim.ReplaceItemValue("ActionName", actionName)
+			Call docClaim.Save(True, True)
+%END REM
+			Call docSubMain.ReplaceItemValue("ContractType", ContractType)
+			Call docSubMain.ReplaceItemValue("ActionName", actionName)
+			Call docSubMain.Save(True, True)	
+		End ForAll
+		
+		'признак создания подпроцесса
+		'Call doc.ReplaceItemValue("InitSubProcess", "1")
+		'Call doc.Save(True, True)
+		
+		MsgBox {Документ(ы) действий по исполнению договора успешно созданы}, 64, {Информация}
+	Else
+		If (DWFAInitSubProcess(docProcess, doc, docSubMain) <> 1) Then
+			DWFAAInitContractExecutionAction = 0
+			Exit Function
+		End If
+		If (DWFAClaim(docSubMain) <> 1) Then
+			DWFAAInitContractExecutionAction = 0
+			Exit Function
+		End If
+		
+		
+		Call ViewID.Refresh()
+		ViewID.AutoUpdate = False
+		
+		ID = docSubMain.UniversalID
+		Set docClaim = ViewID.GetDocumentByKey(ID)
+		
+		Call docClaim.ReplaceItemValue("ContractType", ContractType)
+		Call docClaim.Save(True, True)
+		
+		
+		'признак создания подпроцесса
+		'Call doc.ReplaceItemValue("InitSubProcess", "1")
+		'Call doc.Save(True, True)
+		
+		
+		Call ws.EditDocument(True, docClaim)
+		
+	End If
+	
+	
+	DWFAAInitContractExecutionAction = 1
+	
+	
+	
+	Exit Function
+errh:
+	MsgBox Error$ & {. Error # } & CStr(Err) & { on line # } & CStr(Erl) & { in (DWFAAInitContractExecutionAction) "DWFAppAction"},, {Error}
+	Resume endh
+endh:
+End Function
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+'++LotusScript Development Environment:2:1:DWFAAXmlUpdateMailDb:1:8
+Function DWFAAXmlUpdateMailDb() As Integer
+	On Error GoTo errh
+	
+	Dim session As New NotesSession
+	Dim db As NotesDatabase
+	Dim dbMail As NotesDatabase
+	
+	Dim stream As NotesStream, ParseStream As NotesStream
+	Dim path As String
+	Dim exporter As NotesDXLExporter
+	Dim domParser As NotesDOMParser
+	Dim RootNode As NotesDOMDocumentNode
+	Dim DocumentNodesList As NotesDOMNodeList
+	
+	Dim MyNode As NotesDOMElementNode
+	Dim MyNodeMap As NotesDOMNamedNodeMap
+	Dim MyAttr As NotesDOMNode
+	Dim MyDomNode As NotesDOMNode
+	
+	Dim MyNodeList As NotesDOMNodeList
+	Dim TempNode As NotesDOMElementNode
+	Dim TempChildNode As NotesDOMNode
+	
+	Dim i As Integer, j As Integer
+	
+	
+	Set db = session.CurrentDatabase
+	Set dbMail = session.GetDatabase(db.Server, "mail\tambiev.nsf")
+	
+	'========================
+	'открываем стрим
+	'========================
+	Set stream = session.CreateStream
+	path = "c:\dxl\" & Left(dbMail.FileName, Len(dbMail.FileName) - 3) & "xml"
+	If Not stream.Open(Path) Then
+		MessageBox "Cannot open " & Path,, "Error"
+		Exit Function
+	End If	
+	Call stream.Truncate
+	
+	'========================
+	'записываем в стрим dxl документа(doc)
+	'========================
+	Set exporter = session.CreateDXLExporter(dbMail, stream)
+	Call exporter.Process
+	
+	Call stream.Close 'закрываем стрим (dxl остался в файле)
+	
+%REM
+	
+	
+	'========================
+	'создаем парсер
+	'========================
+	Set domParser = session.CreateDOMParser(stream)
+	domParser.Process
+	
+	'========================
+	'ищем tag "документ"
+	'========================
+	Set rootNode = domParser.Document
+	Set DocumentNodesList = RootNode.GetElementsByTagName("document")
+	If (DocumentNodesList.NumberOfEntries = 0) Then 
+		SynchHrrchImportStructureObj = 0
+		Exit Function
+	End If
+	
+	Dim n As Integer
+	Dim Form As String, NodeID As String, UNID As String
+	Dim MyDomNodeMap As NotesDOMNamedNodeMap
+	Dim MyDomNodeAtrr As NotesDOMNode
+	Dim k As Integer
+	Dim HasMatch As Integer
+	Dim doc As NotesDocument
+	
+	Dim Obj
+	Dim ObjectList List As HierarchyObj
+	'=======================
+	'проходим по всем документам
+	'=======================
+	For i=1 To DocumentNodesList.NumberOfEntries
+		Set MyNode = DocumentNodesList.GetItem(i)
+		If (Not (MyNode.IsNull)) Then
+			Set MyNodeMap = MyNode.Attributes
+			If (MyNodeMap.NumberOfEntries > 0) Then
+				For j=1 To MyNodeMap.NumberOfEntries
+					HasMatch = 0
+					Set MyAttr = MyNodeMap.GetItem(j)
+					If (Not (MyAttr.IsNull)) Then
+						If (MyAttr.NodeName = "form") Then
+							Form = MyAttr.NodeValue
+							If (Form = "Org") Or (Form = "Dep") Or (Form = "Pos") Then 'отбираем нужные документы по форме
+								If MyNode.HasChildNodes Then						
+									
+									n = MyNode.NumberOfChildNodes
+									Set MyDomNode = MyNode.FirstChild
+									Do While (n > 0)
+										
+										Select Case Lcase(MyDomNode.NodeName)
+										Case "noteinfo" 'смотрим NoteID и UNID
+											Set MyDomNodeMap = MyDomNode.Attributes
+											If (MyDomNodeMap.NumberOfEntries > 0) Then
+												For k=1 To MyDomNodeMap.NumberOfEntries
+													Set MyDomNodeAtrr = MyDomNodeMap.GetItem(k)
+													If (Not (MyDomNodeAtrr.IsNull)) Then
+														Select Case Lcase(MyDomNodeAtrr.NodeName)
+														Case "unid"
+															Select Case Form
+															Case "Org" :
+															Set Obj = New Organization 
+															Obj.Kind = "Org" 
+															Case "Dep" 
+															Set Obj = New Department 
+															Obj.Kind = "Dep"
+															Case "Pos" :
+															Set Obj = New Position 
+															Obj.Kind = "Pos"
+															End Select
+															
+															Obj.Unid = MyDomNodeAtrr.NodeValue
+															HasMatch = 1
+															
+															On Error 4091 Resume Next
+															Set doc = dbStructure.GetDocumentByUNID(Obj.Unid)
+															If (doc Is Nothing) Then
+															Print {+++++++++++ Error +++++++++++}
+															Print {Error 4091: Bad UNID - } & Obj.Unid
+															Print {+++++++++++++++++++++++++++++}
+															End
+															End If
+															Exit For
+														End Select
+													End If
+												Next
+											End If
+											
+											If (Not (doc Is Nothing)) Then
+												If doc.HasItem("Deleted") Then
+													If doc.Deleted(0) = "1" Then
+														Set Obj = Nothing
+														Exit Do
+													End If
+												End If
+												
+												Set Obj.doc = doc
+												Obj.ImportStucture = dbStructure.FilePath
+												Obj.ImportStuctureServer = dbStructure.Server
+												Select Case Form
+												Case "Org"
+													Obj.Title 		= doc.OrgName(0)
+													Obj.TitleShort 	= doc.ShortName(0)
+													Obj.Code 			= doc.StrCode(0)
+												Case "Dep"
+													Obj.ParentID 		= doc.GetItemValue("$Ref")(0)
+													Obj.Title 		= doc.StrName(0)
+													Obj.TitleShort 	= doc.StrShortName(0)
+													Obj.Code 			= doc.StrCode(0)
+												Case "Pos"
+													Obj.ParentID 		= doc.GetItemValue("$Ref")(0)
+													Obj.Title 		= doc.PosName(0)
+													Obj.PersonName 	= doc.Person(0)
+													Obj.PersonID 		= doc.FileLink(0)
+													Obj.PersonNum 		= Cstr(doc.Num(0))
+													'Obj.IsCheif		= doc.Chief(0)
+													Obj.IsCheif		= doc.DepHead(0)
+													
+												End Select
+											End If
+											If (HasMatch = 1) Then
+												Exit Do	
+											End If
+										End Select
+										Set MyDomNode = MyDomNode.NextSibling
+										n = (n - 1)
+									Loop
+									
+									
+									'Dim Structure List As HierarchyList
+									If (Not (Obj Is Nothing)) Then
+										Set ObjectList(Obj.UniD) = New HierarchyObj
+										Set ObjectList(Obj.UniD) = Obj
+										Set Obj = Nothing
+									End If
+									
+								End If
+							End If
+						End If		
+					End If
+				Next
+			End If
+		End If
+	Next	
+	
+	
+	
+	
+	
+%END REM
+	
+	
+	
+	Exit Function
+errh:
+	MsgBox Error$ & {. Error # } & CStr(Err) & { on line # } & CStr(Erl) & { in (DWFAAXmlUpdateMailDb) "DWFAppAction"}, 16, {Error}
+	Resume endh
+endh:
+End Function
+
+
+
+
+
+
+
+
+
+
+
+
+
+

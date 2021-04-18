@@ -1,0 +1,2795 @@
+'++LotusScript Development Environment:2:5:(Options):0:74
+Option Public
+Option Declare
+
+Use "fbyte"
+Use "ArrayTools"
+Use "DWFAppLib"
+
+'++LotusScript Development Environment:2:5:(Forward):0:1
+Declare Class TPS_Payterms_RentService As Fbase_abstract_service
+Declare Class TPS_Payterms_Rent_CardAgree As Fbase_abstract_object_doc
+Declare Class TPS_Payterms_Rent_TermPckg As Fbase_abstract_object_doc
+Declare Class TPS_Payterms_Rent_Term As Fbase_abstract_object_doc
+Declare Class TPS_Payterms_Rent_TermType As Fbase_abstract_object_doc
+Declare Class TPS_Payterms_Rent_Company As Fbase_abstract_object_doc
+Declare Class TPS_Payterms_Rent_XMLField
+Declare Class TPS_Payterms_Rent_Term_action As Fbase_abstract_object_doc
+Declare Class TPS_Payterms_Rent_Valuta_action As Fbase_abstract_object_doc
+Declare Class TPS_Payterms_Rent_Turnover_action As Fbase_abstract_object_doc
+Declare Class TPS_Payterms_Rent_Installment_action As Fbase_abstract_object_doc
+Declare Class TPS_Payterms_Rent_Monthpay_action As Fbase_abstract_object_doc
+Declare Class TPS_Payterms_Rent_Discount_action As Fbase_abstract_object_doc
+Declare Class TPS_Payterms_Rent_Place As Fbase_abstract_object_doc
+
+'++LotusScript Development Environment:2:5:(Declarations):0:10
+
+Private Const DATABASE_KEY = "tps.payterms.rent"
+
+Const DOMAIN_TYPE_TPS_PAYTERM_RENT_CARDAGREE = "tps.payterms.rent.cardagree"
+Const DOMAIN_TYPE_TPS_PAYTERM_RENT_TERMPCKG = "tps.payterms.rent.termpckg"
+Const DOMAIN_TYPE_TPS_PAYTERM_RENT_TERM = "tps.payterms.rent.term"
+Const DOMAIN_TYPE_TPS_PAYTERM_RENT_TERM_TYPE = "tps.payterms.rent.term_type"
+Const DOMAIN_TYPE_TPS_PAYTERM_RENT_COMPANY = "tps.payterms.rent.company"
+
+Const DOMAIN_TPS_PAYTERM_RENT_VAL_ACTION = "tps.payterms.rent.term.valuta_action"
+Const DOMAIN_TPS_PAYTERM_RENT_TERM_ACTION = "tps.payterms.rent.term.term_action"
+Const DOMAIN_TPS_PAYTERM_RENT_TURNOVER_ACTION = "tps.payterms.rent.term.turnover_action"
+Const DOMAIN_TPS_PAYTERM_RENT_INSTALLM_ACTION = "tps.payterms.rent.term.installment_action"
+Const DOMAIN_TPS_PAYTERM_RENT_MONTHPAY_ACTION = "tps.payterms.rent.term.monthpay_action"
+Const DOMAIN_TPS_PAYTERM_RENT_DISCOUNT_ACTION = "tps.payterms.rent.term.discount_action"
+Const DOMAIN_TPS_PAYTERM_RENT_PLACE = "tps.payterms.rent.place"
+'======================================================================================================================================
+'	CLASS TPS_Payterms_RentService
+'======================================================================================================================================
+Class TPS_Payterms_RentService As Fbase_abstract_service
+	Private m_db As NotesDatabase
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Private Function getId( in_key As Variant ) As String
+		On Error GoTo error_point
+		Call Me.log.enter( TypeName( Me ) & "." & GetThreadInfo(1))
+		
+		Dim key As String
+		If ( LCase( TypeName( in_key )) = "objectlink" ) Then
+			key = in_key.id 
+		ElseIf IsScalar( in_key ) Then 
+			key = in_key
+		Else
+			Error 1001, "The type of data of parameter 'in_key' is '" & TypeName( in_key ) & "'. It is not supported"
+		End If
+		
+		getId = key
+
+		Call Me.log.trace( "result: " & getId )
+		Call Me.log.exit( TypeName( Me ) & "." & GetThreadInfo(1))
+		Exit Function
+		
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Function
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	'	PUBLIC:
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Sub New(in_ps As Variant)
+	End Sub
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------	
+	Property Get db As NotesDatabase
+		On Error GoTo error_point
+		Call Me.log.enter( TypeName( Me ) & "." & GetThreadInfo(1))
+		
+		If( m_db Is Nothing )Then
+			Set m_db = Me.sm.base.databases.get( DATABASE_KEY )
+		End If
+		Set db = m_db
+		
+		Call Me.log.traceObject( "result", db )		
+		Call Me.log.exit( TypeName( Me ) & "." & GetThreadInfo(1))
+		Exit Property
+		
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Property
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Property Set db As NotesDatabase
+		On Error GoTo error_point
+		Call Me.log.enter( TypeName( Me ) & "." & GetThreadInfo(1))
+		
+		Set m_db = db
+		
+		Call Me.log.exit( TypeName( Me ) & "." & GetThreadInfo(1))
+		Exit Property
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Property
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Function getDocObject( in_doc As NotesDocument ) As Variant
+		On Error GoTo error_point
+		Call Me.log.enter( TypeName( Me ) & "." & GetThreadInfo(1))
+		
+		Select Case LCase(in_doc.form(0))
+			Case "tps.payterms.rent.cardagree", "f01", "cardagree", "contract" :
+				Set getDocObject =  New TPS_Payterms_Rent_CardAgree( in_doc, Me.Me_variant )
+			Case "tps.payterms.rent.termpckg", "tps.contracts.approval.adddoc", "tps.contracts.approval.adddoc_usetempl", "adddoc" :
+				Set getDocObject =  New TPS_Payterms_Rent_TermPckg( in_doc, Me.Me_variant )
+			Case "tps.payterms.rent.term", "tps.payterms.term" :
+				Set getDocObject =  New TPS_Payterms_Rent_Term( in_doc, Me.Me_variant )
+			Case "tps.payterms.term.type":	
+				Set getDocObject =  New TPS_Payterms_Rent_TermType( in_doc, Me.Me_variant )
+			Case "tps.payterms.rent.company", "company" :
+				Set getDocObject =  New TPS_Payterms_Rent_Company( in_doc, Me.Me_variant )
+			Case "tps.payterms.rent.term.valuta_action":
+				Set getDocObject =  New TPS_Payterms_Rent_Valuta_action( in_doc, Me.Me_variant )	
+			Case "tps.payterms.rent.term.term_action":
+				Set getDocObject =  New TPS_Payterms_Rent_Term_action( in_doc, Me.Me_variant )	
+			Case "tps.payterms.rent.term.turnover_action":
+				Set getDocObject =  New TPS_Payterms_Rent_Turnover_action( in_doc, Me.Me_variant )	
+			Case "tps.payterms.rent.term.installment_action":
+				Set getDocObject =  New TPS_Payterms_Rent_Installment_action( in_doc, Me.Me_variant )	
+			Case "tps.payterms.rent.term.monthpay_action":
+				Set getDocObject =  New TPS_Payterms_Rent_Monthpay_action( in_doc, Me.Me_variant )	
+			Case "tps.payterms.rent.term.discount_action":
+				Set getDocObject =  New TPS_Payterms_Rent_Discount_action( in_doc, Me.Me_variant )
+			Case "tps.payterms.rent.place":
+				Set getDocObject =  New TPS_Payterms_Rent_Place( in_doc, Me.Me_variant )	
+			Case Else:
+				Error 1001, "Форма '" & in_doc.form(0) & "' не поддерживается"
+		End Select
+		
+		Call Me.log.traceObject( "result", getDocObject )
+		Call Me.log.exit( TypeName( Me ) & "." & GetThreadInfo(1))
+		Exit Function
+		
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Function
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Function getObject( in_link As Variant ) As Variant
+		On Error GoTo error_point
+		Call Me.log.enter( TypeName( Me ) & "." & GetThreadInfo(1))
+		
+		Select Case in_link.domain
+			Case DOMAIN_TYPE_TPS_PAYTERM_RENT_CARDAGREE:
+				Set getObject = Me.getCardAgree( in_link )
+			Case DOMAIN_TYPE_TPS_PAYTERM_RENT_TERMPCKG:
+				Set getObject = Me.getTermPckg( in_link )
+			Case DOMAIN_TYPE_TPS_PAYTERM_RENT_TERM:
+				Set getObject = Me.getTerm( in_link )
+			Case DOMAIN_TYPE_TPS_PAYTERM_RENT_TERM_TYPE
+				Set getObject = Me.getTermType( in_link )	
+			Case DOMAIN_TYPE_TPS_PAYTERM_RENT_COMPANY:
+				Set getObject = Me.getTerm( in_link )
+			Case DOMAIN_TPS_PAYTERM_RENT_VAL_ACTION:
+				Set getObject = Me.getValutaaction( in_link )	
+			Case DOMAIN_TPS_PAYTERM_RENT_TERM_ACTION:
+				Set getObject = Me.getTermaction( in_link )	
+			Case DOMAIN_TPS_PAYTERM_RENT_TURNOVER_ACTION:
+				Set getObject = Me.getTurnoveraction( in_link )
+			Case DOMAIN_TPS_PAYTERM_RENT_INSTALLM_ACTION:
+				Set getObject = Me.getInstallmentaction( in_link )
+			Case DOMAIN_TPS_PAYTERM_RENT_MONTHPAY_ACTION:
+				Set getObject = Me.getMonthpayaction( in_link )	
+			Case DOMAIN_TPS_PAYTERM_RENT_DISCOUNT_ACTION:
+				Set getObject = Me.getDiscountaction( in_link )	
+			Case DOMAIN_TPS_PAYTERM_RENT_PLACE
+				Set getObject = Me.getPlace( in_link )	
+			Case Else
+				Error 1001, "The data of type '" & in_link.domain & "' of parameter 'in_link.domain' is not supported"
+		End Select
+		
+		Call Me.log.traceObject( "result", getObject )
+		Call Me.log.exit( TypeName( Me ) & "." & GetThreadInfo(1))
+		Exit Function
+		
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Function
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Function getCardAgree( in_key As Variant ) As Variant
+		On Error GoTo error_point
+		Call Me.log.enter( TypeName( Me ) & "." & GetThreadInfo(1))
+		
+		Dim key As String, vw As NotesView, dc As NotesDocumentCollection
+		key = Me.getId( in_key )
+		Set vw = Me.db.getView( "(UNID)" )
+		Set dc = vw.GetAllDocumentsByKey( key, True )
+		If ( dc.Count = 0 ) Then
+			Set Me.getCardAgree = Nothing
+		ElseIf ( dc.Count > 1 ) Then
+			Error 1001, "In database '" & Me.db.Title & "' ( path: " & Me.db.FilePath & " ) founded more than one agreement card by key '" & in_key & "' ( count: " & CStr( dc.Count ) & " )"
+		Else
+			Set Me.getCardAgree = Me.getDocObject( dc.GetFirstDocument )
+		End If
+				
+		Call Me.log.traceObject( "result", getCardAgree )
+		Call Me.log.exit( TypeName( Me ) & "." & GetThreadInfo(1))
+		Exit Function
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Function
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Function getTermPckg( in_key As Variant ) As Variant
+		On Error GoTo error_point
+		Call Me.log.enter( TypeName( Me ) & "." & GetThreadInfo(1))
+		
+		Dim key As String, vw As NotesView, dc As NotesDocumentCollection
+		key = Me.getId( in_key )
+		Set vw = Me.db.getView( "(UNID)" )
+		Set dc = vw.GetAllDocumentsByKey( key, True )
+		If ( dc.Count = 0 ) Then
+			Set Me.getTermPckg = Nothing
+		ElseIf ( dc.Count > 1 ) Then
+			Error 1001, "In database '" & Me.db.Title & "' ( path: " & Me.db.FilePath & " ) founded more than one term by key '" & in_key & "' ( count: " & CStr( dc.Count ) & " )"
+		Else
+			Set Me.getTermPckg = Me.getDocObject( dc.GetFirstDocument )
+		End If
+		
+		Call Me.log.traceObject( "result", getTermPckg )
+		Call Me.log.exit( TypeName( Me ) & "." & GetThreadInfo(1))
+		Exit Function
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Function
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Function getTermPckgActual(in_link As Variant) As Variant
+		On Error GoTo error_point
+		Call Me.log.enter( TypeName( Me ) & "." & GetThreadInfo(1))
+		
+		If ( in_link.domain = DOMAIN_TYPE_TPS_PAYTERM_RENT_CARDAGREE ) Then
+			Dim vw As NotesView, dc As NotesDocumentCollection
+			Set vw = Me.db.Getview("(AddDocEmb.Actual)")
+			If ( Not vw Is Nothing ) Then
+				Call vw.Refresh()
+				vw.Autoupdate = False
+				Set dc = vw.Getalldocumentsbykey( in_link.id )
+				If ( dc.Count = 0 ) Then
+					Set Me.getTermPckgActual = Nothing
+				Else
+					Set Me.getTermPckgActual = Me.getDocObject( dc.GetFirstDocument )
+				End If
+			Else
+				Error 1001, "View '(AddDocEmb.Actual)' is not exist"
+			End If
+		Else
+			Error 1001, "The data of type '" & in_link.domain & "' of parameter 'in_link.domain' is wrong"
+		End If
+
+		Call Me.log.traceObject( "result", getTermPckgActual )
+		Call Me.log.exit( TypeName( Me ) & "." & GetThreadInfo(1))
+		Exit Function
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Function
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Function getTermPckgLastdraft(in_link As Variant) As Variant
+		On Error GoTo error_point
+		Call Me.log.enter( TypeName( Me ) & "." & GetThreadInfo(1))
+		
+		If ( in_link.domain = DOMAIN_TYPE_TPS_PAYTERM_RENT_CARDAGREE ) Then
+			Dim vw As NotesView, dc As NotesDocumentCollection
+			Set vw = Me.db.Getview("(AddDocEmb)")
+			If ( Not vw Is Nothing ) Then
+				Call vw.Refresh()
+				vw.Autoupdate = False
+				Set dc = vw.Getalldocumentsbykey( in_link.id )
+				If ( dc.Count = 0 ) Then
+					Set Me.getTermPckgLastdraft = Nothing
+				Else
+					Set Me.getTermPckgLastdraft = Me.getDocObject( dc.GetLastDocument )
+				End If
+			Else
+				Error 1001, "View '(AddDocEmb.Actual)' is not exist"
+			End If
+		Else
+			Error 1001, "The data of type '" & in_link.domain & "' of parameter 'in_link.domain' is wrong"
+		End If
+
+		Call Me.log.traceObject( "result", getTermPckgLastdraft )
+		Call Me.log.exit( TypeName( Me ) & "." & GetThreadInfo(1))
+		Exit Function
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Function
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Function getTerm( in_key As Variant ) As Variant
+		On Error GoTo error_point
+		Call Me.log.enter( TypeName( Me ) & "." & GetThreadInfo(1))
+				
+		Dim key As String, vw As NotesView, dc As NotesDocumentCollection
+		key = Me.getId( in_key )
+		Set vw = Me.db.getView( "(UNID)" )
+		Set dc = vw.GetAllDocumentsByKey( key, True )
+		If ( dc.Count = 0 ) Then
+			Set Me.getTerm = Nothing
+		ElseIf ( dc.Count > 1 ) Then
+			Error 1001, "In database '" & Me.db.Title & "' ( path: " & Me.db.FilePath & " ) founded more than term package by key '" & in_key & "' ( count: " & CStr( dc.Count ) & " )"
+		Else
+			Set Me.getTerm = Me.getDocObject( dc.GetFirstDocument )
+		End If
+		
+		
+		Call Me.log.traceObject( "result", getTerm )
+		Call Me.log.exit( TypeName( Me ) & "." & GetThreadInfo(1))
+		Exit Function
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Function
+	'--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Function getCardAgreeByContractId( in_key As String ) As  TPS_Payterms_Rent_CardAgree 
+		On Error GoTo error_point
+		Call Me.log.enter( TypeName( Me ) & "." & GetThreadInfo(1))
+		
+		Dim key As String, vw As NotesView, dc As NotesDocumentCollection
+		key = Me.getId( in_key )
+		Set vw = Me.db.Getview("tps.payterms.rent.cardagreeByContractId")
+		If ( vw Is Nothing ) Then
+			Error 1001, "The view 'tps.payterms.rent.cardagreeByContractId' is nothing"
+		End If
+		Set dc = vw.GetAllDocumentsByKey( key, True )
+		If ( dc.Count = 0 ) Then
+			Set Me.getCardAgreeByContractId = Nothing
+		ElseIf ( dc.Count > 1 ) Then
+			Error 1001, "In database '" & Me.db.Title & "' ( path: " & Me.db.FilePath & " ) founded more than one Agreeement Card by contract key '" & in_key & "' ( count: " & CStr( dc.Count ) & " )"
+		Else
+			Set Me.getCardAgreeByContractId = Me.getDocObject( dc.GetFirstDocument )
+		End If
+				
+		Call Me.log.traceObject( "result", getCardAgreeByContractId )
+		Call Me.log.exit( TypeName( Me ) & "." & GetThreadInfo(1))
+		Exit Function
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$		
+	End Function
+	'--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Function getCardAgreeByContractApprovalCardId( in_key As String ) As  TPS_Payterms_Rent_CardAgree
+		On Error GoTo error_point
+		Call Me.log.enter( TypeName( Me ) & "." & GetThreadInfo(1))
+		
+		Dim key As String, vw As NotesView, dc As NotesDocumentCollection
+		key = Me.getId( in_key )
+		Set vw = Me.db.Getview("tps.payterms.rent.cardagreeByContractApprovalCardId")
+		If ( vw Is Nothing ) Then
+			Error 1001, "The view 'tps.payterms.rent.cardagreeByContractApprovalCardId' is nothing"
+		End If
+		Set dc = vw.GetAllDocumentsByKey( key, True )
+		If ( dc.Count = 0 ) Then
+			Set Me.getCardAgreeByContractApprovalCardId = Nothing
+		ElseIf ( dc.Count > 1 ) Then
+			Error 1001, "In database '" & Me.db.Title & "' ( path: " & Me.db.FilePath & " ) founded more than one Agreeement Card by contract key '" & in_key & "' ( count: " & CStr( dc.Count ) & " )"
+		Else
+			Set Me.getCardAgreeByContractApprovalCardId = Me.getDocObject( dc.GetFirstDocument )
+		End If
+		
+		Call Me.log.traceObject( "result", getCardAgreeByContractApprovalCardId )
+		Call Me.log.exit( TypeName( Me ) & "." & GetThreadInfo(1))
+		Exit Function
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Function
+	'--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Function createCardAgree( in_initObj As Variant ) As TPS_Payterms_Rent_CardAgree
+		On Error GoTo error_point
+		Call Me.log.enter( "<" & TypeName( Me ) & "." & GetThreadInfo(1) & ">" )
+		
+		Dim dbPC As NotesDatabase
+		Set dbPC = Me.sm.base.databases.get( "tps.core.process_center" )
+		If ( dbPC Is Nothing ) Then
+			Set dbPC = Me.sm.base.databases.get( "tps.systems.process_center" )
+			If ( dbPC Is Nothing ) Then
+				Error 1001, "Не удалось получить БД 'tps.core.process_center'"
+			End If
+		End If
+		
+		Dim session As New NotesSession
+		Dim docMail As NotesDocument
+		
+		Set docMail = dbPC.CreateDocument
+		docMail.Form 		= "Task"
+		docMail.Action 		= "InitProcess"
+		docMail.InitServer 	= Me.db.Server
+		docMail.AppPath 	= Me.db.FilePath
+		docMail.UserName 	= session.UserName
+		docMail.ProcessID 	= in_initObj.processID
+		docMail.InitPosID 	= in_initObj.initPositionID 
+		docMail.InitObjID 	= in_initObj.initObjID
+		
+		Call docMail.Save(True, True)
+		If ( DWFAAskForAction( docMail ) <> 1 ) Then
+			'nothing
+		ElseIf ( docMail.Error(0) <> "" ) Then
+			Error 1001, docMail.Error(0)
+		Else
+			Dim docMain As NotesDocument
+			Set docMain = Me.db.GetDocumentByUNID( docMail.docMainUNID(0))
+			If ( docMain Is Nothing ) Then
+				Error 1001, {Ошибка при инициации процесса: docMain Is Nothing}
+			Else
+				'Call docMain.ReplaceItemvalue("Form", "tps.payterms.rent.cardagree" )
+				Call docMain.ReplaceItemvalue("domain", DOMAIN_TYPE_TPS_PAYTERM_RENT_CARDAGREE )
+				Call docMain.ReplaceItemvalue("id", 	docMain.UniversalID )
+				
+				Set createCardAgree = Me.getDocObject( docMain )
+			End If
+		End If
+		
+		Call Me.log.exit( "</" & TypeName( Me ) & "." & GetThreadInfo(1) & ">" )
+		Exit Function
+		
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Function
+	'--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Function createTerm( in_doc As NotesDocument ) As Variant
+		On Error GoTo error_point
+		
+		Dim session As New NotesSession
+		Dim docNew As NotesDocument 
+		
+		Set docNew = Me.db.Createdocument()
+		Dim term As New TPS_Payterms_Rent_Term(docNew, Me.Me_variant)
+		
+		Call term.nd.Replaceitemvalue("Form", "tps.payterms.rent.term")
+		Call term.nd.Replaceitemvalue("domain", DOMAIN_TYPE_TPS_PAYTERM_RENT_TERM)
+		Call term.nd.Replaceitemvalue("id", term.nd.Universalid )
+		Call term.nd.Replaceitemvalue("CustomID", term.nd.Universalid )
+		If (Not in_doc Is Nothing ) Then
+			Dim item As NotesItem
+			Set item = in_doc.Getfirstitem("DWF$Authors")
+			If ( Not item Is Nothing ) Then
+				Call item.Copyitemtodocument( term.nd, item.Name )
+			End If
+			Set item = in_doc.Getfirstitem("DWF$Readers")
+			If ( Not item Is Nothing ) Then
+				Call item.Copyitemtodocument( term.nd, item.Name )
+			End If
+			Set item = in_doc.Getfirstitem("DWF$Server")
+			If ( Not item Is Nothing ) Then
+				Call item.Copyitemtodocument( term.nd, item.Name )
+			End If
+		End If
+		Set createTerm = term
+		
+		Call Me.log.exit( "</" & TypeName( Me ) & "." & GetThreadInfo(1) & ">" )
+		Exit Function
+		
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Function
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Function getTerms( in_link As Variant ) As MixCollection
+		On Error GoTo error_point
+		Call Me.log.enter( TypeName( Me ) & "." & GetThreadInfo(1))
+		
+		If ( in_link.domain = DOMAIN_TYPE_TPS_PAYTERM_RENT_TERMPCKG ) Then
+			Dim mxResult As New MixCollection
+			Set getTerms = mxResult
+
+			Dim vw As NotesView, dc As NotesDocumentCollection
+			Set vw = Me.db.Getview("(emb.payterms.terms)")
+			If ( Not vw Is Nothing ) Then
+				Call vw.Refresh()
+				vw.Autoupdate = False
+				Set dc = vw.Getalldocumentsbykey( in_link.id )
+				If ( dc.Count > 0 ) Then
+					Dim doc As NotesDocument
+					Set doc = dc.Getfirstdocument()
+					While Not ( doc Is Nothing )
+						Dim term As Variant
+						Set term = Me.getDocObject( doc )
+						If Not ( term Is Nothing ) Then
+							Call mxResult.Append( term )	
+						End If
+						Set doc = dc.Getnextdocument(doc)
+					Wend
+				End If
+			Else
+				Error 1001, "View '(emb.payterms.terms)' is not exist"
+			End If
+		Else
+			Error 1001, "The data of type '" & in_link.domain & "' of parameter 'in_link.domain' is wrong"
+		End If
+		
+		Call Me.log.traceObject( "result", mxResult )		
+		Call Me.log.exit( "</" & TypeName( Me ) & "." & GetThreadInfo(1) & ">" )
+		Exit Function
+		
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Function
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Function getTermsBySubform( in_link As Variant, subform_name As String ) As MixCollection
+		On Error GoTo error_point
+		Call Me.log.enter( TypeName( Me ) & "." & GetThreadInfo(1))
+		Stop
+		If ( in_link.domain = DOMAIN_TYPE_TPS_PAYTERM_RENT_TERMPCKG ) Then
+			Dim mxResult As New MixCollection
+			Set getTermsBySubform = mxResult
+
+			Dim vw As NotesView, dc As NotesDocumentCollection
+			Set vw = Me.db.Getview("(payterms.termsbysubform)")
+			If ( Not vw Is Nothing ) Then
+				Call vw.Refresh()
+				vw.Autoupdate = False
+				Dim key (1) As String
+				key(0) = in_link.id
+				key(1) = LCase(subform_name)			
+				Set dc = vw.Getalldocumentsbykey( key, True )
+				If ( dc.Count > 0 ) Then
+					Dim doc As NotesDocument
+					Set doc = dc.Getfirstdocument()
+					While Not ( doc Is Nothing )
+						Dim term As Variant
+						Set term = Me.getDocObject( doc )
+						If Not ( term Is Nothing ) Then
+							Call mxResult.Append( term )	
+						End If
+						Set doc = dc.Getnextdocument(doc)
+					Wend
+				End If
+			Else
+				Error 1001, "View '(emb.payterms.terms)' is not exist"
+			End If
+		Else
+			Error 1001, "The data of type '" & in_link.domain & "' of parameter 'in_link.domain' is wrong"
+		End If
+		
+		Call Me.log.traceObject( "result", mxResult )		
+		Call Me.log.exit( "</" & TypeName( Me ) & "." & GetThreadInfo(1) & ">" )
+		Exit Function
+		
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Function
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Function getTermType( in_key As Variant ) As Variant
+		On Error GoTo error_point
+		Call Me.log.enter( TypeName( Me ) & "." & GetThreadInfo(1))
+		
+		Dim key As String, vw As NotesView, dc As NotesDocumentCollection
+		key = Me.getId( in_key )
+		Set vw = Me.db.getView( "(UNID)" )
+		Set dc = vw.GetAllDocumentsByKey( key, True )
+		If ( dc.Count = 0 ) Then
+			Set Me.getTermType = Nothing
+		ElseIf ( dc.Count > 1 ) Then
+			Error 1001, "In database '" & Me.db.Title & "' ( path: " & Me.db.FilePath & " ) founded more than one TermType by key '" & in_key & "' ( count: " & CStr( dc.Count ) & " )"
+		Else
+			Set Me.getTermType = Me.getDocObject( dc.GetFirstDocument )
+		End If
+		
+		Call Me.log.traceObject( "result", getTermType )
+		Call Me.log.exit( TypeName( Me ) & "." & GetThreadInfo(1))
+		Exit Function
+		
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$ 
+	End Function
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Function dialogSelectDiscounts () As NotesDocument
+		On Error GoTo error_point
+		Call Me.log.enter( TypeName( Me ) & "." & GetThreadInfo(1))
+		
+		Dim dc As NotesDocumentCollection
+		Dim ws As New NotesUIWorkspace
+		
+		Set dc = ws.Picklistcollection(PICKLIST_CUSTOM, False, Me.db.Server, Me.db.FilePath, "App.Ref.DiscountConditions", "Условия расчета скидки", "Выберите формулу")
+		If dc.Count = 0 Then Exit Function
+		
+		Set Me.dialogSelectDiscounts = dc.Getfirstdocument()
+		
+		Call Me.log.traceObject( "result", dialogSelectDiscounts )
+		Call Me.log.exit( TypeName( Me ) & "." & GetThreadInfo(1))
+		Exit Function
+		
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$ 
+	End Function
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Function getCompany( in_key As Variant ) As Variant
+		On Error GoTo error_point
+		Call Me.log.enter( TypeName( Me ) & "." & GetThreadInfo(1))
+		
+		Dim key As String, vw As NotesView, dc As NotesDocumentCollection
+		key = Me.getId( in_key )
+		Set vw = Me.db.getView( "(UNID)" )
+		Set dc = vw.GetAllDocumentsByKey( key, True )
+		If ( dc.Count = 0 ) Then
+			Set Me.getCompany = Nothing
+		ElseIf ( dc.Count > 1 ) Then
+			Error 1001, "In database '" & Me.db.Title & "' ( path: " & Me.db.FilePath & " ) founded more than one company by key '" & in_key & "' ( count: " & CStr( dc.Count ) & " )"
+		Else
+			Set Me.getCompany = Me.getDocObject( dc.GetFirstDocument )
+		End If
+		
+		Call Me.log.traceObject( "result", getCompany )
+		Call Me.log.exit( TypeName( Me ) & "." & GetThreadInfo(1))
+		Exit Function
+		
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$ 
+	End Function
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------	
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------	
+	Function parseXMLFields (in_termType As Variant) As Mixcollection
+		On Error GoTo error_point
+		Call Me.log.enter( TypeName( Me ) & "." & GetThreadInfo(1))
+		
+		Dim mxResult As New MixCollection
+		Set Me.parseXMLFields = mxResult
+		
+		Dim sourceStr As String
+		If IsObject (in_termType) Then
+			If Not in_termType Is Nothing Then
+				Dim termType As TPS_Payterms_Rent_TermType
+				If TypeName (in_termType) = "NOTESDOCUMENT" Then
+					Dim termTypeDoc As NotesDocument
+					Set termTypeDoc = in_termType
+					Set termType = Me.Getdocobject(termTypeDoc)
+				Else
+					Set termType = in_termType
+				End If
+				sourceStr = termType.xmlFields()
+			End If
+		Else
+			sourceStr = CStr(in_termType)
+		End If
+		
+		sourceStr = Replace (sourceStr, Chr(13), "")
+		sourceStr = Replace (sourceStr, Chr(10), "")
+		sourceStr = Trim(sourceStr)
+		
+		Dim descr List As String
+		descr ("1") = "%MF{|}%"
+		descr ("2") = "<{|}>"
+		'descr ("formula") = "@{|}@"
+		'descr ("condition") = "@(|)@:{"
+		
+		Dim title As String
+		Dim condition As String
+		Dim strValue As String
+		Dim sourceArr As Variant
+		Dim pos As Integer
+		Dim fPos As Integer
+		Dim fDesc As String
+		Dim fields As New Mixcollection
+		Dim isCondition As Boolean
+		Dim arrIndex As Integer
+		Dim fieldStr As String
+		
+		arrIndex = -1
+		isCondition = False
+		sourceArr = Arrays_Explode (sourceStr, ";")
+		While sourceArr(0) <> ""
+			
+			If Left (sourceArr(0), 2) = "@(" Then
+				condition = StrLeft (sourceArr(0), ")@:{")
+				condition = StrRight (condition, "@(")
+				isCondition = True
+				
+				sourceArr(0) = StrRight (sourceArr(0), condition & ")@:{")
+			End If
+			
+			fPos = 0
+			fDesc = ""
+			ForAll desc In descr
+				pos = InStr (1, sourceArr(0), StrLeft(desc, "|"), 1)
+				If pos > 0 Then
+					If (pos < fPos) Or (fPos = 0) Then
+						fPos = pos
+						fDesc = ListTag (desc)
+					End If
+				End If
+			End ForAll
+			
+			fieldStr = ""
+			If fPos = 0 Then
+				fieldStr = sourceArr(0)
+				sourceArr(0) = ""
+			Else
+				Dim beginDesc As String
+				Dim endDesc As String
+				Dim endSymPosCount As Integer
+				Dim endSymPos  As Integer
+				Dim tail As String
+				Dim i As Integer
+				
+				beginDesc = StrLeft (descr (fDesc), "|")
+				endDesc = StrRight (descr (fDesc), "|")
+				
+				endSymPosCount = 0
+				For i = 0 To UBound (sourceArr)
+					endSymPos = InStr (1, sourceArr(i), endDesc, 1)
+					If endSymPos > 0 Then
+						endSymPosCount = endSymPosCount + 1
+						If i = endSymPosCount Then
+							tail = Left (sourceArr (i), endSymPos + Len(endDesc))
+							If Trim(fieldStr) <> "" Then fieldStr = fieldStr & ";"
+							fieldStr = fieldStr & tail
+							sourceArr (i) = StrRight (sourceArr (i), tail)
+							Exit For
+						End If
+					End If
+					If Trim(fieldStr) <> "" Then fieldStr = fieldStr & ";"
+					fieldStr = fieldStr & sourceArr (i)
+					sourceArr (i) = ""
+				Next			
+			End If
+			
+			Dim field As New TPS_Payterms_Rent_XMLField (fieldStr)
+			'field.source = fieldStr
+			
+			If (InStr(1, fieldStr, "!!", 1)) < fPos Or (fPos = 0) Then
+				title = StrLeft(fieldStr, "!!")
+				field.title = title
+				fieldStr = StrRight (fieldStr, title & "!!")
+			End If
+			
+			If isCondition Then
+				field.condition = condition
+			End If
+			
+			If Right(fieldStr, 1) = "}" Then
+				isCondition = False
+				condition = ""
+				fieldStr = Left(fieldStr,  Len(fieldStr) - 1)
+			End If
+			
+			strValue = fieldStr
+			If fPos > 0 Then
+				strValue = Left (fieldStr, Len (fieldStr) - Len (endDesc))
+				strValue = Right (strValue, Len (strValue) - Len (beginDesc))
+				Set field.fields = Me.parseXMLFields(strValue)
+				field.valuetype = fDesc
+			End If
+			field.content = strValue
+			
+			Call fields.Append(field)
+			'arrIndex = arrIndex + 1
+			'ReDim Preserve fields(arrIndex) As xmlField
+			'fields(arrIndex) = Field
+			
+			Call Arrays_TrimArray (sourceArr) 
+		Wend
+		
+'		ForAll f In fields
+'			MessageBox "Условие: " & f.condition & Chr(13) &_
+'"Тег:" & f.title & Chr (13) &_
+'"Значение:" & f.fieldValue
+'		End ForAll
+		
+		Set Me.parseXMLFields = fields
+		
+		Call Me.log.traceObject( "result", parseXMLFields )
+		Call Me.log.exit( TypeName( Me ) & "." & GetThreadInfo(1))
+		Exit Function
+		
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$ 
+	End Function
+	
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Function createValutaaction( in_docMain As NotesDocument, in_docParent As NotesDocument ) As Variant
+		On Error GoTo error_point
+		
+		Set createValutaaction = Nothing
+		If ( Not ( in_docMain Is Nothing ) ) Then
+			Dim cardAgree As Variant
+			Set cardAgree = Me.getDocObject( in_docMain )
+			If Not IsEmpty( cardAgree ) Then
+				'If ( cardAgree.domain = DOMAIN_TPS_CONTRACTS_APRVL_CARDAGREE ) Then
+				If ( cardAgree.domain = DOMAIN_TYPE_TPS_PAYTERM_RENT_CARDAGREE ) Then
+					
+					Dim session As New NotesSession
+					Dim docNew As NotesDocument 
+					
+					Set docNew = Me.db.Createdocument()
+					Dim valutaaction As New TPS_Payterms_Rent_Valuta_action(docNew, Me.Me_variant)
+					
+					Call valutaaction.nd.Replaceitemvalue("Form", "tps.payterms.rent.term.valuta_action")
+					Call valutaaction.nd.Replaceitemvalue("domain", DOMAIN_TPS_PAYTERM_RENT_VAL_ACTION )
+					Call valutaaction.nd.Replaceitemvalue("id", valutaaction.nd.Universalid )
+					Call valutaaction.nd.Replaceitemvalue("CustomID", valutaaction.nd.Universalid )
+					Call valutaaction.nd.Replaceitemvalue("docKind", "ExtraDoc" )
+					
+					Dim item As NotesItem
+					Set item = in_docMain.Getfirstitem("DWF$Authors")
+					If ( Not item Is Nothing ) Then
+						Call item.Copyitemtodocument( valutaaction.nd, item.Name )
+					End If
+					Set item = in_docMain.Getfirstitem("DWF$Readers")
+					If ( Not item Is Nothing ) Then
+						Call item.Copyitemtodocument( valutaaction.nd, item.Name )
+					End If
+					Set item = in_docMain.Getfirstitem("DWF$Server")
+					If ( Not item Is Nothing ) Then
+						Call item.Copyitemtodocument( valutaaction.nd, item.Name )
+					End If
+					
+					Dim docTemp As New NotesDocument( Me.db ), ItemRef As NotesItem
+					Call docTemp.Makeresponse( in_docMain )
+					Set ItemRef = docTemp.Getfirstitem("$Ref") 
+					If Not ( ItemRef Is Nothing ) Then
+						Call ItemRef.Copyitemtodocument( valutaaction.nd, "MainRef" )
+					Else
+						Error 4001, {Не удалось сформировать поле "$Ref"}
+					End If
+					
+					Call docTemp.Makeresponse( in_docParent )
+					Set ItemRef = docTemp.Getfirstitem("$Ref") 
+					If Not ( ItemRef Is Nothing ) Then
+						Call ItemRef.Copyitemtodocument( valutaaction.nd, "ParentRef" )
+					Else
+						Error 4001, {Не удалось сформировать поле "$Ref"}
+					End If
+				Else
+					Error 4001, {Не верный входящий параметр: Домен не равен домену 'карточки заявки'. UNID: } & in_docMain.Universalid & { / domain: } & cardAgree.domain
+				End If
+			Else
+				Error 4001, {Не удалось получить объект по входящему параметру (документу). UNID: } & in_docMain.Universalid
+			End If
+			
+		End If
+		Set createValutaaction = valutaaction
+		
+		Call Me.log.exit( "</" & TypeName( Me ) & "." & GetThreadInfo(1) & ">" )
+		Exit Function
+		
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Function
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Function getValutaaction( in_key As Variant ) As Variant
+		On Error GoTo error_point
+		Call Me.log.enter( TypeName( Me ) & "." & GetThreadInfo(1))
+		
+		Dim key As String, doc As NotesDocument
+		key = Me.getId( in_key )
+		On Error 4091 Resume Next 'bad unid
+		Set doc = Me.m_db.getdocumentbyunid( key )
+		If ( doc Is Nothing ) Then
+			Error 1001, "In database '" & Me.db.Title & "' ( path: " & Me.db.FilePath & " ) not found document  by key '" & in_key & "'"
+		Else
+			Set Me.getValutaaction = Me.getDocObject( doc )
+		End If
+		
+		Call Me.log.traceObject( "result", getValutaaction )
+		Call Me.log.exit( TypeName( Me ) & "." & GetThreadInfo(1)) 
+
+		Exit Function
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Function
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Function getValutaactions( in_docParent As Variant, in_type As String ) As MixCollection
+		On Error GoTo error_point
+		Call Me.log.enter( TypeName( Me ) & "." & GetThreadInfo(1))
+		
+		Dim result As New MixCollection
+		Set getValutaactions = result
+		
+		Dim s As New NotesSession, cdb As NotesDatabase, vw As NotesView, dc As NotesDocumentCollection, viewname As String
+		Set cdb = s.CurrentDatabase
+		viewname = "(emb.payterms.term.valuta_action.byparentref)" 
+		Set vw = Me.db.Getview( viewname )
+		If Not ( vw Is Nothing ) Then
+			Call vw.Refresh
+			Dim key As String
+			key = in_docParent.Universalid '& {-} & in_type
+			Set dc = vw.GetAllDocumentsByKey( key, True )
+			If ( dc.Count > 0 ) Then
+				Dim doc As NotesDocument
+				Set doc = dc.GetFirstDocument
+				Do While Not ( doc Is Nothing )
+					Dim elem As Variant
+					Set elem = Me.getDocObject( doc )
+					Call result.Append( elem )
+					Set doc = dc.GetNextDocument( doc )
+				Loop
+			End If	
+		Else
+			Error 4001, {Не найдено представление "} & viewname & {"}
+		End If
+		
+		Call Me.log.traceObject( "result", getValutaactions )
+		Call Me.log.exit( TypeName( Me ) & "." & GetThreadInfo(1))
+		Exit Function
+		
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Function
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Function createTermaction( in_docMain As NotesDocument, in_docParent As NotesDocument ) As Variant
+		On Error GoTo error_point
+		
+		Set createTermaction = Nothing
+		If ( Not ( in_docMain Is Nothing ) ) Then
+			Dim cardAgree As Variant
+			Set cardAgree = Me.getDocObject( in_docMain )
+			If Not IsEmpty( cardAgree ) Then
+				'If ( cardAgree.domain = DOMAIN_TPS_CONTRACTS_APRVL_CARDAGREE ) Then
+				If ( cardAgree.domain = DOMAIN_TYPE_TPS_PAYTERM_RENT_CARDAGREE ) Then	
+					Dim session As New NotesSession
+					Dim docNew As NotesDocument 
+					
+					Set docNew = Me.db.Createdocument()
+					Dim termaction As New TPS_Payterms_Rent_Term_action(docNew, Me.Me_variant)
+					
+					Call termaction.nd.Replaceitemvalue("Form", "tps.payterms.rent.term.term_action")
+					Call termaction.nd.Replaceitemvalue("domain", DOMAIN_TPS_PAYTERM_RENT_TERM_ACTION )
+					Call termaction.nd.Replaceitemvalue("id", termaction.nd.Universalid )
+					Call termaction.nd.Replaceitemvalue("CustomID", termaction.nd.Universalid )
+					Call termaction.nd.Replaceitemvalue("docKind", "ExtraDoc" )
+					
+					Dim item As NotesItem
+					Set item = in_docMain.Getfirstitem("DWF$Authors")
+					If ( Not item Is Nothing ) Then
+						Call item.Copyitemtodocument( termaction.nd, item.Name )
+					End If
+					Set item = in_docMain.Getfirstitem("DWF$Readers")
+					If ( Not item Is Nothing ) Then
+						Call item.Copyitemtodocument( termaction.nd, item.Name )
+					End If
+					Set item = in_docMain.Getfirstitem("DWF$Server")
+					If ( Not item Is Nothing ) Then
+						Call item.Copyitemtodocument( termaction.nd, item.Name )
+					End If
+					
+					Dim docTemp As New NotesDocument( Me.db ), ItemRef As NotesItem
+					Call docTemp.Makeresponse( in_docMain )
+					Set ItemRef = docTemp.Getfirstitem("$Ref") 
+					If Not ( ItemRef Is Nothing ) Then
+						Call ItemRef.Copyitemtodocument( termaction.nd, "MainRef" )
+					Else
+						Error 4001, {Не удалось сформировать поле "$Ref"}
+					End If
+					
+					Call docTemp.Makeresponse( in_docParent )
+					Set ItemRef = docTemp.Getfirstitem("$Ref") 
+					If Not ( ItemRef Is Nothing ) Then
+						Call ItemRef.Copyitemtodocument( termaction.nd, "ParentRef" )
+					Else
+						Error 4001, {Не удалось сформировать поле "$Ref"}
+					End If
+				Else
+					Error 4001, {Не верный входящий параметр: Домен не равен домену 'карточки заявки'. UNID: } & in_docMain.Universalid & { / domain: } & cardAgree.domain
+				End If
+			Else
+				Error 4001, {Не удалось получить объект по входящему параметру (документу). UNID: } & in_docMain.Universalid
+			End If
+			
+		End If
+		Set createTermaction = termaction
+		
+		Call Me.log.exit( "</" & TypeName( Me ) & "." & GetThreadInfo(1) & ">" )
+		Exit Function
+		
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Function
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Function getTermaction( in_key As Variant ) As Variant
+		On Error GoTo error_point
+		Call Me.log.enter( TypeName( Me ) & "." & GetThreadInfo(1))
+		
+		Dim key As String, doc As NotesDocument
+		key = Me.getId( in_key )
+		On Error 4091 Resume Next 'bad unid
+		Set doc = Me.m_db.getdocumentbyunid( key )
+		If ( doc Is Nothing ) Then
+			Error 1001, "In database '" & Me.db.Title & "' ( path: " & Me.db.FilePath & " ) not found document  by key '" & in_key & "'"
+		Else
+			Set Me.getTermaction = Me.getDocObject( doc )
+		End If
+		
+		Call Me.log.traceObject( "result", getTermaction )
+		Call Me.log.exit( TypeName( Me ) & "." & GetThreadInfo(1)) 
+
+		Exit Function
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Function
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Function getTermactions( in_docParent As Variant, in_type As String ) As MixCollection
+		On Error GoTo error_point
+		Call Me.log.enter( TypeName( Me ) & "." & GetThreadInfo(1))
+		
+		Dim result As New MixCollection
+		Set getTermactions = result
+		
+		Dim s As New NotesSession, cdb As NotesDatabase, vw As NotesView, dc As NotesDocumentCollection, viewname As String
+		Set cdb = s.CurrentDatabase
+		viewname = "(emb.payterms.term.term_action.byparentref)" 
+		Set vw = Me.db.Getview( viewname )
+		If Not ( vw Is Nothing ) Then
+			Call vw.Refresh
+			Dim key As String
+			key = in_docParent.Universalid '& {-} & in_type
+			Set dc = vw.GetAllDocumentsByKey( key, True )
+			If ( dc.Count > 0 ) Then
+				Dim doc As NotesDocument
+				Set doc = dc.GetFirstDocument
+				Do While Not ( doc Is Nothing )
+					Dim elem As Variant
+					Set elem = Me.getDocObject( doc )
+					Call result.Append( elem )
+					Set doc = dc.GetNextDocument( doc )
+				Loop
+			End If	
+		Else
+			Error 4001, {Не найдено представление "} & viewname & {"}
+		End If
+		
+		Call Me.log.traceObject( "result", getTermactions )
+		Call Me.log.exit( TypeName( Me ) & "." & GetThreadInfo(1))
+		Exit Function
+		
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Function
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Function createTurnoveraction( in_docMain As NotesDocument, in_docParent As NotesDocument ) As Variant
+		On Error GoTo error_point
+		
+		Set createTurnoveraction = Nothing
+		If ( Not ( in_docMain Is Nothing ) ) Then
+			Dim cardAgree As Variant
+			Set cardAgree = Me.getDocObject( in_docMain )
+			If Not IsEmpty( cardAgree ) Then
+				'If ( cardAgree.domain = DOMAIN_TPS_CONTRACTS_APRVL_CARDAGREE ) Then
+				If ( cardAgree.domain = DOMAIN_TYPE_TPS_PAYTERM_RENT_CARDAGREE ) Then
+						
+					Dim session As New NotesSession
+					Dim docNew As NotesDocument 
+					
+					Set docNew = Me.db.Createdocument()
+					Dim turnoveraction As New TPS_Payterms_Rent_Turnover_action(docNew, Me.Me_variant)
+					
+					Call turnoveraction.nd.Replaceitemvalue("Form", "tps.payterms.rent.term.turnover_action")
+					Call turnoveraction.nd.Replaceitemvalue("domain", DOMAIN_TPS_PAYTERM_RENT_TURNOVER_ACTION )
+					Call turnoveraction.nd.Replaceitemvalue("id", turnoveraction.nd.Universalid )
+					Call turnoveraction.nd.Replaceitemvalue("CustomID", turnoveraction.nd.Universalid )
+					Call turnoveraction.nd.Replaceitemvalue("docKind", "ExtraDoc" )
+					
+					Dim item As NotesItem
+					Set item = in_docMain.Getfirstitem("DWF$Authors")
+					If ( Not item Is Nothing ) Then
+						Call item.Copyitemtodocument( turnoveraction.nd, item.Name )
+					End If
+					Set item = in_docMain.Getfirstitem("DWF$Readers")
+					If ( Not item Is Nothing ) Then
+						Call item.Copyitemtodocument( turnoveraction.nd, item.Name )
+					End If
+					Set item = in_docMain.Getfirstitem("DWF$Server")
+					If ( Not item Is Nothing ) Then
+						Call item.Copyitemtodocument( turnoveraction.nd, item.Name )
+					End If
+					
+					Dim docTemp As New NotesDocument( Me.db ), ItemRef As NotesItem
+					Call docTemp.Makeresponse( in_docMain )
+					Set ItemRef = docTemp.Getfirstitem("$Ref") 
+					If Not ( ItemRef Is Nothing ) Then
+						Call ItemRef.Copyitemtodocument( turnoveraction.nd, "MainRef" )
+					Else
+						Error 4001, {Не удалось сформировать поле "$Ref"}
+					End If
+					
+					Call docTemp.Makeresponse( in_docParent )
+					Set ItemRef = docTemp.Getfirstitem("$Ref") 
+					If Not ( ItemRef Is Nothing ) Then
+						Call ItemRef.Copyitemtodocument( turnoveraction.nd, "ParentRef" )
+					Else
+						Error 4001, {Не удалось сформировать поле "$Ref"}
+					End If
+				Else
+					Error 4001, {Не верный входящий параметр: Домен не равен домену 'карточки заявки'. UNID: } & in_docMain.Universalid & { / domain: } & cardAgree.domain
+				End If
+			Else
+				Error 4001, {Не удалось получить объект по входящему параметру (документу). UNID: } & in_docMain.Universalid
+			End If
+			
+		End If
+		Set createTurnoveraction = turnoveraction
+		
+		Call Me.log.exit( "</" & TypeName( Me ) & "." & GetThreadInfo(1) & ">" )
+		Exit Function
+		
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Function
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Function getTurnoveraction( in_key As Variant ) As Variant
+		On Error GoTo error_point
+		Call Me.log.enter( TypeName( Me ) & "." & GetThreadInfo(1))
+		
+		Dim key As String, doc As NotesDocument
+		key = Me.getId( in_key )
+		On Error 4091 Resume Next 'bad unid
+		Set doc = Me.m_db.getdocumentbyunid( key )
+		If ( doc Is Nothing ) Then
+			Error 1001, "In database '" & Me.db.Title & "' ( path: " & Me.db.FilePath & " ) not found document  by key '" & in_key & "'"
+		Else
+			Set Me.getTurnoveraction = Me.getDocObject( doc )
+		End If
+		
+		Call Me.log.traceObject( "result", getTurnoveraction )
+		Call Me.log.exit( TypeName( Me ) & "." & GetThreadInfo(1)) 
+
+		Exit Function
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Function
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Function getTurnoveractions( in_docParent As Variant, in_type As String ) As MixCollection
+		On Error GoTo error_point
+		Call Me.log.enter( TypeName( Me ) & "." & GetThreadInfo(1))
+		
+		Dim result As New MixCollection
+		Set getTurnoveractions = result
+		
+		Dim s As New NotesSession, cdb As NotesDatabase, vw As NotesView, dc As NotesDocumentCollection, viewname As String
+		Set cdb = s.CurrentDatabase
+		viewname = "(emb.payterms.term.turnover_action.byparentref)" 
+		Set vw = Me.db.Getview( viewname )
+		If Not ( vw Is Nothing ) Then
+			Call vw.Refresh
+			Dim key As String
+			key = in_docParent.Universalid '& {-} & in_type
+			Set dc = vw.GetAllDocumentsByKey( key, True )
+			If ( dc.Count > 0 ) Then
+				Dim doc As NotesDocument
+				Set doc = dc.GetFirstDocument
+				Do While Not ( doc Is Nothing )
+					Dim elem As Variant
+					Set elem = Me.getDocObject( doc )
+					Call result.Append( elem )
+					Set doc = dc.GetNextDocument( doc )
+				Loop
+			End If	
+		Else
+			Error 4001, {Не найдено представление "} & viewname & {"}
+		End If
+		
+		Call Me.log.traceObject( "result", getTurnoveractions )
+		Call Me.log.exit( TypeName( Me ) & "." & GetThreadInfo(1))
+		Exit Function
+		
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Function
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Function createInstallmentaction( in_docMain As NotesDocument, in_docParent As NotesDocument ) As Variant
+		On Error GoTo error_point
+		
+		Set createInstallmentaction = Nothing
+		If ( Not ( in_docMain Is Nothing ) ) Then
+			Dim cardAgree As Variant
+			Set cardAgree = Me.getDocObject( in_docMain )
+			If Not IsEmpty( cardAgree ) Then
+				'If ( cardAgree.domain = DOMAIN_TPS_CONTRACTS_APRVL_CARDAGREE ) Then
+				If ( cardAgree.domain = DOMAIN_TYPE_TPS_PAYTERM_RENT_CARDAGREE ) Then
+					
+					Dim session As New NotesSession
+					Dim docNew As NotesDocument 
+					
+					Set docNew = Me.db.Createdocument()
+					Dim installmentaction As New TPS_Payterms_Rent_Installment_action(docNew, Me.Me_variant)
+					
+					Call installmentaction.nd.Replaceitemvalue("Form", "tps.payterms.rent.term.installment_action")
+					Call installmentaction.nd.Replaceitemvalue("domain", DOMAIN_TPS_PAYTERM_RENT_INSTALLM_ACTION )
+					Call installmentaction.nd.Replaceitemvalue("id", installmentaction.nd.Universalid )
+					Call installmentaction.nd.Replaceitemvalue("CustomID", installmentaction.nd.Universalid )
+					Call installmentaction.nd.Replaceitemvalue("docKind", "ExtraDoc" )
+					
+					Dim item As NotesItem
+					Set item = in_docMain.Getfirstitem("DWF$Authors")
+					If ( Not item Is Nothing ) Then
+						Call item.Copyitemtodocument( installmentaction.nd, item.Name )
+					End If
+					Set item = in_docMain.Getfirstitem("DWF$Readers")
+					If ( Not item Is Nothing ) Then
+						Call item.Copyitemtodocument( installmentaction.nd, item.Name )
+					End If
+					Set item = in_docMain.Getfirstitem("DWF$Server")
+					If ( Not item Is Nothing ) Then
+						Call item.Copyitemtodocument( installmentaction.nd, item.Name )
+					End If
+					
+					Dim docTemp As New NotesDocument( Me.db ), ItemRef As NotesItem
+					Call docTemp.Makeresponse( in_docMain )
+					Set ItemRef = docTemp.Getfirstitem("$Ref") 
+					If Not ( ItemRef Is Nothing ) Then
+						Call ItemRef.Copyitemtodocument( installmentaction.nd, "MainRef" )
+					Else
+						Error 4001, {Не удалось сформировать поле "$Ref"}
+					End If
+					
+					Call docTemp.Makeresponse( in_docParent )
+					Set ItemRef = docTemp.Getfirstitem("$Ref") 
+					If Not ( ItemRef Is Nothing ) Then
+						Call ItemRef.Copyitemtodocument( installmentaction.nd, "ParentRef" )
+					Else
+						Error 4001, {Не удалось сформировать поле "$Ref"}
+					End If
+				Else
+					Error 4001, {Не верный входящий параметр: Домен не равен домену 'карточки заявки'. UNID: } & in_docMain.Universalid & { / domain: } & cardAgree.domain
+				End If
+			Else
+				Error 4001, {Не удалось получить объект по входящему параметру (документу). UNID: } & in_docMain.Universalid
+			End If
+			
+		End If
+		Set createInstallmentaction = installmentaction
+		
+		Call Me.log.exit( "</" & TypeName( Me ) & "." & GetThreadInfo(1) & ">" )
+		Exit Function
+		
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Function
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Function getInstallmentaction( in_key As Variant ) As Variant
+		On Error GoTo error_point
+		Call Me.log.enter( TypeName( Me ) & "." & GetThreadInfo(1))
+		
+		Dim key As String, doc As NotesDocument
+		key = Me.getId( in_key )
+		On Error 4091 Resume Next 'bad unid
+		Set doc = Me.m_db.getdocumentbyunid( key )
+		If ( doc Is Nothing ) Then
+			Error 1001, "In database '" & Me.db.Title & "' ( path: " & Me.db.FilePath & " ) not found document  by key '" & in_key & "'"
+		Else
+			Set Me.getInstallmentaction = Me.getDocObject( doc )
+		End If
+		
+		Call Me.log.traceObject( "result", getInstallmentaction )
+		Call Me.log.exit( TypeName( Me ) & "." & GetThreadInfo(1)) 
+
+		Exit Function
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Function
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Function getInstallmentactions( in_docParent As Variant, in_type As String ) As MixCollection
+		On Error GoTo error_point
+		Call Me.log.enter( TypeName( Me ) & "." & GetThreadInfo(1))
+		
+		Dim result As New MixCollection
+		Set getInstallmentactions = result
+		
+		Dim s As New NotesSession, cdb As NotesDatabase, vw As NotesView, dc As NotesDocumentCollection, viewname As String
+		Set cdb = s.CurrentDatabase
+		viewname = "(emb.payterms.term.installment_action.byparentref)" 
+		Set vw = Me.db.Getview( viewname )
+		If Not ( vw Is Nothing ) Then
+			Call vw.Refresh
+			Dim key As String
+			key = in_docParent.Universalid '& {-} & in_type
+			Set dc = vw.GetAllDocumentsByKey( key, True )
+			If ( dc.Count > 0 ) Then
+				Dim doc As NotesDocument
+				Set doc = dc.GetFirstDocument
+				Do While Not ( doc Is Nothing )
+					Dim elem As Variant
+					Set elem = Me.getDocObject( doc )
+					Call result.Append( elem )
+					Set doc = dc.GetNextDocument( doc )
+				Loop
+			End If	
+		Else
+			Error 4001, {Не найдено представление "} & viewname & {"}
+		End If
+		
+		Call Me.log.traceObject( "result", getInstallmentactions )
+		Call Me.log.exit( TypeName( Me ) & "." & GetThreadInfo(1))
+		Exit Function
+		
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Function
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Function createMonthpayaction( in_docMain As NotesDocument, in_docParent As NotesDocument ) As Variant
+		On Error GoTo error_point
+		
+		Set createMonthpayaction = Nothing
+		If ( Not ( in_docMain Is Nothing ) ) Then
+			Dim cardAgree As Variant
+			Set cardAgree = Me.getDocObject( in_docMain )
+			If Not IsEmpty( cardAgree ) Then
+				'If ( cardAgree.domain = DOMAIN_TPS_CONTRACTS_APRVL_CARDAGREE ) Then
+				If ( cardAgree.domain = DOMAIN_TYPE_TPS_PAYTERM_RENT_CARDAGREE ) Then
+					
+					Dim session As New NotesSession
+					Dim docNew As NotesDocument 
+					
+					Set docNew = Me.db.Createdocument()
+					Dim monthpayaction As New TPS_Payterms_Rent_Monthpay_action(docNew, Me.Me_variant)
+					
+					Call monthpayaction.nd.Replaceitemvalue("Form", "tps.payterms.rent.term.monthpay_action")
+					Call monthpayaction.nd.Replaceitemvalue("domain", DOMAIN_TPS_PAYTERM_RENT_MONTHPAY_ACTION )
+					Call monthpayaction.nd.Replaceitemvalue("id", monthpayaction.nd.Universalid )
+					Call monthpayaction.nd.Replaceitemvalue("CustomID", monthpayaction.nd.Universalid )
+					Call monthpayaction.nd.Replaceitemvalue("docKind", "ExtraDoc" )
+					
+					Dim item As NotesItem
+					Set item = in_docMain.Getfirstitem("DWF$Authors")
+					If ( Not item Is Nothing ) Then
+						Call item.Copyitemtodocument( monthpayaction.nd, item.Name )
+					End If
+					Set item = in_docMain.Getfirstitem("DWF$Readers")
+					If ( Not item Is Nothing ) Then
+						Call item.Copyitemtodocument( monthpayaction.nd, item.Name )
+					End If
+					Set item = in_docMain.Getfirstitem("DWF$Server")
+					If ( Not item Is Nothing ) Then
+						Call item.Copyitemtodocument( monthpayaction.nd, item.Name )
+					End If
+					
+					Dim docTemp As New NotesDocument( Me.db ), ItemRef As NotesItem
+					Call docTemp.Makeresponse( in_docMain )
+					Set ItemRef = docTemp.Getfirstitem("$Ref") 
+					If Not ( ItemRef Is Nothing ) Then
+						Call ItemRef.Copyitemtodocument( monthpayaction.nd, "MainRef" )
+					Else
+						Error 4001, {Не удалось сформировать поле "$Ref"}
+					End If
+					
+					Call docTemp.Makeresponse( in_docParent )
+					Set ItemRef = docTemp.Getfirstitem("$Ref") 
+					If Not ( ItemRef Is Nothing ) Then
+						Call ItemRef.Copyitemtodocument( monthpayaction.nd, "ParentRef" )
+					Else
+						Error 4001, {Не удалось сформировать поле "$Ref"}
+					End If
+				Else
+					Error 4001, {Не верный входящий параметр: Домен не равен домену 'карточки заявки'. UNID: } & in_docMain.Universalid & { / domain: } & cardAgree.domain
+				End If
+			Else
+				Error 4001, {Не удалось получить объект по входящему параметру (документу). UNID: } & in_docMain.Universalid
+			End If
+			
+		End If
+		Set createMonthpayaction = monthpayaction
+		
+		Call Me.log.exit( "</" & TypeName( Me ) & "." & GetThreadInfo(1) & ">" )
+		Exit Function
+		
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Function
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Function getMonthpayaction( in_key As Variant ) As Variant
+		On Error GoTo error_point
+		Call Me.log.enter( TypeName( Me ) & "." & GetThreadInfo(1))
+		
+		Dim key As String, doc As NotesDocument
+		key = Me.getId( in_key )
+		On Error 4091 Resume Next 'bad unid
+		Set doc = Me.m_db.getdocumentbyunid( key )
+		If ( doc Is Nothing ) Then
+			Error 1001, "In database '" & Me.db.Title & "' ( path: " & Me.db.FilePath & " ) not found document  by key '" & in_key & "'"
+		Else
+			Set Me.getMonthpayaction = Me.getDocObject( doc )
+		End If
+		
+		Call Me.log.traceObject( "result", getMonthpayaction )
+		Call Me.log.exit( TypeName( Me ) & "." & GetThreadInfo(1)) 
+
+		Exit Function
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Function
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Function getMonthpayactions( in_docParent As Variant, in_type As String ) As MixCollection
+		On Error GoTo error_point
+		Call Me.log.enter( TypeName( Me ) & "." & GetThreadInfo(1))
+		
+		Dim result As New MixCollection
+		Set getMonthpayactions = result
+		
+		Dim s As New NotesSession, cdb As NotesDatabase, vw As NotesView, dc As NotesDocumentCollection, viewname As String
+		Set cdb = s.CurrentDatabase
+		viewname = "(emb.payterms.term.monthpay_action.byparentref)" 
+		Set vw = Me.db.Getview( viewname )
+		If Not ( vw Is Nothing ) Then
+			Call vw.Refresh
+			Dim key As String
+			key = in_docParent.Universalid '& {-} & in_type
+			Set dc = vw.GetAllDocumentsByKey( key, True )
+			If ( dc.Count > 0 ) Then
+				Dim doc As NotesDocument
+				Set doc = dc.GetFirstDocument
+				Do While Not ( doc Is Nothing )
+					Dim elem As Variant
+					Set elem = Me.getDocObject( doc )
+					Call result.Append( elem )
+					Set doc = dc.GetNextDocument( doc )
+				Loop
+			End If
+		Else
+			Error 4001, {Не найдено представление "} & viewname & {"}
+		End If
+		
+		Call Me.log.traceObject( "result", getMonthpayactions )
+		Call Me.log.exit( TypeName( Me ) & "." & GetThreadInfo(1))
+		Exit Function
+		
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Function
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Function createDiscountaction( in_docMain As NotesDocument, in_docParent As NotesDocument ) As Variant
+		On Error GoTo error_point
+		
+		Set createDiscountaction = Nothing
+		If ( Not ( in_docMain Is Nothing ) ) Then
+			Dim cardAgree As Variant
+			Set cardAgree = Me.getDocObject( in_docMain )
+			If Not IsEmpty( cardAgree ) Then
+				'If ( cardAgree.domain = DOMAIN_TPS_CONTRACTS_APRVL_CARDAGREE ) Then
+				If ( cardAgree.domain = DOMAIN_TYPE_TPS_PAYTERM_RENT_CARDAGREE ) Then
+					
+					Dim session As New NotesSession
+					Dim docNew As NotesDocument 
+					
+					Set docNew = Me.db.Createdocument()
+					Dim discountaction As New TPS_Payterms_Rent_Discount_action(docNew, Me.Me_variant)
+					
+					Call discountaction.nd.Replaceitemvalue("Form", "tps.payterms.rent.term.discount_action")
+					Call discountaction.nd.Replaceitemvalue("domain", DOMAIN_TPS_PAYTERM_RENT_DISCOUNT_ACTION )
+					Call discountaction.nd.Replaceitemvalue("id", discountaction.nd.Universalid )
+					Call discountaction.nd.Replaceitemvalue("CustomID", discountaction.nd.Universalid )
+					Call discountaction.nd.Replaceitemvalue("docKind", "ExtraDoc" )
+					
+					Dim item As NotesItem
+					Set item = in_docMain.Getfirstitem("DWF$Authors")
+					If ( Not item Is Nothing ) Then
+						Call item.Copyitemtodocument( discountaction.nd, item.Name )
+					End If
+					Set item = in_docMain.Getfirstitem("DWF$Readers")
+					If ( Not item Is Nothing ) Then
+						Call item.Copyitemtodocument( discountaction.nd, item.Name )
+					End If
+					Set item = in_docMain.Getfirstitem("DWF$Server")
+					If ( Not item Is Nothing ) Then
+						Call item.Copyitemtodocument( discountaction.nd, item.Name )
+					End If
+					
+					Dim docTemp As New NotesDocument( Me.db ), ItemRef As NotesItem
+					Call docTemp.Makeresponse( in_docMain )
+					Set ItemRef = docTemp.Getfirstitem("$Ref") 
+					If Not ( ItemRef Is Nothing ) Then
+						Call ItemRef.Copyitemtodocument( discountaction.nd, "MainRef" )
+					Else
+						Error 4001, {Не удалось сформировать поле "$Ref"}
+					End If
+					
+					Call docTemp.Makeresponse( in_docParent )
+					Set ItemRef = docTemp.Getfirstitem("$Ref") 
+					If Not ( ItemRef Is Nothing ) Then
+						Call ItemRef.Copyitemtodocument( discountaction.nd, "ParentRef" )
+					Else
+						Error 4001, {Не удалось сформировать поле "$Ref"}
+					End If
+				Else
+					Error 4001, {Не верный входящий параметр: Домен не равен домену 'карточки заявки'. UNID: } & in_docMain.Universalid & { / domain: } & cardAgree.domain
+				End If
+			Else
+				Error 4001, {Не удалось получить объект по входящему параметру (документу). UNID: } & in_docMain.Universalid
+			End If
+			
+		End If
+		Set createDiscountaction = discountaction
+		
+		Call Me.log.exit( "</" & TypeName( Me ) & "." & GetThreadInfo(1) & ">" )
+		Exit Function
+		
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Function
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Function getDiscountaction( in_key As Variant ) As Variant
+		On Error GoTo error_point
+		Call Me.log.enter( TypeName( Me ) & "." & GetThreadInfo(1))
+		
+		Dim key As String, doc As NotesDocument
+		key = Me.getId( in_key )
+		On Error 4091 Resume Next 'bad unid
+		Set doc = Me.m_db.getdocumentbyunid( key )
+		If ( doc Is Nothing ) Then
+			Error 1001, "In database '" & Me.db.Title & "' ( path: " & Me.db.FilePath & " ) not found document  by key '" & in_key & "'"
+		Else
+			Set Me.getDiscountaction = Me.getDocObject( doc )
+		End If
+		
+		Call Me.log.traceObject( "result", getDiscountaction )
+		Call Me.log.exit( TypeName( Me ) & "." & GetThreadInfo(1))
+
+		Exit Function
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Function
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Function getDiscountactions( in_docParent As Variant, in_type As String ) As MixCollection
+		On Error GoTo error_point
+		Call Me.log.enter( TypeName( Me ) & "." & GetThreadInfo(1))
+		
+		Dim result As New MixCollection
+		Set getDiscountactions = result
+		
+		Dim s As New NotesSession, cdb As NotesDatabase, vw As NotesView, dc As NotesDocumentCollection, viewname As String
+		Set cdb = s.CurrentDatabase
+		viewname = "(emb.payterms.term.discount_action.byparentref)"
+		Set vw = Me.db.Getview( viewname )
+		If Not ( vw Is Nothing ) Then
+			Call vw.Refresh
+			Dim key As String
+			key = in_docParent.Universalid '& {-} & in_type
+			Set dc = vw.GetAllDocumentsByKey( key, True )
+			If ( dc.Count > 0 ) Then
+				Dim doc As NotesDocument
+				Set doc = dc.GetFirstDocument
+				Do While Not ( doc Is Nothing )
+					Dim elem As Variant
+					Set elem = Me.getDocObject( doc )
+					Call result.Append( elem )
+					Set doc = dc.GetNextDocument( doc )
+				Loop
+			End If
+		Else
+			Error 4001, {Не найдено представление "} & viewname & {"}
+		End If
+		
+		Call Me.log.traceObject( "result", getDiscountactions )
+		Call Me.log.exit( TypeName( Me ) & "." & GetThreadInfo(1))
+		Exit Function
+		
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Function
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Function getPlace( in_key As Variant ) As Variant
+		On Error GoTo error_point
+		Call Me.log.enter( TypeName( Me ) & "." & GetThreadInfo(1))
+		
+		Dim key As String, doc As NotesDocument
+		key = Me.getId( in_key )
+		On Error 4091 Resume Next 'bad unid
+		Set doc = Me.m_db.getdocumentbyunid( key )
+		Err = 0
+		If ( doc Is Nothing ) Then
+			Error 1001, "In database '" & Me.db.Title & "' ( path: " & Me.db.FilePath & " ) not found document  by key '" & in_key & "'"
+		Else
+			Set Me.getPlace = Me.getDocObject( doc )
+		End If
+		
+		Call Me.log.traceObject( "result", getPlace )
+		Call Me.log.exit( TypeName( Me ) & "." & GetThreadInfo(1)) 
+
+		Exit Function
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Function
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Function getPlaces( in_doc As NotesDocument ) As Variant 
+		On Error GoTo error_point
+		Call Me.log.enter( TypeName( Me ) & "." & GetThreadInfo(1))
+		
+		Dim result As New Mixcollection
+		Set getPlaces = result
+		
+		Dim vw As NotesView, viewname As String, dc As NotesDocumentCollection
+		viewname = "(emb.places.all)"
+		Set vw = Me.db.Getview( viewname )
+		If ( Not vw Is Nothing ) Then
+			Call vw.Refresh()
+			vw.Autoupdate = False
+			Set dc = vw.Getalldocumentsbykey( in_doc.universalId )
+			If ( dc.Count > 0 ) Then
+				Dim doc As NotesDocument
+				Set doc = dc.Getfirstdocument()
+				While Not ( doc Is Nothing )
+					Dim place As Variant
+					Set place = Me.getDocObject( doc )
+					If Not ( place Is Nothing ) Then
+						Call result.Append( place )	
+					End If
+					Set doc = dc.Getnextdocument(doc)
+				Wend
+			End If
+		Else
+			Error 1001, "View '" & viewname & "' is not exist"
+		End If
+		
+		Call Me.log.traceObject( "result", result )		
+		Call Me.log.exit( TypeName( Me ) & "." & GetThreadInfo(1)) 
+
+		Exit Function
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Function
+	'--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Function createPlace( in_doc As NotesDocument ) As Variant
+		On Error GoTo error_point
+		
+		Set createPlace = Nothing
+		If ( Not ( in_doc Is Nothing ) ) Then
+			Dim termPckg As Variant
+			Set termPckg = Me.getDocObject( in_doc )
+			If Not IsEmpty( termPckg ) Then
+				If ( termPckg.domain = DOMAIN_TYPE_TPS_PAYTERM_RENT_TERMPCKG ) Then
+					
+					Dim session As New NotesSession
+					Dim docNew As NotesDocument 
+					
+					Set docNew = Me.db.Createdocument()
+					Dim place As New TPS_Payterms_Rent_Place(docNew, Me.Me_variant)
+					
+					Call place.nd.Replaceitemvalue("Form", "tps.payterms.rent.place" )
+					Call place.nd.Replaceitemvalue("domain", DOMAIN_TPS_PAYTERM_RENT_PLACE)
+					Call place.nd.Replaceitemvalue("id", place.nd.Universalid )
+					Call place.nd.Replaceitemvalue("CustomID", place.nd.Universalid )
+					Call place.nd.Replaceitemvalue("docKind", "ExtraDoc" )
+					
+					Dim item As NotesItem
+					Set item = in_doc.Getfirstitem("DWF$Authors")
+					If ( Not item Is Nothing ) Then
+						Call item.Copyitemtodocument( place.nd, item.Name )
+					End If
+					Set item = in_doc.Getfirstitem("DWF$Readers")
+					If ( Not item Is Nothing ) Then
+						Call item.Copyitemtodocument( place.nd, item.Name )
+					End If
+					Set item = in_doc.Getfirstitem("DWF$Server")
+					If ( Not item Is Nothing ) Then
+						Call item.Copyitemtodocument( place.nd, item.Name )
+					End If
+					
+					Dim docTemp As New NotesDocument( Me.db ), mainRef As NotesItem, ItemRef As NotesItem
+					Set mainRef = in_doc.Getfirstitem("MainRef")
+					If ( Not ( mainRef Is Nothing ) ) Then
+						Call mainRef.Copyitemtodocument( docNew, "MainRef" )
+						
+						Call docTemp.Makeresponse( in_doc )
+						Set ItemRef = docTemp.Getfirstitem("$Ref") 
+						If Not ( ItemRef Is Nothing ) Then
+							Call ItemRef.Copyitemtodocument( place.nd, "ParentRef" )
+						Else
+							Error 4001, {Не удалось сформировать поле "$Ref"}
+						End If
+						
+						Set createPlace = place
+						
+					End If
+					
+				Else
+					Error 4001, {Не верный входящий параметр: Домен не равен домену 'карточки пакета'. UNID: } & in_doc.Universalid & { / domain: } & termPckg.domain
+				End If
+			Else
+				Error 4001, {Не удалось получить объект по входящему параметру (документу). UNID: } & in_doc.Universalid
+			End If
+			
+		End If
+		
+		Call Me.log.exit( "</" & TypeName( Me ) & "." & GetThreadInfo(1) & ">" )
+		Exit Function
+		
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Function
+	
+	
+	
+End Class
+
+
+'======================================================================================================================================
+'	CLASS TPS_Payterms_Rent_CardAgree
+'======================================================================================================================================
+Class TPS_Payterms_Rent_CardAgree As Fbase_abstract_object_doc
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	'	PUBLIC:
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Sub New(in_doc As NotesDocument, in_ps As Variant)
+	End Sub
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Property Get id As String
+		On Error GoTo error_point
+		If (m_doc.HasItem( "id" )) Then
+			id = m_doc.id(0)
+		Else
+			id = m_doc.UniversalID
+		End If
+		Exit Property 
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Property
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Property Get domain As String
+		On Error GoTo error_point
+		domain = DOMAIN_TYPE_TPS_PAYTERM_RENT_CARDAGREE
+		Exit Property 
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Property
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Property Get title As String
+		On Error GoTo error_point
+		If m_doc.Hasitem("ContractType") Then
+			title = m_doc.ContractType(0)	
+		End If
+		If m_doc.Hasitem("company_title") Then
+			If (title <> "") Then
+				title = title & {. } & m_doc.company_title(0)	
+			Else
+				title = m_doc.company_title(0)
+			End If
+		End If
+		If m_doc.Hasitem("contragent_title") Then
+			If (title <> "") Then
+				title = title & { и } & m_doc.contragent_title(0)	
+			Else
+				title = m_doc.Contragent_title(0)
+			End If
+		End If
+		Exit Property 
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Property
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------	
+	Property Get contract As Variant
+		On Error GoTo error_point
+		Call Me.log.enter( TypeName( Me ) & "." & GetThreadInfo(1))
+		
+		Set contract = New ObjectLink( Me.nd.contract_id(0), Me.nd.contract_title(0), Me.nd.contract_domain(0) )
+		
+		Call Me.log.traceObject( "result", contract )
+		Call Me.log.exit( TypeName( Me ) & "." & GetThreadInfo(1))
+		Exit Property
+		
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Property
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------	
+	Property Get mall As Variant
+		On Error GoTo error_point
+		Call Me.log.enter( TypeName( Me ) & "." & GetThreadInfo(1))
+		
+		Set mall = New ObjectLink( Me.nd.mall_id(0), Me.nd.mall_title(0), Me.nd.mall_domain(0) )
+		
+		Call Me.log.traceObject( "result", Mall )
+		Call Me.log.exit( TypeName( Me ) & "." & GetThreadInfo(1))
+		Exit Property
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Property
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------	
+	Property Get places As MixCollection
+		On Error GoTo error_point
+		Call Me.log.enter( TypeName( Me ) & "." & GetThreadInfo(1))
+		
+		Dim mxResult As New MixCollection
+		Set places = mxResult
+		If ( Me.nd.place_id(0) <> "" ) Then
+			Dim i As Integer
+			For i=0 To UBound( Me.nd.place_id )
+				Dim cId As String, cTitle As String, cDomain As String
+				cId = Me.nd.place_id(i)
+				cTitle = Me.nd.place_title(i)
+				cDomain = Me.nd.place_domain(i)
+				
+				Dim c As New ObjectLink( cId, cTitle, cDomain )
+				Call mxResult.Append( c )
+			Next
+		End If
+		
+		Call Me.log.traceObject( "result", mxResult )
+		Call Me.log.exit( TypeName( Me ) & "." & GetThreadInfo(1))
+		Exit Property
+		
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Property
+		
+			
+End Class
+'======================================================================================================================================
+'	CLASS TPS_Payterms_Rent_TermPckg
+'======================================================================================================================================
+Class TPS_Payterms_Rent_TermPckg As Fbase_abstract_object_doc
+	Private m_ratePeriodType As String
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	'	PUBLIC:
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Sub New (in_doc As NotesDocument, in_ps As Variant)
+	End Sub
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Property Get id As String
+		On Error GoTo error_point
+		If (m_doc.HasItem( "id" )) Then
+			id = m_doc.id(0)
+		Else
+			id = m_doc.UniversalID
+		End If
+		Exit Property 
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Property
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Property Get domain As String
+		On Error GoTo error_point
+		domain = DOMAIN_TYPE_TPS_PAYTERM_RENT_TERMPCKG
+		Exit Property 
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Property
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Property Get title As String
+		On Error GoTo error_point
+		
+		If (m_doc.HasItem( "title" )) Then
+			title = m_doc.title(0)
+		End If
+		
+		Exit Property 
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Property
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Property Get ratePeriodType As String
+		On Error GoTo error_point
+		If ( m_ratePeriodType = "" ) Then
+			m_ratePeriodType = m_doc.RatePeriodType(0)
+		End If
+		ratePeriodType = m_ratePeriodType
+		Exit Property 
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Property
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	
+	
+	
+End Class
+'======================================================================================================================================
+'	CLASS TPS_Payterms_Rent_Term
+'======================================================================================================================================
+Class TPS_Payterms_Rent_Term As Fbase_abstract_object_doc
+	Private m_calcType As String
+	Private totalSquare As Double
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	'	PUBLIC:
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Sub New (in_doc As NotesDocument, in_ps As Variant)
+	End Sub
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Property Get id As String
+		On Error GoTo error_point
+		If (m_doc.HasItem( "id" )) Then
+			id = m_doc.id(0)
+		Else
+			id = m_doc.UniversalID
+		End If
+		Exit Property 
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Property
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Property Get domain As String
+		On Error GoTo error_point
+		domain = DOMAIN_TYPE_TPS_PAYTERM_RENT_TERM
+		Exit Property 
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Property
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Property Get title As String
+		On Error GoTo error_point
+		
+		If (m_doc.HasItem( "title" )) Then
+			title = m_doc.title(0)
+		End If
+		
+		Exit Property 
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Property
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------	
+	Property Get calcType As String
+		On Error GoTo error_point
+		If ( m_calcType = "" ) Then
+			m_calcType = m_doc.calcType(0)
+		End If
+		calcType = m_calcType
+		 
+		Exit Property 
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Property
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------	
+	Private Function IsMeter () As Boolean
+		On Error GoTo error_point
+		
+		Me.IsMeter = (Me.nd.getitemValue ("CalcType")(0) = "meter")
+		
+		Exit Function
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Function
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------	
+	Private Function IsYear () As Boolean
+		On Error GoTo error_point
+		
+		Me.IsYear = (Me.nd.getitemValue ("RatePeriodType")(0) = "year")
+		
+		Exit Function
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Function
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Public Function getPaymentRateCost (rateCosts As Variant) As Variant
+		On Error GoTo error_point
+		
+		Me.GetPaymentRateCost = Arrays_InitArray (0)
+		
+		'If Me.GetTotalSquare() > 0 Then
+			Dim ratesArr As Variant
+			ratesArr  = Arrays_InitArray (rateCosts)
+			If IsNumeric (ratesArr(0)) Then
+				Dim squareRate As Double
+				Dim paymentRateCost As Variant				
+				paymentRateCost = Arrays_InitArray ("")
+				ForAll rateCost In ratesArr
+					squareRate = CDbl(rateCost)
+					If Me.IsMeter() Then squareRate = (Me.GetTotalSquare * squareRate)
+					If Me.IsYear() Then squareRate = squareRate/12					
+					Call Arrays_AppendElement(paymentRateCost, squareRate)
+				End ForAll
+				Me.GetPaymentRateCost = paymentRateCost
+			End If
+		'End If
+		
+		Exit Function
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Function
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Private Function getTotalSquare () As Double
+		On Error GoTo error_point
+		
+		If totalSquare = 0 Then
+			
+			If Me.nd.HasItem("Square") Then
+				totalSquare = Me.nd.Getitemvalue("Square")(0)
+			Else
+				Stop
+				If Trim(Me.nd.Getitemvalue("Place_id")(0)) = "" Then
+					Exit Function
+				End If
+				
+				Dim i As Integer		
+				Dim sq As Double
+				Dim placeObject As Variant
+				
+				For i=0 To UBound (Me.nd.Getitemvalue("Place_id"))
+					Dim placeObjectLink As New Objectlink (Me.nd.Getitemvalue("Place_id")(i), Me.nd.Getitemvalue("Place_title")(i), Me.nd.Getitemvalue("Place_domain")(i))
+					If Not IsEmpty (placeObjectLink) Then
+						Set placeObject = Me.ps.ps.ps.trc.getObject (placeObjectLink)
+						If Not placeObject Is Nothing Then
+							If IsNumeric (getNum (placeObject.nd.GetItemValue ("PlaceSquare")(0))) Then
+								sq = CDbl(getNum (placeObject.nd.GetItemValue ("PlaceSquare")(0)))
+							Else
+								If IsNumeric (getNum (placeObject.nd.GetItemValue ("Square")(0))) Then
+									sq = CDbl(getNum (placeObject.nd.GetItemValue ("Square")(0)))
+								End If
+							End If
+							totalSquare = totalSquare + sq
+						End If
+					End If
+				Next
+				
+			End If 
+		End If
+		
+		Me.getTotalSquare = totalSquare
+		
+		Exit Function
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Function
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Function getNum (v As String) As String
+		If Trim (v) <> "" Then
+			getNum = Arrays_ReplaceSubstring (v, ".", ",")
+		End If
+	End Function
+End Class
+'======================================================================================================================================
+'	CLASS TPS_Payterms_Rent_TermType
+'======================================================================================================================================
+Class TPS_Payterms_Rent_TermType As Fbase_abstract_object_doc
+	Private m_title As String
+	Private m_subformname As String
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	'	PUBLIC:
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Sub New (in_doc As NotesDocument, in_ps As Variant)
+	End Sub
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Property Get id As String
+		On Error GoTo error_point
+		If (m_doc.HasItem( "id" )) Then
+			id = m_doc.id(0)
+		Else
+			id = m_doc.UniversalID
+		End If
+		Exit Property 
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Property
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Property Get domain As String
+		On Error GoTo error_point
+		domain = DOMAIN_TYPE_TPS_PAYTERM_RENT_TERM_TYPE
+		Exit Property 
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Property
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Property Get title As String
+		On Error GoTo error_point
+		If ( m_title = "" ) Then
+			If (m_doc.HasItem( "Name" )) Then
+				m_title = m_doc.Name(0)
+			End If
+		End If
+		title = m_title
+		Exit Property 
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Property
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Property Get subFormName As String
+		On Error GoTo error_point
+		If ( m_subformname = "" ) Then
+			If (m_doc.HasItem( "SubFormName" )) Then
+				m_subformname = m_doc.SubFormName(0)
+			End If	
+		End If
+		subFormName = m_subformname
+		Exit Property 
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Property
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Property Get xmlFields As String
+		On Error GoTo error_point
+		Call Me.log.enter( "<" & TypeName( Me ) & "." & GetThreadInfo(1) & ">" )
+		
+		'Dim mxResult As New MixCollection
+		'Set xmlFields = mxResult 
+
+		If (m_doc.HasItem( "XMLFields" )) Then
+		'	ForAll x In m_doc.Getfirstitem("XMLFields").Values
+		'		Dim f As New TPS_Payterms_Rent_XMLField( CStr(x) )
+		'		Call mxResult.Append( f )
+		'	End ForAll
+			Me.xmlFields = m_doc.Getitemvalue("XMLFields")(0)
+		End If
+		
+		Call Me.log.exit( "</" & TypeName( Me ) & "." & GetThreadInfo(1) & ">" )
+		Exit Property 
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Property
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Property Get number As Integer
+		On Error GoTo error_point
+		
+		If (m_doc.HasItem( "Number" )) Then
+			number = m_doc.Number(0)
+		End If	
+		
+		Exit Property 
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Property
+	
+End Class
+
+'======================================================================================================================================
+'	CLASS TPS_Payterms_Rent_Company
+'======================================================================================================================================
+Class TPS_Payterms_Rent_Company As Fbase_abstract_object_doc
+	
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	'	PUBLIC:
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Sub New (in_doc As NotesDocument, in_ps As Variant)
+	End Sub
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Property Get id As String
+		On Error GoTo error_point
+		If (m_doc.HasItem( "id" )) Then
+			id = m_doc.id(0)
+		Else
+			id = m_doc.UniversalID
+		End If
+		Exit Property 
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Property
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Property Get domain As String
+		On Error GoTo error_point
+		domain = DOMAIN_TYPE_TPS_PAYTERM_RENT_COMPANY
+		Exit Property 
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Property
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Property Get title As String
+		On Error GoTo error_point
+		
+		If (m_doc.HasItem( "title" )) Then
+			title = m_doc.title(0)
+		End If
+		
+		Exit Property 
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Property
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Property Get contragent As Variant
+		On Error GoTo error_point
+		Call Me.log.enter( TypeName( Me ) & "." & GetThreadInfo(1))
+		
+		If Me.nd.Hasitem("contragent_id") Then
+			Set contragent = New ObjectLink( Me.nd.contragent_id(0), Me.nd.contragent_title(0), Me.nd.contragent_domain(0))
+		Else
+			Set contragent = Nothing
+		End If 
+		
+		Call Me.log.trace( "result: " & contragent )
+		Call Me.log.exit( TypeName( Me ) & "." & GetThreadInfo(1))
+		Exit Property
+		
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$		
+	End Property
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	
+End Class
+	'======================================================================================================================================
+'	CLASS TPS_Payterms_Rent_XMLField
+'======================================================================================================================================
+Class TPS_Payterms_Rent_XMLField
+	Private m_tagname As String
+	Private m_tagvalue As String
+	Private m_tagvaluetype As Integer
+	Private m_initvalue As String
+	Private m_fields As Mixcollection
+	Private m_condition As String
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	'	PUBLIC:
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Sub New(in_value As String)
+		initvalue = in_value
+		Set m_fields = New Mixcollection
+	End Sub
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Property Get initvalue As String
+		Me.initvalue = m_initvalue
+	End Property
+	Property Set initvalue As String
+		m_initvalue = Me.initvalue
+	End Property
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Property Get title As String
+		Me.title = m_tagname
+	End Property
+	Property Set title As String
+		m_tagname = Arrays_ReplaceSubString(Trim(Me.title), " ", "_")
+	End Property
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Property Get valuetype As String
+		Me.valuetype = m_tagvaluetype
+	End Property
+	Property Set valuetype As String
+		m_tagvaluetype = Me.valuetype
+	End Property
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Property Get content As String
+		Me.content = m_tagvalue
+	End Property
+	Property Set content As String
+		'Dim tval As String
+		'tval = Trim(Me.content)
+		
+		'If InStr(1, tVal, "!!", 1) Then
+		'	tval = Trim(StrRight (tVal, "!!"))
+		'End If
+		
+		'Dim result As String
+		
+		'If Left(tVal, 2) = "@(" Then
+		'	Me.valuetype = 1 'формула
+		'	result = StrRight (StrLeft (tVal, ")@"), "@(")
+		'ElseIf Left (tVal, 1) = "{" Then
+		'	Me.valuetype = 2 'несколько полей
+		'	result = StrRight (StrLeft (tVal, "}"), "{")
+		'ElseIf Left (tVal, 4) = "%MF{" Then
+		'	Me.valuetype = 3 'мультиполе
+		'	result = StrRight (StrLeft (tVal, "}%"), "%MF{")
+		'Else
+		'	Me.valuetype = 0 'значение поля из документа
+		'	result = tVal
+		'End If
+		
+		m_tagvalue = Me.content 'result
+		
+	End Property
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Property Set condition As String
+		m_condition = Me.condition
+	End Property
+	Property Get condition As String
+		Me.condition = m_condition
+	End Property
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+'	Property Get isMulti As Integer
+'		On Error GoTo error_point
+'		If ( UBound( Me.fields ) = 0 ) Then
+'			isMulti = 0
+'		Else
+'			isMulti = 1
+'		End If
+'		
+'		Exit Property 
+'error_point:
+'		On Error GoTo 0
+'		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+'	End Property
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------	
+	Property Get fields As Variant
+		On Error GoTo error_point
+		
+		'If m_fields.Count > 0 Then
+			Set Me.fields = m_fields
+		'End If
+		
+		Exit Property 
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Property
+	Property Set fields As Variant
+		On Error GoTo error_point
+		
+		Set m_fields = Me.fields
+				
+		Exit Property 
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Property
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	
+End Class
+'======================================================================================================================================
+'	CLASS TPS_Contracts_Approval_Termaction
+'======================================================================================================================================
+Class TPS_Payterms_Rent_Term_action As Fbase_abstract_object_doc
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------	
+	' PUBLIC
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------	
+	Sub New( in_doc As NotesDocument, in_ps As Variant )
+	End Sub
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Property Get id As String
+		On Error GoTo error_point
+		Call Me.log.enter( TypeName( Me ) & "." & GetThreadInfo(1))
+		
+		id = Me.nd.Universalid
+		
+		Call Me.log.trace( "result: " & id )
+		Call Me.log.exit( TypeName( Me ) & "." & GetThreadInfo(1))
+		Exit Property
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Property
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Property Get title As String
+		On Error GoTo error_point
+		Call Me.log.enter( TypeName( Me ) & "." & GetThreadInfo(1))
+		
+		title = Me.nd.action_type(0)
+		
+		Call Me.log.trace( "result: " & title )
+		Call Me.log.exit( TypeName( Me ) & "." & GetThreadInfo(1))
+		Exit Property
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$		
+	End Property
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Property Get action_type As String
+		On Error GoTo error_point
+		Call Me.log.enter( TypeName( Me ) & "." & GetThreadInfo(1))
+		
+		action_type = Me.nd.action_type(0)
+		
+		Call Me.log.trace( "result: " & action_type )
+		Call Me.log.exit( TypeName( Me ) & "." & GetThreadInfo(1))
+		Exit Property
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$		
+	End Property
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Property Get domain As String
+		On Error GoTo error_point
+		Call Me.log.enter( TypeName( Me ) & "." & GetThreadInfo(1))
+		
+		domain = DOMAIN_TPS_PAYTERM_RENT_TERM_ACTION
+		
+		Call Me.log.trace( "result: " & domain )
+		Call Me.log.exit( TypeName( Me ) & "." & GetThreadInfo(1))
+		Exit Property
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Property
+End Class
+
+'======================================================================================================================================
+'	CLASS TPS_Contracts_Approval_Valutaaction
+'======================================================================================================================================
+Class TPS_Payterms_Rent_Valuta_action As Fbase_abstract_object_doc
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------	
+	' PUBLIC
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------	
+	Sub New( in_doc As NotesDocument, in_ps As Variant )
+	End Sub
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Property Get id As String
+		On Error GoTo error_point
+		Call Me.log.enter( TypeName( Me ) & "." & GetThreadInfo(1))
+		
+		id = Me.nd.Universalid
+		
+		Call Me.log.trace( "result: " & id )
+		Call Me.log.exit( TypeName( Me ) & "." & GetThreadInfo(1))
+		Exit Property
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Property
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Property Get title As String
+		On Error GoTo error_point
+		Call Me.log.enter( TypeName( Me ) & "." & GetThreadInfo(1))
+		
+		title = Me.nd.action_type(0)
+		
+		Call Me.log.trace( "result: " & title )
+		Call Me.log.exit( TypeName( Me ) & "." & GetThreadInfo(1))
+		Exit Property
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$		
+	End Property
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Property Get action_type As String
+		On Error GoTo error_point
+		Call Me.log.enter( TypeName( Me ) & "." & GetThreadInfo(1))
+		
+		action_type = Me.nd.action_type(0)
+		
+		Call Me.log.trace( "result: " & action_type )
+		Call Me.log.exit( TypeName( Me ) & "." & GetThreadInfo(1))
+		Exit Property
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$		
+	End Property
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Property Get domain As String
+		On Error GoTo error_point
+		Call Me.log.enter( TypeName( Me ) & "." & GetThreadInfo(1))
+		
+		domain = DOMAIN_TPS_PAYTERM_RENT_VAL_ACTION
+		
+		Call Me.log.trace( "result: " & domain )
+		Call Me.log.exit( TypeName( Me ) & "." & GetThreadInfo(1))
+		Exit Property
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Property
+End Class
+'======================================================================================================================================
+'	CLASS TPS_Payterms_Rent_Turnover_action
+'======================================================================================================================================
+Class TPS_Payterms_Rent_Turnover_action As Fbase_abstract_object_doc
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------	
+	' PUBLIC
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------	
+	Sub New( in_doc As NotesDocument, in_ps As Variant )
+	End Sub
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Property Get id As String
+		On Error GoTo error_point
+		Call Me.log.enter( TypeName( Me ) & "." & GetThreadInfo(1))
+		
+		id = Me.nd.Universalid
+		
+		Call Me.log.trace( "result: " & id )
+		Call Me.log.exit( TypeName( Me ) & "." & GetThreadInfo(1))
+		Exit Property
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Property
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Property Get title As String
+		On Error GoTo error_point
+		Call Me.log.enter( TypeName( Me ) & "." & GetThreadInfo(1))
+		
+		title = Me.nd.action_type(0)
+		
+		Call Me.log.trace( "result: " & title )
+		Call Me.log.exit( TypeName( Me ) & "." & GetThreadInfo(1))
+		Exit Property
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$		
+	End Property
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Property Get action_type As String
+		On Error GoTo error_point
+		Call Me.log.enter( TypeName( Me ) & "." & GetThreadInfo(1))
+		
+		action_type = Me.nd.action_type(0)
+		
+		Call Me.log.trace( "result: " & action_type )
+		Call Me.log.exit( TypeName( Me ) & "." & GetThreadInfo(1))
+		Exit Property
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$		
+	End Property
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Property Get domain As String
+		On Error GoTo error_point
+		Call Me.log.enter( TypeName( Me ) & "." & GetThreadInfo(1))
+		
+		domain = DOMAIN_TPS_PAYTERM_RENT_TURNOVER_ACTION
+		
+		Call Me.log.trace( "result: " & domain )
+		Call Me.log.exit( TypeName( Me ) & "." & GetThreadInfo(1))
+		Exit Property
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Property
+End Class
+'======================================================================================================================================
+'	CLASS TPS_Payterms_Rent_Installment_action
+'======================================================================================================================================
+Class TPS_Payterms_Rent_Installment_action As Fbase_abstract_object_doc
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------	
+	' PUBLIC
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------	
+	Sub New( in_doc As NotesDocument, in_ps As Variant )
+	End Sub
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Property Get id As String
+		On Error GoTo error_point
+		Call Me.log.enter( TypeName( Me ) & "." & GetThreadInfo(1))
+		
+		id = Me.nd.Universalid
+		
+		Call Me.log.trace( "result: " & id )
+		Call Me.log.exit( TypeName( Me ) & "." & GetThreadInfo(1))
+		Exit Property
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Property
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Property Get title As String
+		On Error GoTo error_point
+		Call Me.log.enter( TypeName( Me ) & "." & GetThreadInfo(1))
+		
+		title = Me.nd.action_type(0)
+		
+		Call Me.log.trace( "result: " & title )
+		Call Me.log.exit( TypeName( Me ) & "." & GetThreadInfo(1))
+		Exit Property
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$		
+	End Property
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Property Get action_type As String
+		On Error GoTo error_point
+		Call Me.log.enter( TypeName( Me ) & "." & GetThreadInfo(1))
+		
+		action_type = Me.nd.action_type(0)
+		
+		Call Me.log.trace( "result: " & action_type )
+		Call Me.log.exit( TypeName( Me ) & "." & GetThreadInfo(1))
+		Exit Property
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$		
+	End Property
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Property Get domain As String
+		On Error GoTo error_point
+		Call Me.log.enter( TypeName( Me ) & "." & GetThreadInfo(1))
+		
+		domain = DOMAIN_TPS_PAYTERM_RENT_INSTALLM_ACTION
+		
+		Call Me.log.trace( "result: " & domain )
+		Call Me.log.exit( TypeName( Me ) & "." & GetThreadInfo(1))
+		Exit Property
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Property
+End Class
+
+'======================================================================================================================================
+'	CLASS TPS_Payterms_Rent_Monthpay_action
+'======================================================================================================================================
+Class TPS_Payterms_Rent_Monthpay_action As Fbase_abstract_object_doc
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------	
+	' PUBLIC
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------	
+	Sub New( in_doc As NotesDocument, in_ps As Variant )
+	End Sub
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Property Get id As String
+		On Error GoTo error_point
+		Call Me.log.enter( TypeName( Me ) & "." & GetThreadInfo(1))
+		
+		id = Me.nd.Universalid
+		
+		Call Me.log.trace( "result: " & id )
+		Call Me.log.exit( TypeName( Me ) & "." & GetThreadInfo(1))
+		Exit Property
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Property
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Property Get title As String
+		On Error GoTo error_point
+		Call Me.log.enter( TypeName( Me ) & "." & GetThreadInfo(1))
+		
+		title = Me.nd.action_type(0)
+		
+		Call Me.log.trace( "result: " & title )
+		Call Me.log.exit( TypeName( Me ) & "." & GetThreadInfo(1))
+		Exit Property
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$		
+	End Property
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Property Get action_type As String
+		On Error GoTo error_point
+		Call Me.log.enter( TypeName( Me ) & "." & GetThreadInfo(1))
+		
+		action_type = Me.nd.action_type(0)
+		
+		Call Me.log.trace( "result: " & action_type )
+		Call Me.log.exit( TypeName( Me ) & "." & GetThreadInfo(1))
+		Exit Property
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$		
+	End Property
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Property Get domain As String
+		On Error GoTo error_point
+		Call Me.log.enter( TypeName( Me ) & "." & GetThreadInfo(1))
+		
+		domain = DOMAIN_TPS_PAYTERM_RENT_MONTHPAY_ACTION
+		
+		Call Me.log.trace( "result: " & domain )
+		Call Me.log.exit( TypeName( Me ) & "." & GetThreadInfo(1))
+		Exit Property
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Property
+End Class
+'======================================================================================================================================
+'	CLASS TPS_Payterms_Rent_Discount_action
+'======================================================================================================================================
+Class TPS_Payterms_Rent_Discount_action As Fbase_abstract_object_doc
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------	
+	' PUBLIC
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------	
+	Sub New( in_doc As NotesDocument, in_ps As Variant )
+	End Sub
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Property Get id As String
+		On Error GoTo error_point
+		Call Me.log.enter( TypeName( Me ) & "." & GetThreadInfo(1))
+		
+		id = Me.nd.Universalid
+		
+		Call Me.log.trace( "result: " & id )
+		Call Me.log.exit( TypeName( Me ) & "." & GetThreadInfo(1))
+		Exit Property
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Property
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Property Get title As String
+		On Error GoTo error_point
+		Call Me.log.enter( TypeName( Me ) & "." & GetThreadInfo(1))
+		
+		title = Me.nd.action_type(0)
+		
+		Call Me.log.trace( "result: " & title )
+		Call Me.log.exit( TypeName( Me ) & "." & GetThreadInfo(1))
+		Exit Property
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$		
+	End Property
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Property Get action_type As String
+		On Error GoTo error_point
+		Call Me.log.enter( TypeName( Me ) & "." & GetThreadInfo(1))
+		
+		action_type = Me.nd.action_type(0)
+		
+		Call Me.log.trace( "result: " & action_type )
+		Call Me.log.exit( TypeName( Me ) & "." & GetThreadInfo(1))
+		Exit Property
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$		
+	End Property
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Property Get domain As String
+		On Error GoTo error_point
+		Call Me.log.enter( TypeName( Me ) & "." & GetThreadInfo(1))
+		
+		domain = DOMAIN_TPS_PAYTERM_RENT_DISCOUNT_ACTION
+		
+		Call Me.log.trace( "result: " & domain )
+		Call Me.log.exit( TypeName( Me ) & "." & GetThreadInfo(1))
+		Exit Property
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Property
+End Class
+'======================================================================================================================================
+'	CLASS TPS_Payterms_Rent_Place
+'======================================================================================================================================
+Class TPS_Payterms_Rent_Place As Fbase_abstract_object_doc
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------	
+	' PUBLIC
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------	
+	Sub New( in_doc As NotesDocument, in_ps As Variant )
+	End Sub
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Property Get id As String
+		On Error GoTo error_point
+		Call Me.log.enter( TypeName( Me ) & "." & GetThreadInfo(1))
+		
+		id = Me.nd.Universalid
+		
+		Call Me.log.trace( "result: " & id )
+		Call Me.log.exit( TypeName( Me ) & "." & GetThreadInfo(1))
+		Exit Property
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Property
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Property Get title As String
+		On Error GoTo error_point
+		Call Me.log.enter( TypeName( Me ) & "." & GetThreadInfo(1))
+		
+		title = Me.nd.place_title(0)
+		
+		Call Me.log.trace( "result: " & title )
+		Call Me.log.exit( TypeName( Me ) & "." & GetThreadInfo(1))
+		Exit Property
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$		
+	End Property
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Property Get domain As String
+		On Error GoTo error_point
+		Call Me.log.enter( TypeName( Me ) & "." & GetThreadInfo(1))
+		
+		domain = DOMAIN_TPS_PAYTERM_RENT_PLACE
+		
+		Call Me.log.trace( "result: " & domain )
+		Call Me.log.exit( TypeName( Me ) & "." & GetThreadInfo(1))
+		Exit Property
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Property
+End Class

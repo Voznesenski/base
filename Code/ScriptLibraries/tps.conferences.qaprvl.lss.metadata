@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?><note class="filter" maintenanceversion="1.0" replicaid="44257D5C002A4928" version="10.0" xmlns="http://www.lotus.com/dxl">
+<noteinfo noteid="7a2" sequence="66" unid="287D87AB4D4A790D43257EF1002FF201">
+<created><datetime>20151102T114341,45+03</datetime></created>
+<modified><datetime>20210418T115609,55+03</datetime></modified>
+<revised><datetime>20201118T171259,65+03</datetime></revised>
+<lastaccessed><datetime>20210418T115609,54+03</datetime></lastaccessed>
+<addedtofile><datetime>20210418T115609,54+03</datetime></addedtofile></noteinfo>
+<updatedby><name>CN=Tambiev/O=tps</name><name>CN=Salpagarov/O=tps</name><name>CN=Tambiev/O=tps</name><name>CN=Nikolay Gorbunov/O=SVO</name><name>CN=Tambiev/O=tps</name><name>CN=Salpagarov/O=tps</name><name>CN=Tambiev/O=tps</name><name>CN=Salpagarov/O=tps</name><name>CN=Tambiev/O=tps</name><name>CN=Salpagarov/O=tps</name></updatedby>
+<wassignedby><name>CN=Salpagarov/O=tps</name></wassignedby>
+<item name="$Flags"><text>s34Q</text></item>
+<item name="$PublicAccess" sign="true"><text>1</text></item>
+<item name="$TITLE" sign="true"><text>tps.conferences.qaprvl</text></item>
+<item name="$DesignerVersion" sign="true"><text>8.5.3</text></item>
+
+
+<item name="$POID"><datetime>20201118T171259,65+03</datetime></item></note>

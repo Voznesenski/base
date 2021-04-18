@@ -1,0 +1,682 @@
+'++LotusScript Development Environment:2:5:(Options):0:74
+Option Public
+Option Declare
+
+Use "ArrayTools"
+'++LotusScript Development Environment:2:5:(Forward):0:1
+Declare Class NCommonObj
+Declare Class LVContol
+Declare Class Action
+Declare Sub FPostOpen(Source As Notesuidocument)
+Declare Sub FQuerysave(Source As Notesuidocument, Continue As Variant)
+Declare Function GetTempDir(doc As NotesDocument) As String
+Declare Function OpenFile(FilePath As String) As Integer
+
+'++LotusScript Development Environment:2:5:(Declarations):0:10
+Declare Function ShellExecute Lib "shell32" Alias "ShellExecuteA"_
+(Byval hWnd As Long,_
+Byval Operation As String,_
+Byval FileName As String,_
+Byval Parameters As String,_
+Byval Directory As String,_
+ShowCmd As Integer) As Long
+
+Const SW_SHOWMAXIMIZED = 3
+Const SW_SHOWNORMAL = 1
+Const SW_SHOWMINIMIZED = 2
+'***************************************************************************
+
+
+
+Const LVControlname = "ListViewControl6"
+Const rtitemname = "Files"
+
+Class NCommonObj
+	Public ws As NotesUIWorkspace
+	Public session As NotesSession
+	Public docUI As NotesUIDocument
+	Public doc As NotesDocument
+	Sub new()
+		Set ws = New NotesUIWorkspace
+		Set session = New NotesSession
+		Set docUI = ws.CurrentDocument
+		Set doc = docUI.Document
+	End Sub
+	
+	Sub delete()
+	End Sub
+End Class
+
+Class LVContol
+	Public Obj As Variant
+	Sub new(Source As NotesUIDocument)
+		Set Me.Obj = Source.getObject(LVControlname)
+		If  (Not (Isobject (Obj)))  Then
+			Msgbox {Ошибка: Не найден объект "LVControl"}, 48, {Операция остановлена}
+			Exit Sub
+		End If
+	End Sub
+	
+	Function Edit(doc As NotesDocument) As Integer
+		On Error Goto errh
+		
+		Dim TempDir As String
+		Dim rtitem As NotesRichTextItem
+		Dim FileObj As NotesEmbeddedObject
+		Dim filename As String
+		
+		If (Me.Obj.ListItems.Count = 1) Then
+			Me.Obj.ListItems.Item(1).Selected = True
+		End If
+		If (Me.Obj.SelectedItem Is Nothing) Then
+			'Msgbox {Ошибка: Не определено название выделенного файла}, 48, {Операция остановлена}
+			Exit Function
+		End If
+		
+		TempDir = GetTempDir(doc)
+		Set rtitem = doc.GetFirstItem(rtitemname)
+		If (rtitem Is Nothing) Then
+			Msgbox {Ошибка: Нет поля "} & rtitemname & {"}, 48, {Операция остановлена}
+			Exit Function
+		End If
+		If (rtitem.Type <> RICHTEXT) Then
+			Msgbox {Ошибка: Не верный формат поля "} & rtitemname &{"}, 48, {Операция остановлена}
+			Exit Function
+		End If
+		
+		filename = Me.Obj.SelectedItem.Text
+		Set FileObj = rtitem.GetEmbeddedObject(filename)
+		If (FileObj Is Nothing) Then
+			Msgbox {Ошибка: Не найден файл с именем "} & filename & {"} & Chr(13) &_
+			{Необходимо сохранить и закрыть документ. При повторном появлении ошибки обратитесь к администратору}, 48, {Операция остановлена}
+			Exit Function
+		End If
+		
+		If (Not (Me.Obj.SelectedItem.Bold)) Then
+			Call FileObj.ExtractFile(TempDir & {\} & filename)	
+			Me.Obj.SelectedItem.Bold = True
+			Me.Obj.SelectedItem.ForeColor = 255 
+			Me.Obj.SelectedItem.ListSubItems.Item(1).ForeColor = 255 
+			Me.Obj.SelectedItem.ListSubItems.Item(2).ForeColor = 255 
+		End If
+		
+		Call OpenFile(TempDir & {\} & filename)
+		
+		
+		Set Me.Obj.SelectedItem = Nothing
+		Call Me.Obj.Refresh	
+		
+		Exit Function
+errh:
+		Msgbox Error$ & {. Error # } & Cstr(Err) & {on line # } & Cstr(Erl) & { in (Edit) "LVContol" class}
+		Resume endh
+endh:
+	End Function
+	
+	
+	Function Read(doc As NotesDocument) As Integer
+		On Error Goto errh
+		
+		Dim TempDir As String
+		Dim rtitem As NotesRichTextItem
+		Dim FileObj As NotesEmbeddedObject
+		Dim filename As String
+		
+		If (Me.Obj.ListItems.Count = 1) Then
+			Me.Obj.ListItems.Item(1).Selected = True
+		End If
+		If (Me.Obj.SelectedItem Is Nothing) Then
+			'Msgbox {Ошибка: Не определено название выделенного файла}, 48, {Операция остановлена}
+			Exit Function
+		End If
+		
+		TempDir = GetTempDir(doc)
+		Set rtitem = doc.GetFirstItem(rtitemname)
+		If (rtitem Is Nothing) Then
+			Msgbox {Ошибка: Нет поля "} & rtitemname & {"}, 48, {Операция остановлена}
+			Exit Function
+		End If
+		If (rtitem.Type <> RICHTEXT) Then
+			Msgbox {Ошибка: Не верный формат поля "} & rtitemname &{"}, 48, {Операция остановлена}
+			Exit Function
+		End If
+		
+		filename = Me.Obj.SelectedItem.Text
+		Set FileObj = rtitem.GetEmbeddedObject(filename)
+		If (FileObj Is Nothing) Then
+			Msgbox {Ошибка: Не найден файл с именем "} & filename & {"} & Chr(13) &_
+			{Необходимо сохранить и закрыть документ. При повторном появлении ошибки обратитесь к администратору}, 48, {Операция остановлена}
+			Exit Function
+		End If
+		
+		Call FileObj.ExtractFile(TempDir & {\} & filename)	
+		Call OpenFile(TempDir & {\} & filename)
+		
+		
+		Set Me.Obj.SelectedItem = Nothing
+		Call Me.Obj.Refresh	
+		
+		
+		Exit Function
+errh:
+		Msgbox Error$ & {. Error # } & Cstr(Err) & {on line # } & Cstr(Erl) & { in (Read) "LVContol" class}
+		Resume endh
+endh:
+	End Function
+	
+	
+	
+	Sub delete()
+	End Sub
+End Class
+
+
+Class Action
+	Public NCObj As NCommonObj
+	Sub new()
+		Set NCObj = New NCommonObj
+	End Sub
+	
+	Sub AddFiles()
+		On Error Goto errh
+		
+		Dim rtitem As NotesRichTextItem
+		Dim filepath As Variant
+		Dim filename As String, username As String, changetime As String
+		Dim v As Variant
+		Dim FileObj As NotesEmbeddedObject
+		
+		Dim LVControl As New LVContol(Me.NCObj.docUI)
+		Dim LVCItem As Variant
+		
+		
+		filepath = Me.NCObj.ws.OpenFileDialog(True, "Выберите файл(ы)", "", "c:\")
+		If Isempty(filepath) Then
+			Exit Sub
+		End If
+		
+		Set rtitem = Me.NCObj.doc.GetFirstItem(rtitemname)
+		If (rtitem Is Nothing) Then
+			Set rtitem = New NotesRichTextItem(Me.NCObj.doc, rtitemname)
+		Else
+			If (rtitem.Type <> RICHTEXT) Then
+				Msgbox {Ошибка: Не верный формат поля "} & rtitemname & {"}, 48, {Операция остановлена}
+				Exit Sub
+			End If	
+		End If
+		
+		username = Me.NCObj.session.UserName
+		changetime = Cstr(Now)
+		
+		v = Me.NCObj.doc.GetFirstItem("LVCItemValue").Values
+		Forall fpath In filepath
+			filename = Strrightback(fpath, {\})
+			
+			Set FileObj = rtitem.GetEmbeddedObject(filename)
+			If (Not (FileObj Is Nothing)) Then
+				Msgbox {Файл с именем "} & filename & {" уже существует}, 48, {Операция остановлена}
+				Exit Sub
+			End If
+			
+			Call rtitem.EmbedObject( EMBED_ATTACHMENT, "", Cstr(fpath) )
+			
+			If (v(0) <>"") Then
+				Redim Preserve v(Ubound(v)+1) As String
+			End If
+			v(Ubound(v)) = filename & {-$$-} & username & {-$$-} & changetime
+			
+			
+			Set LVCItem = LVControl.Obj.ListItems.Add(,, filename) 
+			LVCItem.Subitems(1) = username
+			LVCItem.Subitems(2) = changetime
+			LVCItem.Selected = False
+			
+		End Forall
+		Me.NCObj.doc.LVCItemValue = v
+		
+		Call Me.NCObj.docUI.Refresh
+		
+		Exit Sub
+errh:
+		Msgbox Error$ & {. Error # } & Cstr(Err) & {on line # } & Cstr(Erl) & { in (AddFiles) "Action" class}
+		Resume endh
+endh:
+	End Sub
+	
+	
+	Sub DeleteFiles()
+		On Error Goto errh
+		
+		Dim LVControl As New LVContol(Me.NCObj.docUI)
+		Dim LVCItem As Variant
+		Dim rtitem As NotesRichTextItem
+		Dim FileObj As NotesEmbeddedObject
+		Dim filename As String, username As String, changetime As String
+		Dim v As Variant
+		Dim index As Variant
+		
+		If (LVControl.Obj.ListItems.Count = 1) Then
+			LVControl.Obj.ListItems.Item(1).Selected = True
+		End If
+		If (LVControl.Obj.SelectedItem Is Nothing) Then
+			Exit Sub
+		End If
+		filename = LVControl.Obj.SelectedItem.Text
+		username = LVControl.Obj.SelectedItem.ListSubItems.Item(1).Text
+		changetime = LVControl.Obj.SelectedItem.ListSubItems.Item(2).Text
+		
+		If (Msgbox ({Удаленние файла "} & filename & {". Продолжить?}, 4+32+256, {Внимание!}) = 7) Then 'no
+			Exit Sub
+		End If
+		
+		Set rtitem = Me.NCObj.doc.GetFirstItem(rtitemname)
+		If (rtitem Is Nothing) Then
+			Set rtitem = New NotesRichTextItem(Me.NCObj.doc, rtitemname)
+		Else
+			If (rtitem.Type <> RICHTEXT) Then
+				Msgbox {Ошибка: Не верный формат поля "} & rtitemname & {"}, 48, {Операция остановлена}
+				Exit Sub
+			End If	
+		End If
+		
+		v = Me.NCObj.doc.GetFirstItem("LVCItemValue").Values
+		
+		Set FileObj = rtitem.GetEmbeddedObject(filename)
+		If (FileObj Is Nothing) Then
+			Msgbox {Ошибка: Не найден файл с именем "} & filename & {"}, 48, {Операция остановлена}
+			Exit Sub
+		End If
+		
+		Set LVCItem = LVControl.Obj.FindItem(filename)
+		If (Not (LVCItem Is Nothing)) Then
+			Call LVControl.Obj.ListItems.Remove(LVCItem.Index)	
+		End If
+		Call FileObj.Remove()
+		
+		index = Arraygetindex(v, filename & {-$$-} & username & {-$$-} & changetime)
+		If (Not (Isnull(index))) Then
+			Call Arrays_RemoveElement(v, index)
+		End If
+		Me.NCObj.doc.LVCItemValue = v
+		
+		Call Me.NCObj.docUI.Refresh
+		
+		
+		Exit Sub
+errh:
+		Msgbox Error$ & {. Error # } & Cstr(Err) & {on line # } & Cstr(Erl) & { in (DeleteFiles) "Action" class}
+		Resume endh
+endh:
+	End Sub
+	
+	
+	
+	Sub SaveAsFiles()
+		On Error Goto errh
+		
+		
+		Dim LVControl As New LVContol(Me.NCObj.docUI)
+		Dim LVCItem As Variant
+		Dim rtitem As NotesRichTextItem
+		Dim FileObj As NotesEmbeddedObject
+		Dim filename As String
+		Dim filter As String
+		Dim TempDir As String
+		Dim saveasfilepath As Variant
+		Dim saveasfilename As String
+		Dim saveasfiledirectory As String
+		Dim checkfilename As String
+		Dim hasMatch As Integer
+		
+		
+		TempDir$ = Environ("USERPROFILE") '
+		If (TempDir$ = "") Then
+			TempDir$ = {c:\}
+		Else
+			TempDir$ = TempDir$ & {\My Documents\}
+		End If
+		
+		If (LVControl.Obj.ListItems.Count = 1) Then
+			LVControl.Obj.ListItems.Item(1).Selected = True
+		End If
+		If (LVControl.Obj.SelectedItem Is Nothing) Then
+			Exit Sub
+		End If
+		filename = LVControl.Obj.SelectedItem.Text
+		
+		If (Instr(filename, {.}) = 0) Then
+			If (Msgbox ({Не определено расширение файла. Продолжить?}, 4+32+256, {Внимание!}) = 7) Then
+				Exit Sub
+			End If
+		Else
+			filter = Strrightback(filename, {.})
+		End If
+		
+		Set rtitem = Me.NCObj.doc.GetFirstItem(rtitemname)
+		If (rtitem Is Nothing) Then
+			Set rtitem = New NotesRichTextItem(Me.NCObj.doc, rtitemname)
+		Else
+			If (rtitem.Type <> RICHTEXT) Then
+				Msgbox {Ошибка: Не верный формат поля "} & rtitemname & {"}, 48, {Операция остановлена}
+				Exit Sub
+			End If	
+		End If
+		
+		Set FileObj = rtitem.GetEmbeddedObject(filename)
+		If (FileObj Is Nothing) Then
+			Msgbox {Ошибка: Не найден файл с именем "} & filename & {"}, 48, {Операция остановлена}
+			Exit Sub
+		End If
+		
+		hasMatch = 1
+		Do While (hasMatch = 1)
+			hasMatch = 0
+			saveasfilepath = Me.NCObj.ws.SaveFileDialog(False, "Сохранить как...", filter, TempDir, filename)
+			If (Isempty(saveasfilepath)) Then
+				Exit Sub
+			End If
+			saveasfilename = Strrightback(saveasfilepath(0), {\})
+			saveasfiledirectory = Strleftback(saveasfilepath(0), {\})
+			
+			checkfilename$ = Dir$(saveasfiledirectory & {\*.*}, 0)
+			Do While (checkfilename$ <> "")
+				If (Lcase(checkfilename$) = Lcase(saveasfilename)) Then
+					hasMatch = 1
+					Select Case Msgbox ({Файл с именем "} & saveasfilename & {" уже существует. Заменить его?}, 3+32+256, {Внимание!})
+					Case 2 'cancel
+						Exit Sub
+					Case 6 'yes
+						hasMatch = 0
+						Exit Do
+					Case 7 'no
+						'nothing
+					End Select
+					Exit Do
+				End If
+				checkfilename$ = Dir$()
+			Loop
+		Loop
+		
+		
+		TempDir = GetTempDir(Me.NCObj.doc)
+		
+		Call FileObj.ExtractFile(TempDir & {\} & filename)
+		Filecopy (TempDir & {\} & filename), saveasfilepath(0)
+		Kill (TempDir & {\} & filename)
+		
+		Set LVControl.Obj.SelectedItem = Nothing
+		
+		
+		
+		Exit Sub
+errh:
+		Msgbox Error$ & {. Error # } & Cstr(Err) & {on line # } & Cstr(Erl) & { in (SaveAsFiles) "Action" class}
+		Resume endh
+endh:
+	End Sub
+	
+	
+	
+	Sub delete()
+	End Sub
+End Class
+
+
+
+'++LotusScript Development Environment:2:2:FPostOpen:1:8
+Sub FPostOpen(Source As Notesuidocument)
+	On Error Goto errh
+	
+	Dim LVControl As Variant
+	Dim LVCItem As Variant
+	
+	Dim doc As NotesDocument
+	Dim LVCItemValue As Variant
+	Dim v As Variant
+	Dim rtitem As NotesRichTextItem
+	Dim filename As String, username As String, changetime As String
+	Dim FileObj As NotesEmbeddedObject
+	
+	
+	Set LVControl = Source.getObject(LVControlname)
+	If  (Not (Isobject (LVControl)))  Then
+		Msgbox {Ошибка: Не найден объект "LVControl"}, 48, {Операция остановлена}
+		Exit Sub
+	End If
+	
+	With LVControl
+		.Appearance = 1
+		.View = 3
+		.Labeledit = False
+		.Gridlines = True
+		.Fullrowselect = True
+		.HideColumnHeaders = False
+	End With
+	
+	Call LVControl.ColumnHeaders.Clear()	
+	Call LVControl.ColumnHeaders.Add(,,"Наименование файла",500)
+	Call LVControl.ColumnHeaders.Add(,,"Посл. изменение",170)
+	Call LVControl.ColumnHeaders.Add(,,"Дата",130)
+	
+	Set doc = Source.Document
+	
+	Set rtitem = doc.GetFirstItem(rtitemname)
+	If (rtitem Is Nothing) Then
+		Exit Sub
+	End If
+	If (rtitem.Type <> RICHTEXT) Then
+		Msgbox {Ошибка: Не верный формат поля "} & rtitemname & {"}, 48, {Операция остановлена}
+		Exit Sub
+	End If
+	
+	
+	If (Not (doc.HasItem("LVCItemValue"))) Then
+		Msgbox {Ошибка: Не найдено поле "LVCItemValue"}, 48, {Операция остановлена}
+		Exit Sub
+	End If
+	LVCItemValue = doc.GetFirstItem("LVCItemValue").Values
+	
+	If (LVCItemValue(0) = "") Then
+		Exit Sub
+	End If
+	
+	Call LVControl.ListItems.Clear()
+	Forall value In LVCItemValue
+		v = Split(value, {-$$-})
+		If (Not(Isarray(v))) Then
+			Msgbox {Ошибка: Не верный формат данных в поле "LVCItemValue"}, 48, {Операция остановлена}
+			Exit Sub
+		End If
+		If (Ubound(v) <> 2) Then
+			Msgbox {Ошибка: Не верный формат данных в поле "LVCItemValue"}, 48, {Операция остановлена}
+			Exit Sub
+		End If
+		filename = v(0)
+		username = v(1)
+		changetime = v(2)
+		Set FileObj = rtitem.GetEmbeddedObject(filename)
+		If (Not (FileObj Is Nothing)) Then
+			Set LVCItem = LVControl.ListItems.Add(,, filename) 
+			LVCItem.Subitems(1) = username
+			LVCItem.Subitems(2) = changetime
+			LVCItem.Selected = False	
+		Else
+			Msgbox {Ошибка: Не найден файл с именем "} & filename & {"}, 48, {Операция остановлена}
+			'Exit Sub
+		End If
+		
+		
+		
+	End Forall
+	
+	Set LVControl.SelectedItem = Nothing		
+	
+	
+	Exit Sub
+errh:
+	Msgbox Error$ & {. Error # } & Cstr(Err) & {on line # } & Cstr(Erl) & { in (FPostOpen) "MSListViewControlLib"}
+	Resume endh
+endh:
+End Sub
+
+
+'++LotusScript Development Environment:2:2:FQuerysave:1:8
+Sub FQuerysave(Source As Notesuidocument, Continue As Variant)
+	On Error Goto errh
+	
+	
+	Dim LVControl As Variant
+	Dim LVCItem As Variant
+	
+	Dim session As New NotesSession
+	Dim doc As NotesDocument
+	Dim LVCItemValue As Variant, LVCItemValueTemp As Variant
+	Dim v As Variant
+	Dim rtitem As NotesRichTextItem
+	Dim filename As String, username As String, changetime As String
+	Dim FileObj As NotesEmbeddedObject
+	Dim TempDir As String
+	Dim i As Integer
+	
+	
+	
+	Set LVControl = Source.getObject(LVControlname)
+	If  (Not (Isobject (LVControl)))  Then
+		Continue = False
+		Msgbox {Ошибка: Не найден объект "LVControl"}, 48, {Операция остановлена}
+		Exit Sub
+	End If
+	
+	Set doc = Source.Document
+	TempDir = GetTempDir(doc)
+	Set rtitem = doc.GetFirstItem(rtitemname)
+	If (rtitem Is Nothing) Then
+		Exit Sub
+	End If
+	If (rtitem.Type <> RICHTEXT) Then
+		Continue = False
+		Msgbox {Ошибка: Не верный формат поля "} & rtitemname & {"}, 48, {Операция остановлена}
+		Exit Sub
+	End If
+	
+	
+	If (Not (doc.HasItem("LVCItemValue"))) Then
+		Continue = False
+		Msgbox {Ошибка: Не найдено поле "LVCItemValue"}, 48, {Операция остановлена}
+		Exit Sub
+	End If
+	
+	LVCItemValueTemp = doc.GetFirstItem("LVCItemValue").Values
+	LVCItemValue = LVCItemValueTemp
+	
+	If (LVCItemValueTemp(0) = "") Then
+		Exit Sub
+	End If
+	
+	For i=Lbound(LVCItemValueTemp) To Ubound(LVCItemValueTemp)
+		v = Split(LVCItemValueTemp(i), {-$$-})
+		If (Not(Isarray(v))) Then
+			Continue = False
+			Msgbox {Ошибка: Не верный формат данных в поле "LVCItemValue"}, 48, {Операция остановлена}
+			Exit Sub
+		End If
+		If (Ubound(v) <> 2) Then
+			Continue = False
+			Msgbox {Ошибка: Не верный формат данных в поле "LVCItemValue"}, 48, {Операция остановлена}
+			Exit Sub
+		End If
+		filename = v(0)
+		username = session.UserName
+		changetime = Cstr(Now)
+		
+		Set LVCItem = LVControl.FindItem(filename)
+		If (Not (LVCItem Is Nothing)) Then
+			If (LVCItem.Bold) Then
+				
+				Set FileObj = rtitem.GetEmbeddedObject(filename)
+				If (Not (FileObj Is Nothing)) Then
+					Call FileObj.Remove() 'удалили тот, что открывали
+				End If
+				Call rtitem.EmbedObject( EMBED_ATTACHMENT, "", Cstr(TempDir & {\} & filename) ) 'добавили тот, что был изменен
+				
+				LVCItem.Bold = False
+				LVCItem.ForeColor = 0 
+				
+				LVCItemValue(i) = filename & {-$$-} & username & {-$$-} & changetime
+			End If
+		Else
+			Set FileObj = rtitem.GetEmbeddedObject(filename)
+			If (Not (FileObj Is Nothing)) Then
+				Call FileObj.Remove()
+			End If
+			
+			Call Arrays_RemoveElement(LVCItemValue, i)
+		End If
+	Next
+	
+	doc.LVCItemValue = LVCItemValue
+	
+	
+	
+	
+	
+	
+	
+	Exit Sub
+errh:
+	Continue = False
+	Msgbox Error$ & {. Error # } & Cstr(Err) & {on line # } & Cstr(Erl) & { in (FQuerysave) "MSListViewControlLib"}
+	Resume endh
+endh:
+End Sub
+'++LotusScript Development Environment:2:1:GetTempDir:1:8
+Function GetTempDir(doc As NotesDocument) As String
+	On Error Goto errh
+	
+	Dim TempDir As String
+	
+	TempDir$ = Environ("Temp")
+	If (TempDir$ = "") Then
+		TempDir$ = {c:\temp}
+	End If
+	TempDir$ = TempDir$ & {\} & doc.UniversalID
+	
+	On Error Goto errChFolder
+	Chdir TempDir$
+	On Error Goto errh
+	
+	GetTempDir = TempDir$
+	
+	
+	
+	Exit Function
+errChFolder:
+	On Error Goto errMkFolder
+	Mkdir TempDir$
+	Resume Next
+	
+	Exit Function
+errMkFolder:
+	Msgbox {Ошибка: Не определена временная папка}, 48, {Операция остановлена}
+	Resume endh
+	
+	Exit Function
+errh:
+	Msgbox Error$ & {. Error # } & Cstr(Err) & {on line # } & Cstr(Erl) & { in (GetTempDir) "MSListViewControlLib"}
+	Resume endh
+endh:
+End Function
+'++LotusScript Development Environment:2:1:OpenFile:1:8
+Function OpenFile(FilePath As String) As Integer
+	On Error Goto errh
+	
+	Dim b As Variant
+	b = ShellExecute(0, "open", FilePath, "",  "", SW_SHOWMAXIMIZED)
+	
+	
+	Exit Function
+errh:
+	Msgbox Error$ & {. Error # } & Cstr(Err) & {on line # } & Cstr(Erl) & { in (OpenFile) "MSListViewControlLib"}
+	Resume endh
+endh:
+End Function

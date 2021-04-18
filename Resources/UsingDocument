@@ -1,0 +1,26 @@
+<?xml version='1.0' encoding='utf-8'?>
+<note default='true' class='helpusingdocument' xmlns='http://www.lotus.com/dxl'
+ version='10.0' maintenanceversion='1.0' replicaid='44257D5C002A4928'>
+<noteinfo noteid='1916' unid='0A2A53EF6A185914432581D7003CEB0D' sequence='1'>
+<created><datetime>20171113T140523,33+03</datetime></created>
+<modified><datetime>20210418T115613,78+03</datetime></modified>
+<revised><datetime>20171113T140523,51+03</datetime></revised>
+<lastaccessed><datetime>20210418T115613,77+03</datetime></lastaccessed>
+<addedtofile><datetime>20210418T115613,77+03</datetime></addedtofile></noteinfo>
+<updatedby><name>CN=Igor V Tomnov/O=SVO</name></updatedby>
+<wassignedby><name>CN=Igor V Tomnov/O=SVO</name></wassignedby>
+<item name='$HTMLCode' sign='true'>
+<rawitemdata type='1'>
+</rawitemdata></item>
+<item name='$Info' sign='true'>
+<rawitemdata type='1'>
+hhgBAIAAAAAAgAAAAQABAP///wAQAAAA
+</rawitemdata></item>
+<item name='$Flags'><text>P</text></item>
+<item name='$DesignerVersion'><text>8.5.3</text></item>
+<item name='$Body' sign='true'>
+<rawitemdata type='1'>
+gQKC/1oAAQAAAAAAAAAAAKAFAACgBQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+AAAAAAAAAAABAAAAAJSHAAAAAAAAAAAAAAAAAQAAAAQAAACDBAEAhf8IAAEAAAo=
+</rawitemdata></item></note>
+

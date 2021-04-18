@@ -1,0 +1,418 @@
+'++LotusScript Development Environment:2:5:(Options):0:74
+Option Public
+Option Declare
+Use "fbyte"
+Use "tps.correspondence"
+
+
+
+'++LotusScript Development Environment:2:5:(Forward):0:1
+Declare Public Class TPS_Workflow_Service As Fbase_abstract_service
+Declare Public Class TPS_Workflow_Orders_Service As Fbase_abstract_service
+Declare Public Class TPS_Workflow_Orders_Order As FBase_Abstract_Object_Doc
+Declare Public Class TPS_Workflow_Orders_Decree As FBase_Abstract_Object_Doc
+Declare Public Class TPS_Workflow_Methodics_Service As Fbase_abstract_service
+Declare Public Class TPS_Workflow_Methodics_Method As FBase_Abstract_Object_Doc
+Declare Sub Initialize
+Declare Sub Terminate
+Declare Private Function getId( in_key As Variant ) As String
+
+'++LotusScript Development Environment:2:5:(Declarations):0:10
+Const DOMAIN_TPS_WORKFLOW_ORDERS_ORDER = "tps.workflow.orders.order"
+Const DOMAIN_TPS_WORKFLOW_ORDERS_DECREE = "tps.workflow.orders.decree"
+Private Const ORDERS_DATABASE_KEY = "tps.workflow.orders"
+
+Private Const METHODICS_DATABASE_KEY = "tps.workflow.methodics" 
+Const DOMAIN_TPS_WORKFLOW_METHODICS_METHOD = "tps.workflow.methodics.method"
+
+Public Class TPS_Workflow_Service As Fbase_abstract_service
+	Private m_correspondence As Variant
+	Private m_methodics As Variant
+	Private m_orders As Variant
+	
+	'constructor
+	Public Sub New(in_ps As Variant)
+		'nothing
+	End Sub
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Property Get correspondence As Variant
+		On Error GoTo error_point
+		
+		If IsEmpty(m_correspondence)Then
+			Set m_correspondence = New TPS_CorrespService( Me.Me_Variant )
+		End If
+		Set correspondence = m_correspondence
+		Exit Property
+		
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Property
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------		
+	Public Property Get Methodics As Variant
+		On Error GoTo error_point
+		
+		If IsEmpty( m_methodics )Then
+			Set m_methodics = New TPS_Workflow_Methodics_Service( Me.Me_Variant )
+		End If
+		Set Methodics = m_methodics
+		Exit Property
+		
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Property	
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------		
+	Public Property get Orders As Variant
+		On Error GoTo error_point
+		
+		If IsEmpty( m_orders )Then
+			Set m_orders = New TPS_Workflow_Orders_Service( Me.Me_Variant )
+		End If
+		Set Orders = m_orders
+		Exit Property
+		
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End property	
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------	
+	Public Function getObject( in_link As Variant ) As Variant
+		On Error GoTo error_point
+		
+		Set getObject = Nothing
+		If ( in_link.domain Like "tps.workflow.orders.*" ) Then
+			Set getObject = me.orders.getObject( in_link )
+		elseIf ( in_link.domain Like "tps.workflow.methodics.*" ) Then
+				Set getObject = me.methodics.getObject( in_link )
+			
+		Else
+			Error 1001, "The package for object '" & in_link.domain & "' from parameter 'in_link.domain' is not registered"
+		End If
+
+		Exit Function
+		
+error_point:
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$		
+	End Function
+	
+	
+End Class
+
+
+Public Class TPS_Workflow_Orders_Service As Fbase_abstract_service
+	Private m_db As NotesDatabase
+	
+	'constructor
+	Public Sub New(in_ps As Variant)
+		'nothing
+	End Sub
+	
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Property Get db As NotesDatabase
+		On Error GoTo error_point
+		Call Me.log.enter( TypeName( Me ) & "." & GetThreadInfo(1))
+		
+		If( m_db Is Nothing )Then
+			Set m_db = Me.sm.base.databases.get( ORDERS_DATABASE_KEY )
+		End If
+		Set db = m_db
+		
+		Call Me.log.traceObject( "result", db )		
+		Call Me.log.exit( TypeName( Me ) & "." & GetThreadInfo(1))
+		Exit Property
+		
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Property
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------	
+	Public Function getObject( in_link As Variant ) As Variant
+		On Error GoTo error_point
+		Call Me.log.enter( TypeName( Me ) & "." & GetThreadInfo(1))
+		
+		Select Case in_link.domain
+			Case DOMAIN_TPS_WORKFLOW_ORDERS_ORDER:
+				getObject = getOrder(in_link)
+			case DOMAIN_TPS_WORKFLOW_ORDERS_DECREE:
+				getObject =  getDecree(in_link)
+		
+			Case Else
+				Error 1001, "The data of type '" & in_link.domain & "' of parameter 'in_link.domain' is not supported"
+		End Select
+
+		Call Me.log.traceObject( "result", getObject )
+		Call Me.log.exit( TypeName( Me ) & "." & GetThreadInfo(1))
+		Exit Function
+		
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Function
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------	
+	%REM
+		Function getOrder
+		Description: Comments for Function
+	%END REM
+	Public Function getOrder( in_key As Variant ) As Variant
+		On Error GoTo error_point
+		Call Me.log.enter( TypeName( Me ) & "." & GetThreadInfo(1))
+
+
+		On Error GoTo error_point
+		Call Me.log.enter( TypeName( Me ) & "." & GetThreadInfo(1))
+		
+		Dim key As String, vw As NotesView, dc As NotesDocumentCollection
+		key = getId( in_key )
+		Set vw = Me.db.Getview("fbyte.entities.lookup")
+		Set dc = vw.GetAllDocumentsByKey( key, True )
+		If ( dc.Count = 0 ) Then
+			Set getOrder = Nothing
+		ElseIf ( dc.Count > 1 ) Then
+			Error 1001, "In database '" & Me.db.Title & "' ( path: " & Me.db.FilePath & " ) found more than one document by key '" & key & "' ( count: " & CStr( dc.Count ) & " )"
+		Else
+			Set getOrder = Me.getDocObject( dc.GetFirstDocument )
+		End If
+		
+		Call Me.log.traceObject( "result", getOrder )
+		Call Me.log.exit( TypeName( Me ) & "." & GetThreadInfo(1))
+		Exit Function
+		
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$ 
+		
+	End Function
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------	
+	%REM
+		Function getDecree
+		Description: Comments for Function
+	%END REM
+	Public Function getDecree( in_key As Variant ) As Variant
+		On Error GoTo error_point
+		Call Me.log.enter( TypeName( Me ) & "." & GetThreadInfo(1))
+
+
+		On Error GoTo error_point
+		Call Me.log.enter( TypeName( Me ) & "." & GetThreadInfo(1))
+		
+		Dim key As String, vw As NotesView, dc As NotesDocumentCollection
+		key = getId( in_key )
+		Set vw = Me.db.Getview("fbyte.entities.lookup")
+		Set dc = vw.GetAllDocumentsByKey( key, True )
+		If ( dc.Count = 0 ) Then
+			Set getDecree = Nothing
+		ElseIf ( dc.Count > 1 ) Then
+			Error 1001, "In database '" & Me.db.Title & "' ( path: " & Me.db.FilePath & " ) found more than one document by key '" & key & "' ( count: " & CStr( dc.Count ) & " )"
+		Else
+			Set getDecree = Me.getDocObject( dc.GetFirstDocument )
+		End If
+		
+		Call Me.log.traceObject( "result", getDecree )
+		Call Me.log.exit( TypeName( Me ) & "." & GetThreadInfo(1))
+		Exit Function
+		
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$ 
+	End Function
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Function getDocObject( in_doc As NotesDocument ) As Variant
+		On Error GoTo error_point
+		Call Me.log.enter( TypeName( Me ) & "." & GetThreadInfo(1))
+		
+		Select Case in_doc.form(0)
+			Case "F01":
+				Set getDocObject =  New TPS_Workflow_Orders_Order( in_doc, Me.Me_variant )
+			Case "F02":
+				Set getDocObject =  New TPS_Workflow_Orders_Decree( in_doc, Me.Me_variant )
+			Case Else:
+				Error 1001, "Форма '" & in_doc.form(0) & "' не поддерживается"
+		End Select
+		
+		'Call Me.log.traceObject( "result", getDocObject )
+		Call Me.log.exit( TypeName( Me ) & "." & GetThreadInfo(1))
+		Exit Function
+		
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Function
+	
+End Class
+
+Public Class TPS_Workflow_Orders_Order As FBase_Abstract_Object_Doc
+	
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	'	PUBLIC:
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Sub New( in_doc As NotesDocument, in_ps As Variant )
+	End Sub
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+	Property Get Title As String
+		Title = nd.AppNumber(0) & "-" & nd.AppSuffix(0) & " от " & Format(nd.AppDate(0), "dd.mm.yyyy") & " " & nd.Title(0) 
+	End Property
+End Class
+
+Public Class TPS_Workflow_Orders_Decree As FBase_Abstract_Object_Doc
+	
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	'	PUBLIC:
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Sub New( in_doc As NotesDocument, in_ps As Variant )
+	End Sub
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+End Class
+Public Class TPS_Workflow_Methodics_Service As Fbase_abstract_service
+	Private m_db As NotesDatabase
+	
+	'constructor
+	Public Sub New(in_ps As Variant)
+		'nothing
+	End Sub
+	
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Property Get db As NotesDatabase
+		On Error GoTo error_point
+		Call Me.log.enter( TypeName( Me ) & "." & GetThreadInfo(1))
+		
+		If( m_db Is Nothing )Then
+			Set m_db = Me.sm.base.databases.get( METHODICS_DATABASE_KEY )
+		End If
+		Set db = m_db
+		
+		Call Me.log.traceObject( "result", db )		
+		Call Me.log.exit( TypeName( Me ) & "." & GetThreadInfo(1))
+		Exit Property
+		
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Property
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Function getDocObject( in_doc As NotesDocument ) As Variant
+		On Error GoTo error_point
+		Call Me.log.enter( TypeName( Me ) & "." & GetThreadInfo(1))
+		
+		Select Case in_doc.form(0)
+			Case "F01":
+				Set getDocObject =  New TPS_Workflow_Methodics_Method( in_doc, Me.Me_variant )
+			Case Else:
+				Error 1001, "Форма '" & in_doc.form(0) & "' не поддерживается"
+		End Select
+		
+		'Call Me.log.traceObject( "result", getDocObject )
+		Call Me.log.exit( TypeName( Me ) & "." & GetThreadInfo(1))
+		Exit Function
+		
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Function
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------	
+	Public Function getObject( in_link As Variant ) As Variant
+		On Error GoTo error_point
+		Call Me.log.enter( TypeName( Me ) & "." & GetThreadInfo(1))
+		
+		Select Case in_link.domain
+			Case DOMAIN_TPS_WORKFLOW_METHODICS_METHOD:
+				getObject = getMethodics(in_link)
+				
+			Case Else
+				Error 1001, "The data of type '" & in_link.domain & "' of parameter 'in_link.domain' is not supported"
+		End Select
+
+		Call Me.log.traceObject( "result", getObject )
+		Call Me.log.exit( TypeName( Me ) & "." & GetThreadInfo(1))
+		Exit Function
+		
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Function
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------	
+	Public Function getMethodics( in_key As Variant ) As Variant
+		On Error GoTo error_point
+		Call Me.log.enter( TypeName( Me ) & "." & GetThreadInfo(1))
+
+
+		On Error GoTo error_point
+		Call Me.log.enter( TypeName( Me ) & "." & GetThreadInfo(1))
+		
+		Dim key As String, vw As NotesView, dc As NotesDocumentCollection
+		key = getId( in_key )
+		Set vw = Me.db.Getview("fbyte.entities.lookup")
+		Set dc = vw.GetAllDocumentsByKey( key, True )
+		If ( dc.Count = 0 ) Then
+			Set getMethodics = Nothing
+		ElseIf ( dc.Count > 1 ) Then
+			Error 1001, "In database '" & Me.db.Title & "' ( path: " & Me.db.FilePath & " ) found more than one document by key '" & key & "' ( count: " & CStr( dc.Count ) & " )"
+		Else
+			Set getMethodics = Me.getDocObject( dc.GetFirstDocument )
+		End If
+		
+		Call Me.log.traceObject( "result", getMethodics )
+		Call Me.log.exit( TypeName( Me ) & "." & GetThreadInfo(1))
+		Exit Function
+		
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$ 
+	End Function
+
+End Class
+Public Class TPS_Workflow_Methodics_Method As FBase_Abstract_Object_Doc
+	
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	'	PUBLIC:
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Sub New( in_doc As NotesDocument, in_ps As Variant )
+	End Sub
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+End Class
+'++LotusScript Development Environment:2:2:Initialize:1:10
+Sub Initialize
+	
+End Sub
+
+
+
+
+
+
+'++LotusScript Development Environment:2:2:Terminate:1:10
+Sub Terminate
+	
+End Sub
+
+
+
+'++LotusScript Development Environment:2:1:getId:1:8
+Private Function getId( in_key As Variant ) As String
+	On Error GoTo error_point
+	
+	Dim key As String
+	If ( LCase( TypeName( in_key )) = "objectlink" ) Then
+		key = in_key.id 
+	ElseIf IsScalar( in_key ) Then 
+		key = in_key
+	Else
+		Error 1001, "The type of data of parameter 'in_key' is '" & TypeName( in_key ) & "'. It is not supported"
+	End If
+	
+	getId = key
+	
+	Exit Function
+	
+error_point:
+	On Error GoTo 0
+	Error Err, GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+End Function
+
+
+
+
+

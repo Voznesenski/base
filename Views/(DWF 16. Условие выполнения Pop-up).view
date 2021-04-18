@@ -1,0 +1,82 @@
+<?xml version='1.0' encoding='utf-8'?>
+<note class='view' xmlns='http://www.lotus.com/dxl' version='10.0' maintenanceversion='1.0'
+ replicaid='44257D5C002A4928'>
+<noteinfo noteid='4f6' unid='4FC8068916F13411C32578760038A29F' sequence='56'>
+<created><datetime dst='true'>20110418T141836,47+04</datetime></created>
+<modified><datetime>20210418T115557,22+03</datetime></modified>
+<revised><datetime>20201118T171322,65+03</datetime></revised>
+<lastaccessed><datetime>20210418T115557,21+03</datetime></lastaccessed>
+<addedtofile><datetime>20210418T115557,21+03</datetime></addedtofile></noteinfo>
+<updatedby><name>CN=Tambiev/O=tps</name><name>CN=zeos/O=tps</name><name>CN=Tambiev/O=tps</name><name
+>CN=zeos/O=tps</name><name>CN=Tambiev/O=tps</name><name>CN=zeos/O=tps</name><name
+>CN=Salpagarov/O=tps</name><name>CN=zeos/O=tps</name><name>CN=Tambiev/O=tps</name><name
+>CN=zeos/O=tps</name><name>CN=Tambiev/O=tps</name><name>CN=zeos/O=tps</name><name
+>CN=Tambiev/O=tps</name><name>CN=zeos/O=tps</name><name>CN=Tambiev/O=tps</name><name
+>CN=zeos/O=tps</name><name>CN=Tambiev/O=tps</name><name>CN=zeos/O=tps</name><name
+>CN=Tambiev/O=tps</name><name>CN=zeos/O=tps</name><name>CN=Tambiev/O=tps</name><name
+>CN=zeos/O=tps</name><name>CN=Tambiev/O=tps</name><name>CN=zeos/O=tps</name><name
+>CN=develop/O=tps</name><name>CN=Tambiev/O=tps</name><name>CN=Salpagarov/O=tps</name><name
+>CN=Tambiev/O=tps</name><name>CN=Salpagarov/O=tps</name><name>CN=Tambiev/O=tps</name><name
+>CN=Salpagarov/O=tps</name><name>CN=Tambiev/O=tps</name><name>CN=Salpagarov/O=tps</name></updatedby>
+<wassignedby><name>CN=Salpagarov/O=tps</name></wassignedby>
+<item name='$FormatNote' summary='true' sign='true'>
+<rawitemdata type='4'>
+AQCmJ7dNOjr7uNZsLQALdyXD
+</rawitemdata></item>
+<item name='$FormulaClass' sign='true'><text>1</text></item>
+<item name='$TITLE' sign='true'><text>(DWF 16. Условие выполнения Pop-up)|Pop-upСondition</text></item>
+<item name='$Index' sign='true'><text/></item>
+<item name='$Formula' summary='true' sign='true'><formula compiled='true'>
+dAECAGAAAgAkOQUACQBQYXJlbnRSZWYAVgEBAAAACwKvAD4AFgAFAAkAUGFyZW50UmVmAFYBrgAo
+AAEAGwA8Be0F5SAF7gXvBfAF5QXkBeUF6wXlBe0F7j4ArgAEALUDAwACAFoAAwAkMTMABQAHAEZv
+cm11bGEAAQAAAAsCrwA6ABIABQAHAEZvcm11bGEArgAoAAEAGwA8Be0F5SAF7gXvBfAF5QXkBeUF
+6wXlBe0F7j4ArgAEALUDAwACAFoAAwAkMTIABQAHAE1lc3NhZ2UAAQAAAAsCrwA6ABIABQAHAE1l
+c3NhZ2UArgAoAAEAGwA8Be0F5SAF7gXvBfAF5QXkBeUF6wXlBe0F7j4ArgAEALUDAwAFADAAKwAG
+AAIABgADAAMACQAEACQ5TnVtYmVyJDEzJDEyJENvbmZsaWN0JFJFRgAEAAQAAAAcAAUABABGb3Jt
+AQAFAERXRjE2AAoCBAADAAcADgAIAAlMMVMzUzRT
+</formula></item>
+<item name='$Collation' summary='true'>
+<rawitemdata type='2'>
+HAACAABECGYHAAACAABmAAIABgAkOU51bWJlcg==
+</rawitemdata></item>
+<item name='$ViewFormat' summary='true' sign='true'>
+<rawitemdata type='5'>
+AQAEAA4AiEAAAFZDCwQCAAkAcAAAADMAAQAACQABAAAAAAAAAAICAAAAVkMBAAYAAQAAAAAAJQAB
+AAAJAAAAAAAAAAAAAgIAAABWQwAAAwAQAGwAAABNAQEAAAkAAAAAAAAAAAACAgAAAFZDAAADABIA
+bAAAAE0BAQAACQAAAAAAAAAAAAICAAAAJDlQYXJlbnRSZWZwAAIAYAACACQ5BQAJAFBhcmVudFJl
+ZgBWAQEAAAALAq8APgAWAAUACQBQYXJlbnRSZWYAVgGuACgAAQAbADwF7QXlIAXuBe8F8AXlBeQF
+5QXrBeUF7QXuPgCuAAQAtQMDAAcADgAIAAk2UzlTMTRTTnVtYmVyIyQxM0AtBfQF7gXwBewF8wXr
+BeBsAAIAWgADACQxMwAFAAcARm9ybXVsYQABAAAACwKvADoAEgAFAAcARm9ybXVsYQCuACgAAQAb
+ADwF7QXlIAXuBe8F8AXlBeQF5QXrBeUF7QXuPgCuAAQAtQMDAAcAEAAJAAkzUzRTNlM4UwAkMTIF
+0QXuBe4F4QX5BeUF7QXoBeVsAAIAWgADACQxMgAFAAcATWVzc2FnZQABAAAACwKvADoAEgAFAAcA
+TWVzc2FnZQCuACgAAQAbADwF7QXlIAXuBe8F8AXlBeQF5QXrBeUF7QXuPgCuAAQAtQMDAAcAEAAJ
+AAkzUzRTNlM4UwAmAAEAAAABAQAJAQAACgEBDgoAAC8ArSsBAAEAAQAAAAAAAAAAAFdDBAEACAAA
+AAAAAAAAAAAAAAAAAAABAAAAAAAAAP//AAAAAAAAAAAAAAAAAABXQwQBAAgAAAAAAAAAAAAAAAAA
+AAAAAAAAAAAAAAD//wAAAAAAAAAAAAAAAAAAV0MEAQAJAAAAAAAAAAAAAAAAAAAAAAAABAAAAAAA
+//8AAAAAAAAAAAAAAAAAAFdDBAEACQAAAAAAAAAAAAAAAAAAAAAAAAQAAAAAAP//AAAAAAAAAAAA
+AAAAAABCABAAAAABAP///wABAPf39wABAAAAAAAAAAAAAAAAAAEA////AAEA////AAAAAQAAAAAA
+AQAAAAAAAAAAAAAAAAAIAAAAAAABAA==
+</rawitemdata></item>
+<item name='$Comment' sign='true'><text/></item>
+<item name='$Flags'><text>Y</text></item>
+<item name='$DesignerVersion' sign='true'><text>6.5</text></item>
+<item name='$V5ACTIONS' sign='true'>
+<rawitemdata type='1'>
+vRwRAAAAAQABAAAAAQAAAAAAAAAAAAAACAACAHn/bAABAOzp2AABAAAAAAAJAAAAAAABAOzp2AAA
+AB8AAAAAAAAAAAADAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+AAAAAAAAAAAAAAAAAAAAAAAAAAAAAPz/OgAAAAAAAQAAAAAAAQAAAAAAAAAAAAAAAAAAAAAAAAAA
+AAAAAAAAAAEAAAAAAAAAAAAAAAAAAAC+/yYAAAAFAAAAnQEAAAsAAAAAAAAAQ2F0ZWdvcmlfemXD
+AQBOfL7/KAAAAAUAAACdAQAADgAAAAAAAABfRWRpdCBEb2N1bWVudAIAAgq+/ygAAAAFAAAAnQEA
+AA4AAAAAAAAAX1NlbmQgRG9jdW1lbnQDAAMKvv8iAAAABQAAAJ0BAAAIAAAAAAAAAF9Gb3J3YXJk
+BAAECr7/LAAAAAUAAACdAQAAEgAAAAAAAABfTW92ZSBUbyBGb2xkZXIuLi4FAD18vv8uAAAABQAA
+AJ0BAAATAAAAAAAAAF9SZW1vdmUgRnJvbSBGb2xkZXIABgA+fA==
+</rawitemdata></item>
+<item name='$ACTIONS' sign='true'>
+<rawitemdata type='1'>
+vRwRAAAAAQABAAAAAQAAAAAAAAAAAAAACAACAL7/JgAAAAUAAACdAQAACwAAAAAAAABDYXRlZ29y
+aV96ZXcBAE58vv8oAAAABQAAAJ0BAAAOAAAAAAAAAF9FZGl0IERvY3VtZW50AgACCr7/KAAAAAUA
+AACdAQAADgAAAAAAAABfU2VuZCBEb2N1bWVudAMAAwq+/yIAAAAFAAAAnQEAAAgAAAAAAAAAX0Zv
+cndhcmQEAAQKvv8sAAAABQAAAJ0BAAASAAAAAAAAAF9Nb3ZlIFRvIEZvbGRlci4uLgUAPXy+/y4A
+AAAFAAAAnQEAABMAAAAAAAAAX1JlbW92ZSBGcm9tIEZvbGRlcrAGAD58
+</rawitemdata></item></note>
+

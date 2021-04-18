@@ -1,0 +1,27 @@
+<?xml version='1.0' encoding='utf-8'?>
+<note default='true' class='helpaboutdocument' xmlns='http://www.lotus.com/dxl'
+ version='10.0' maintenanceversion='1.0' replicaid='44257D5C002A4928'>
+<noteinfo noteid='1a5a' unid='964665B4F388836B432581D7003CE880' sequence='2'>
+<created><datetime>20171113T140516,80+03</datetime></created>
+<modified><datetime>20210418T115615,41+03</datetime></modified>
+<revised><datetime>20190422T160609,12+03</datetime></revised>
+<lastaccessed><datetime>20210418T115615,40+03</datetime></lastaccessed>
+<addedtofile><datetime>20210418T115615,40+03</datetime></addedtofile></noteinfo>
+<updatedby><name>CN=Igor V Tomnov/O=SVO</name><name>CN=Salpagarov/O=tps</name></updatedby>
+<wassignedby><name>CN=Salpagarov/O=tps</name></wassignedby>
+<item name='$HTMLCode' sign='true'>
+<rawitemdata type='1'>
+</rawitemdata></item>
+<item name='$Info' sign='true'>
+<rawitemdata type='1'>
+hhgBAIAAAAAAgAAAAQABAP///wAQAAAA
+</rawitemdata></item>
+<item name='$Flags'><text>P</text></item>
+<item name='$DesignerVersion'><text>8.5.3</text></item>
+<item name='$Body' sign='true'>
+<rawitemdata type='1'>
+gQKC/1oAAQAAAAAAAAAAAKAFAACgBQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+AAAAAAAAAAABAAAAAJSHAAAAAAAAAAAAAAAAAQAAAAQAAACDBAEAhf8IAAEAAAo=
+</rawitemdata></item>
+<item name='fbyte_platform_database_id'><text>tps.workflow.methodics</text></item></note>
+

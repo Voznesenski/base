@@ -1,0 +1,40 @@
+'++LotusScript Development Environment:2:5:(Options):0:74
+Option Public
+Option Declare
+
+Use "tps.building.tors"
+
+
+
+'++LotusScript Development Environment:2:5:(Forward):0:1
+Declare Public Class TPS_BuildingService As FBase_Abstract_Service
+
+'++LotusScript Development Environment:2:5:(Declarations):0:10
+'======================================================================================================================================
+'	CLASS TPS_BuildingService
+'======================================================================================================================================
+Public Class TPS_BuildingService As FBase_Abstract_Service
+	Private m_db As NotesDatabase
+	Private m_tors As Variant
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	'	PUBLIC:
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Sub New(in_ps As Variant)
+	End Sub
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Property Get tors As Variant
+		On Error Goto error_point
+		
+		If Isempty(m_tors)Then
+			Set m_tors = New TPS_BuildingTORsService( Me.Me_Variant )
+		End If
+		Set tors = m_tors
+		Exit Property
+		
+error_point:
+		On Error Goto 0
+		Error Err, Typename( Me ) & "." & Getthreadinfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Property
+	
+	
+End Class

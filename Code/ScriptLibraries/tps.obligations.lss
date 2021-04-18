@@ -1,0 +1,2586 @@
+'++LotusScript Development Environment:2:5:(Options):0:74
+Option Public
+Option Declare
+
+Use "fbyte"
+Use "ArrayTools"
+Use "tps.common"
+
+'++LotusScript Development Environment:2:5:(Forward):0:1
+Declare Class TPS_ObligationsService As Fbase_abstract_service
+Declare Class TPS_Obligations_CardAgree As Fbase_abstract_object_doc
+Declare Class TPS_Obligations_OblPckg As Fbase_abstract_object_doc
+Declare Class TPS_Obligations_Obligation As Fbase_abstract_object_doc
+Declare Class TPS_Obligations_LinkRule As Fbase_abstract_object_doc
+Declare Class TPS_Obligations_Company As Fbase_abstract_object_doc
+Declare Class TPS_Obligations_OblCondititionDict As Fbase_abstract_object_doc
+Declare Class TPS_Obligations_ObligationDict As Fbase_abstract_object_doc
+Declare Class TPS_Obligations_CategoryDict As Fbase_abstract_object_doc
+Declare Class TPS_Obligations_LinkRuleDict As Fbase_abstract_object_doc
+Declare Class TPS_Obligations_ExecutorDict As Fbase_abstract_object_doc
+Declare Class TPS_Obligations_Constant As Fbase_abstract_object_doc
+Declare Class TPS_Obligations_Reminderrule As Fbase_abstract_object_doc
+Declare Class TPS_Obligations_DateUpdate As Fbase_abstract_object_doc
+
+'++LotusScript Development Environment:2:5:(Declarations):0:10
+
+Private Const DATABASE_KEY = "tps.obligations"
+
+Const DOMAIN_TYPE_TPS_OBLIGATIONS_CARDAGREE = "tps.obligations.cardagree"
+Const DOMAIN_TYPE_TPS_OBLIGATIONS_OBL_PCKG = "tps.obligations.oblpckg"
+Const DOMAIN_TYPE_TPS_OBLIGATIONS_OBLIGATION = "tps.obligations.obligation"
+Const DOMAIN_TYPE_TPS_OBLIGATIONS_LINKRULE = "tps.obligations.link_rule"
+Const DOMAIN_TYPE_TPS_OBLIGATIONS_COMPANY = "tps.obligations.rent.company"
+Const DOMAIN_TYPE_TPS_OBLIGATIONS_OBL_CNDT_DIC = "tps.obligations.obl_conditions_dict"
+Const DOMAIN_TYPE_TPS_OBLIGATIONS_OBL_DIC = "tps.obligations.obligation_dict"
+Const DOMAIN_TYPE_TPS_OBLIGATIONS_CATEGORY = "tps.obligations.category_dict"
+Const DOMAIN_TYPE_TPS_OBLIGATIONS_LINKRULE_DIC = "tps.obligations.link_rule"
+Const DOMAIN_TYPE_TPS_OBLIGATIONS_EXECUTOR_DIC = "tps.obligations.executor_dict"
+Const DOMAIN_TYPE_TPS_OBLIGATIONS_OBL_RPT_SRC = "tps.obligations.obligation_repeat_source"
+Const DOMAIN_TYPE_TPS_OBLIGATIONS_CONSTANT = "tps.obligations.constant"
+Const DOMAIN_TYPE_TPS_OBLIGATIONS_REMINDERRULE = "tps.obligations.reminder_rule"
+Const DOMAIN_TYPE_TPS_OBLIGATIONS_DATE_UPDATE = "tps.obligations.obligation_date_update"
+
+'======================================================================================================================================
+'	CLASS TPS_ObligationsService
+'======================================================================================================================================
+Class TPS_ObligationsService As Fbase_abstract_service
+	Private m_db As NotesDatabase
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Private Function getId( in_key As Variant ) As String
+		On Error GoTo error_point
+		Call Me.log.enter( TypeName( Me ) & "." & GetThreadInfo(1))
+		
+		Dim key As String
+		If ( LCase( TypeName( in_key )) = "objectlink" ) Then
+			key = in_key.id 
+		ElseIf IsScalar( in_key ) Then 
+			key = in_key
+		Else
+			Error 1001, "The type of data of parameter 'in_key' is '" & TypeName( in_key ) & "'. It is not supported"
+		End If
+		
+		getId = key
+
+		Call Me.log.trace( "result: " & getId )
+		Call Me.log.exit( TypeName( Me ) & "." & GetThreadInfo(1))
+		Exit Function
+		
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Function
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	'	PUBLIC:
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Sub New(in_ps As Variant)
+	End Sub
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------	
+	Property Get db As NotesDatabase
+		On Error GoTo error_point
+		Call Me.log.enter( TypeName( Me ) & "." & GetThreadInfo(1))
+		
+		If( m_db Is Nothing )Then
+			Set m_db = Me.sm.base.databases.get( DATABASE_KEY )
+		End If
+		Set db = m_db
+		
+		Call Me.log.traceObject( "result", db )		
+		Call Me.log.exit( TypeName( Me ) & "." & GetThreadInfo(1))
+		Exit Property
+		
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Property
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Function getDocObject( in_doc As NotesDocument ) As Variant
+		On Error GoTo error_point
+		Call Me.log.enter( TypeName( Me ) & "." & GetThreadInfo(1))
+		
+		Select Case LCase(in_doc.form(0))
+			Case "f01", "cardagree", "tps.obligations.cardagree":
+				Set getDocObject =  New TPS_Obligations_CardAgree( in_doc, Me.Me_variant )
+			Case "tps.obligations.oblpckg":
+				Set getDocObject =  New TPS_Obligations_OblPckg( in_doc, Me.Me_variant )
+			Case "tps.obligations.obligation":
+				Set getDocObject =  New TPS_Obligations_Obligation( in_doc, Me.Me_variant )
+			Case "tps.obligations.link_rule":			
+				Set getDocObject =  New TPS_Obligations_LinkRule( in_doc, Me.Me_variant )
+			Case "company":
+				Set getDocObject =  New TPS_Obligations_Company( in_doc, Me.Me_variant )
+			Case "tps.obligations.obl_conditions_dict":
+				Set getDocObject =  New TPS_Obligations_OblCondititionDict( in_doc, Me.Me_variant )	
+			Case "tps.obligations.obligation_dict":
+				Set getDocObject =  New TPS_Obligations_ObligationDict( in_doc, Me.Me_variant )	
+			Case "tps.obligations.category_dict":
+				Set getDocObject =  New TPS_Obligations_CategoryDict( in_doc, Me.Me_variant )
+			Case "tps.obligations.link_rule_dict":
+				Set getDocObject =  New TPS_Obligations_LinkRuleDict( in_doc, Me.Me_variant )	
+			Case "tps.obligations.executor_dict":
+				Set getDocObject =  New TPS_Obligations_ExecutorDict( in_doc, Me.Me_variant )	
+			Case "tps.obligations.constant":
+				Set getDocObject =  New TPS_Obligations_Constant( in_doc, Me.Me_variant )	
+			Case "tps.obligations.reminder_rule":
+				Set getDocObject =  New TPS_Obligations_Reminderrule( in_doc, Me.Me_variant )	
+			Case Else:
+				Error 1001, "Форма '" & in_doc.form(0) & "' не поддерживается"
+		End Select
+		
+		Call Me.log.traceObject( "result", getDocObject )
+		Call Me.log.exit( TypeName( Me ) & "." & GetThreadInfo(1))
+		Exit Function
+		
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Function
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Function getObject( in_link As Variant ) As Variant
+		On Error GoTo error_point
+		Call Me.log.enter( TypeName( Me ) & "." & GetThreadInfo(1))
+		
+		Select Case in_link.domain
+			Case DOMAIN_TYPE_TPS_OBLIGATIONS_CARDAGREE:
+				Set getObject = Me.getCardAgree( in_link )
+			Case DOMAIN_TYPE_TPS_OBLIGATIONS_OBL_PCKG:
+				Set getObject = Me.getOblPckg( in_link )
+			Case DOMAIN_TYPE_TPS_OBLIGATIONS_OBLIGATION:
+				Set getObject = Me.getObligation( in_link )
+			Case DOMAIN_TYPE_TPS_OBLIGATIONS_LINKRULE
+				Set getObject = Me.getLinkRule( in_link )	
+			Case DOMAIN_TYPE_TPS_OBLIGATIONS_COMPANY:
+				Set getObject = Me.getCompany( in_link )	
+			Case DOMAIN_TYPE_TPS_OBLIGATIONS_OBL_CNDT_DIC:
+				Set getObject = Me.getOblCondititionDict( in_link )	
+			Case DOMAIN_TYPE_TPS_OBLIGATIONS_OBL_DIC:
+				Set getObject = Me.getObligationDict( in_link )	
+			Case DOMAIN_TYPE_TPS_OBLIGATIONS_CATEGORY:
+				Set getObject = Me.getCategoryDict( in_link )	
+			Case DOMAIN_TYPE_TPS_OBLIGATIONS_LINKRULE_DIC:
+				Set getObject = Me.getLinkRuleDict( in_link )	
+			Case DOMAIN_TYPE_TPS_OBLIGATIONS_EXECUTOR_DIC:
+				Set getObject = Me.getExecutorDict( in_link )	
+			Case DOMAIN_TYPE_TPS_OBLIGATIONS_CONSTANT:
+				Set getObject = Me.getConstant( in_link )
+			Case DOMAIN_TYPE_TPS_OBLIGATIONS_REMINDERRULE
+				Set getObject = Me.getReminderrule( in_link )
+			Case Else
+				Error 1001, "The data of type '" & in_link.domain & "' of parameter 'in_link.domain' is not supported"
+		End Select
+		
+		Call Me.log.traceObject( "result", getObject )
+		Call Me.log.exit( TypeName( Me ) & "." & GetThreadInfo(1))
+		Exit Function
+		
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Function
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Function getCardAgree( in_key As Variant ) As Variant
+		On Error GoTo error_point
+		Call Me.log.enter( TypeName( Me ) & "." & GetThreadInfo(1))
+		
+		Dim key As String, vw As NotesView, dc As NotesDocumentCollection
+		key = Me.getId( in_key )
+		'Set vw = Me.sm.core.cache.getView( "(UNID)", Me.db )
+		Set vw = Me.db.Getview("(UNID)")
+		Set dc = vw.GetAllDocumentsByKey( key, True )
+		If ( dc.Count = 0 ) Then
+			Set Me.getCardAgree = Nothing
+		ElseIf ( dc.Count > 1 ) Then
+			Error 1001, "In database '" & Me.db.Title & "' ( path: " & Me.db.FilePath & " ) founded more than one agreement card by key '" & in_key & "' ( count: " & CStr( dc.Count ) & " )"
+		Else
+			Set Me.getCardAgree = Me.getDocObject( dc.GetFirstDocument )
+		End If
+				
+		Call Me.log.traceObject( "result", getCardAgree )
+		Call Me.log.exit( TypeName( Me ) & "." & GetThreadInfo(1))
+		Exit Function
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Function
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Function getOblPckg( in_key As Variant ) As Variant
+		On Error GoTo error_point
+		Call Me.log.enter( TypeName( Me ) & "." & GetThreadInfo(1))
+		
+		Dim key As String, vw As NotesView, dc As NotesDocumentCollection
+		key = Me.getId( in_key )
+		Set vw = Me.sm.core.cache.getView( "(UNID)", Me.db )
+		Set dc = vw.GetAllDocumentsByKey( key, True )
+		If ( dc.Count = 0 ) Then
+			Set Me.getOblPckg = Nothing
+		ElseIf ( dc.Count > 1 ) Then
+			Error 1001, "In database '" & Me.db.Title & "' ( path: " & Me.db.FilePath & " ) founded more than one obligation package by key '" & in_key & "' ( count: " & CStr( dc.Count ) & " )"
+		Else
+			Set Me.getOblPckg = Me.getDocObject( dc.GetFirstDocument )
+		End If
+		
+		
+		Call Me.log.traceObject( "result", getOblPckg )
+		Call Me.log.exit( TypeName( Me ) & "." & GetThreadInfo(1))
+		Exit Function
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Function
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Function getOblPckgActual(in_link As Variant) As Variant
+		On Error GoTo error_point
+		Call Me.log.enter( TypeName( Me ) & "." & GetThreadInfo(1))
+		
+		If ( in_link.domain = DOMAIN_TYPE_TPS_OBLIGATIONS_CARDAGREE ) Then
+			Dim vw As NotesView, dc As NotesDocumentCollection
+			Set vw = Me.db.Getview("(AddDocEmb.Actual)")
+			If ( Not vw Is Nothing ) Then
+				Call vw.Refresh()
+				vw.Autoupdate = False
+				Set dc = vw.Getalldocumentsbykey( in_link.id )
+				If ( dc.Count = 0 ) Then
+					Set Me.getOblPckgActual = Nothing
+				Else
+					Set Me.getOblPckgActual = Me.getDocObject( dc.GetFirstDocument )
+				End If
+			Else
+				Error 1001, "View '(AddDocEmb.Actual)' is not exist"
+			End If
+		Else
+			Error 1001, "The data of type '" & in_link.domain & "' of parameter 'in_link.domain' is wrong"
+		End If
+
+		Call Me.log.traceObject( "result", getOblPckgActual )
+		Call Me.log.exit( TypeName( Me ) & "." & GetThreadInfo(1))
+		Exit Function
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Function
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Function getOblPckgLastdraft(in_link As Variant) As Variant
+		On Error GoTo error_point
+		Call Me.log.enter( TypeName( Me ) & "." & GetThreadInfo(1))
+		
+		If ( in_link.domain = DOMAIN_TYPE_TPS_OBLIGATIONS_CARDAGREE ) Then
+			Dim vw As NotesView, dc As NotesDocumentCollection
+			Set vw = Me.db.Getview("(AddDocEmb)")
+			If ( Not vw Is Nothing ) Then
+				Call vw.Refresh()
+				vw.Autoupdate = False
+				Set dc = vw.Getalldocumentsbykey( in_link.id )
+				If ( dc.Count = 0 ) Then
+					Set Me.getOblPckgLastdraft = Nothing
+				Else
+					Set Me.getOblPckgLastdraft = Me.getDocObject( dc.GetLastDocument )
+				End If
+			Else
+				Error 1001, "View '(AddDocEmb.Actual)' is not exist"
+			End If
+		Else
+			Error 1001, "The data of type '" & in_link.domain & "' of parameter 'in_link.domain' is wrong"
+		End If
+
+		Call Me.log.traceObject( "result", getOblPckgLastdraft )
+		Call Me.log.exit( TypeName( Me ) & "." & GetThreadInfo(1))
+		Exit Function
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Function
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Function getObligation( in_key As Variant ) As Variant
+		On Error GoTo error_point
+		Call Me.log.enter( TypeName( Me ) & "." & GetThreadInfo(1))
+				
+		Dim key As String, vw As NotesView, dc As NotesDocumentCollection
+		key = Me.getId( in_key )
+		Set vw = Me.sm.core.cache.getView( "(UNID)", Me.db )
+		Set dc = vw.GetAllDocumentsByKey( key, True )
+		If ( dc.Count = 0 ) Then
+			Set Me.getObligation = Nothing
+		ElseIf ( dc.Count > 1 ) Then
+			Error 1001, "In database '" & Me.db.Title & "' ( path: " & Me.db.FilePath & " ) founded more than one obligation by key '" & in_key & "' ( count: " & CStr( dc.Count ) & " )"
+		Else
+			Set Me.getObligation = Me.getDocObject( dc.GetFirstDocument )
+		End If
+		
+		
+		Call Me.log.traceObject( "result", getObligation )
+		Call Me.log.exit( TypeName( Me ) & "." & GetThreadInfo(1))
+		Exit Function
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Function
+	'--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+%REM	
+	Function getCardAgreeByContractId____( in_key As String ) As  TPS_Obligations_CardAgree 
+		On Error GoTo error_point
+		Call Me.log.enter( TypeName( Me ) & "." & GetThreadInfo(1))
+		
+		Dim key As String, vw As NotesView, dc As NotesDocumentCollection
+		key = Me.getId( in_key )
+		Set vw = Me.db.Getview("tps.payterms.rent.cardagreeByContractId")
+		If ( vw Is Nothing ) Then
+			Error 1001, "The view 'tps.payterms.rent.cardagreeByContractId' is nothing"
+		End If
+		Set dc = vw.GetAllDocumentsByKey( key, True )
+		If ( dc.Count = 0 ) Then
+			Set Me.getCardAgreeByContractId____ = Nothing
+		ElseIf ( dc.Count > 1 ) Then
+			Error 1001, "In database '" & Me.db.Title & "' ( path: " & Me.db.FilePath & " ) founded more than one Agreeement Card by contract key '" & in_key & "' ( count: " & CStr( dc.Count ) & " )"
+		Else
+			Set Me.getCardAgreeByContractId____ = Me.getDocObject( dc.GetFirstDocument )
+		End If
+				
+		Call Me.log.traceObject( "result", getCardAgreeByContractId____ )
+		Call Me.log.exit( TypeName( Me ) & "." & GetThreadInfo(1))
+		Exit Function
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$		
+	End Function
+%ENDREM	
+	'--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Function createCardAgree( in_initObj As Variant ) As TPS_Obligations_CardAgree
+		On Error GoTo error_point
+		Call Me.log.enter( "<" & TypeName( Me ) & "." & GetThreadInfo(1) & ">" )
+		
+		Dim dbPC As NotesDatabase
+		Set dbPC = Me.sm.base.databases.get( "tps.core.process_center" )
+		If ( dbPC Is Nothing ) Then
+			Set dbPC = Me.sm.base.databases.get( "tps.systems.process_center" )
+			If ( dbPC Is Nothing ) Then
+				Set dbPC = Me.sm.base.databases.get( "tps.core.processcenter" )
+				If ( dbPC Is Nothing ) Then
+					Error 1001, "Не удалось получить БД 'tps.core.process_center'"
+				End If
+			End If
+		End If
+		
+		Dim session As New NotesSession
+		Dim docMail As NotesDocument
+		
+		Set docMail = dbPC.CreateDocument
+		docMail.Form 		= "Task"
+		docMail.Action 		= "InitProcess"
+		docMail.InitServer 	= Me.db.Server
+		docMail.AppPath 	= Me.db.FilePath
+		docMail.UserName 	= session.UserName
+		docMail.ProcessID 	= in_initObj.processID
+		docMail.InitPosID 	= in_initObj.initPositionID 
+		docMail.InitObjID 	= in_initObj.initObjID
+		
+		Call docMail.Save(True, True)
+		If ( DWFAAskForAction( docMail ) <> 1 ) Then
+			'nothing
+		ElseIf ( docMail.Error(0) <> "" ) Then
+			Error 1001, docMail.Error(0)
+		Else
+			Dim docMain As NotesDocument
+			Set docMain = Me.db.GetDocumentByUNID( docMail.docMainUNID(0))
+			If ( docMain Is Nothing ) Then
+				Error 1001, {Ошибка при инициации процесса: docMain Is Nothing}
+			Else
+				Call docMain.ReplaceItemvalue("domain", DOMAIN_TYPE_TPS_OBLIGATIONS_CARDAGREE )
+				Call docMain.ReplaceItemvalue("id", 	docMain.UniversalID )
+				
+				Set createCardAgree = Me.getDocObject( docMain )
+			End If
+		End If
+		
+		Call Me.log.exit( "</" & TypeName( Me ) & "." & GetThreadInfo(1) & ">" )
+		Exit Function
+		
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Function
+	'--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Function createObligation( in_doc As NotesDocument ) As Variant
+		On Error GoTo error_point
+		
+		Set createObligation = Nothing
+		If ( Not ( in_doc Is Nothing ) ) Then
+			Dim cardAgree As Variant
+			Set cardAgree = Me.getDocObject( in_doc )
+			If Not IsEmpty( cardAgree ) Then
+				If ( cardAgree.domain = DOMAIN_TYPE_TPS_OBLIGATIONS_CARDAGREE ) Then
+					
+					Dim session As New NotesSession
+					Dim docNew As NotesDocument 
+					
+					Set docNew = Me.db.Createdocument()
+					Dim obligation As New TPS_Obligations_Obligation(docNew, Me.Me_variant)
+					
+					Call obligation.nd.Replaceitemvalue("Form", "tps.obligations.obligation")
+					Call obligation.nd.Replaceitemvalue("domain", DOMAIN_TYPE_TPS_OBLIGATIONS_OBLIGATION)
+					Call obligation.nd.Replaceitemvalue("id", obligation.nd.Universalid )
+					Call obligation.nd.Replaceitemvalue("CustomID", obligation.nd.Universalid )
+					Call obligation.nd.Replaceitemvalue("docKind", "ExtraDoc" )
+					
+					Dim item As NotesItem
+					Set item = in_doc.Getfirstitem("DWF$Authors")
+					If ( Not item Is Nothing ) Then
+						Call item.Copyitemtodocument( obligation.nd, item.Name )
+					End If
+					Set item = in_doc.Getfirstitem("DWF$Readers")
+					If ( Not item Is Nothing ) Then
+						Call item.Copyitemtodocument( obligation.nd, item.Name )
+					End If
+					Set item = in_doc.Getfirstitem("DWF$Server")
+					If ( Not item Is Nothing ) Then
+						Call item.Copyitemtodocument( obligation.nd, item.Name )
+					End If
+					
+					Dim docTemp As New NotesDocument( Me.db ), ItemRef As NotesItem
+					Call docTemp.Makeresponse( in_doc )
+					Set ItemRef = docTemp.Getfirstitem("$Ref") 
+					If Not ( ItemRef Is Nothing ) Then
+						Call ItemRef.Copyitemtodocument( obligation.nd, "MainRef" )
+					Else
+						Error 4001, {Не удалось сформировать поле "$Ref"}
+					End If
+					
+				Else
+					Error 4001, {Не верный входящий параметр: Домен не равен домену 'карточки заявки'. UNID: } & in_doc.Universalid & { / domain: } & cardAgree.domain
+				End If
+			Else
+				Error 4001, {Не удалось получить объект по входящему параметру (документу). UNID: } & in_doc.Universalid
+			End If
+			
+		End If
+		Set createObligation = obligation
+		
+		Call Me.log.exit( "</" & TypeName( Me ) & "." & GetThreadInfo(1) & ">" )
+		Exit Function
+		
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Function
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Function getChildren(in_Object As variant) As MixCollection
+		On Error GoTo error_point
+
+		Dim mx As New MixCollection
+		Set getChildren = mx
+		
+		Const VIEWNAME = "(obligations.byparentref)"
+		
+		Dim view As NotesView
+		Set view = db.Getview( viewname )
+		If ( view Is Nothing ) Then	Error 4001, {Не найдено представление "} & VIEWNAME & {" в } & db.Filepath
+		Call view.Refresh()
+			
+		Dim col As NotesDocumentCollection, doc As NotesDocument
+		Set col = view.Getalldocumentsbykey( in_Object.nd.CustomID(0) )
+		If ( col.Count > 0 ) Then
+			Dim object As Variant 
+			Set doc = col.Getfirstdocument()
+			While ( Not ( doc Is Nothing ) )
+				Set object = getDocObject(doc)
+				If Not IsEmpty( object ) Then
+					Call mx.Append( object )
+				End If
+				Set doc = col.Getnextdocument( doc )
+			Wend
+		End If
+		Exit Function 
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Function
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Function getObligations( in_link As Variant ) As MixCollection
+		On Error GoTo error_point
+		Call Me.log.enter( TypeName( Me ) & "." & GetThreadInfo(1))
+		
+		If ( in_link.domain = DOMAIN_TYPE_TPS_OBLIGATIONS_OBL_PCKG ) Then
+			Dim mxResult As New MixCollection
+			Set getObligations = mxResult
+
+			Dim vw As NotesView, dc As NotesDocumentCollection
+			Set vw = Me.db.Getview("(obligations.byoblpckg_id)")
+			If ( Not vw Is Nothing ) Then
+				Call vw.Refresh()
+				vw.Autoupdate = False
+				Set dc = vw.Getalldocumentsbykey( in_link.id )
+				If ( dc.Count > 0 ) Then
+					Dim doc As NotesDocument
+					Set doc = dc.Getfirstdocument()
+					While Not ( doc Is Nothing )
+						Dim obl As Variant
+						Set obl = Me.getDocObject( doc )
+						If Not ( obl Is Nothing ) Then
+							Call mxResult.Append( obl )	
+						End If
+						Set doc = dc.Getnextdocument(doc)
+					Wend
+				End If
+			Else
+				Error 1001, "View '(obligations.byoblpckg_id)' is not exist"
+			End If
+		Else
+			Error 1001, "The data of type '" & in_link.domain & "' of parameter 'in_link.domain' is wrong"
+		End If
+		
+		Call Me.log.traceObject( "result", mxResult )		
+		Call Me.log.exit( "</" & TypeName( Me ) & "." & GetThreadInfo(1) & ">" )
+		Exit Function
+		
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Function
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Function getCompany( in_key As Variant ) As Variant
+		On Error GoTo error_point
+		Call Me.log.enter( TypeName( Me ) & "." & GetThreadInfo(1))
+		
+		Dim key As String, vw As NotesView, dc As NotesDocumentCollection
+		key = Me.getId( in_key )
+		'Set vw = Me.sm.core.cache.getView( "(UNID)", Me.db )
+		Set vw = Me.db.Getview("(UNID)")
+		Set dc = vw.GetAllDocumentsByKey( key, True )
+		If ( dc.Count = 0 ) Then
+			Set Me.getCompany = Nothing
+		ElseIf ( dc.Count > 1 ) Then
+			Error 1001, "In database '" & Me.db.Title & "' ( path: " & Me.db.FilePath & " ) founded more than one company by key '" & in_key & "' ( count: " & CStr( dc.Count ) & " )"
+		Else
+			Set Me.getCompany = Me.getDocObject( dc.GetFirstDocument )
+		End If
+		
+		Call Me.log.traceObject( "result", getCompany )
+		Call Me.log.exit( TypeName( Me ) & "." & GetThreadInfo(1))
+		Exit Function
+		
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$ 
+	End Function
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Function getLinkRule( in_key As Variant ) As Variant
+		On Error GoTo error_point
+		Call Me.log.enter( TypeName( Me ) & "." & GetThreadInfo(1))
+		
+		Dim key As String, vw As NotesView, dc As NotesDocumentCollection
+		key = Me.getId( in_key )
+		Set vw = Me.sm.core.cache.getView( "(UNID)", Me.db )
+		Set dc = vw.GetAllDocumentsByKey( key, True )
+		If ( dc.Count = 0 ) Then
+			Set Me.getLinkRule = Nothing
+		ElseIf ( dc.Count > 1 ) Then
+			Error 1001, "In database '" & Me.db.Title & "' ( path: " & Me.db.FilePath & " ) founded more than one 'link rule' by key '" & in_key & "' ( count: " & CStr( dc.Count ) & " )"
+		Else
+			Set Me.getLinkRule = Me.getDocObject( dc.GetFirstDocument )
+		End If
+		
+		Call Me.log.traceObject( "result", getLinkRule )
+		Call Me.log.exit( TypeName( Me ) & "." & GetThreadInfo(1))
+		Exit Function
+		
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$ 
+	End Function
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Function getLinkRuleDict( in_key As Variant ) As Variant
+		On Error GoTo error_point
+		Call Me.log.enter( TypeName( Me ) & "." & GetThreadInfo(1))
+		
+		Dim key As String, vw As NotesView, dc As NotesDocumentCollection
+		key = Me.getId( in_key )
+		Set vw = Me.sm.core.cache.getView( "(UNID)", Me.db )
+		Set dc = vw.GetAllDocumentsByKey( key, True )
+		If ( dc.Count = 0 ) Then
+			Set Me.getLinkRuleDict = Nothing
+		ElseIf ( dc.Count > 1 ) Then
+			Error 1001, "In database '" & Me.db.Title & "' ( path: " & Me.db.FilePath & " ) founded more than one 'link rule dictionary' by key '" & in_key & "' ( count: " & CStr( dc.Count ) & " )"
+		Else
+			Set Me.getLinkRuleDict = Me.getDocObject( dc.GetFirstDocument )
+		End If
+		
+		Call Me.log.traceObject( "result", getLinkRuleDict )
+		Call Me.log.exit( TypeName( Me ) & "." & GetThreadInfo(1))
+		Exit Function
+		
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$ 
+	End Function
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Function getOblCondititionDict( in_key As Variant ) As Variant
+		On Error GoTo error_point
+		Call Me.log.enter( TypeName( Me ) & "." & GetThreadInfo(1))
+		
+		Dim key As String, vw As NotesView, dc As NotesDocumentCollection
+		key = Me.getId( in_key )
+		Set vw = Me.sm.core.cache.getView( "(UNID)", Me.db )
+		Set dc = vw.GetAllDocumentsByKey( key, True )
+		If ( dc.Count = 0 ) Then
+			Set Me.getOblCondititionDict = Nothing
+		ElseIf ( dc.Count > 1 ) Then
+			Error 1001, "In database '" & Me.db.Title & "' ( path: " & Me.db.FilePath & " ) founded more than one 'obligations conditition dictionary' by key '" & in_key & "' ( count: " & CStr( dc.Count ) & " )"
+		Else
+			Set Me.getOblCondititionDict = Me.getDocObject( dc.GetFirstDocument )
+		End If
+		
+		Call Me.log.traceObject( "result", getOblCondititionDict )
+		Call Me.log.exit( TypeName( Me ) & "." & GetThreadInfo(1))
+		Exit Function
+		
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$ 
+	End Function
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Function getObligationDict( in_key As Variant ) As Variant
+		On Error GoTo error_point
+		Call Me.log.enter( TypeName( Me ) & "." & GetThreadInfo(1))
+		
+		Dim key As String, vw As NotesView, dc As NotesDocumentCollection
+		key = Me.getId( in_key )
+		Set vw = Me.sm.core.cache.getView( "(UNID)", Me.db )
+		Set dc = vw.GetAllDocumentsByKey( key, True )
+		If ( dc.Count = 0 ) Then
+			Set Me.getObligationDict = Nothing
+		ElseIf ( dc.Count > 1 ) Then
+			Error 1001, "In database '" & Me.db.Title & "' ( path: " & Me.db.FilePath & " ) founded more than one 'obligation dictionary' by key '" & in_key & "' ( count: " & CStr( dc.Count ) & " )"
+		Else
+			Set Me.getObligationDict = Me.getDocObject( dc.GetFirstDocument )
+		End If
+		
+		Call Me.log.traceObject( "result", getObligationDict )
+		Call Me.log.exit( TypeName( Me ) & "." & GetThreadInfo(1))
+		Exit Function
+		
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$ 
+	End Function
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Function getCategoryDict( in_key As Variant ) As Variant
+		On Error GoTo error_point
+		Call Me.log.enter( TypeName( Me ) & "." & GetThreadInfo(1))
+		
+		Dim key As String, vw As NotesView, dc As NotesDocumentCollection
+		key = Me.getId( in_key )
+		Set vw = Me.sm.core.cache.getView( "(UNID)", Me.db )
+		Set dc = vw.GetAllDocumentsByKey( key, True )
+		If ( dc.Count = 0 ) Then
+			Set Me.getCategoryDict = Nothing
+		ElseIf ( dc.Count > 1 ) Then
+			Error 1001, "In database '" & Me.db.Title & "' ( path: " & Me.db.FilePath & " ) founded more than one 'category' by key '" & in_key & "' ( count: " & CStr( dc.Count ) & " )"
+		Else
+			Set Me.getCategoryDict = Me.getDocObject( dc.GetFirstDocument )
+		End If
+		
+		Call Me.log.traceObject( "result", getCategoryDict )
+		Call Me.log.exit( TypeName( Me ) & "." & GetThreadInfo(1))
+		Exit Function
+		
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$ 
+	End Function
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Function getExecutorDict( in_key As Variant ) As Variant
+		On Error GoTo error_point
+		Call Me.log.enter( TypeName( Me ) & "." & GetThreadInfo(1))
+		
+		Dim key As String, vw As NotesView, dc As NotesDocumentCollection
+		key = Me.getId( in_key )
+		Set vw = Me.sm.core.cache.getView( "(UNID)", Me.db )
+		Set dc = vw.GetAllDocumentsByKey( key, True )
+		If ( dc.Count = 0 ) Then
+			Set Me.getExecutorDict = Nothing
+		ElseIf ( dc.Count > 1 ) Then
+			Error 1001, "In database '" & Me.db.Title & "' ( path: " & Me.db.FilePath & " ) founded more than one 'executor' by key '" & in_key & "' ( count: " & CStr( dc.Count ) & " )"
+		Else
+			Set Me.getExecutorDict = Me.getDocObject( dc.GetFirstDocument )
+		End If
+		
+		Call Me.log.traceObject( "result", getExecutorDict )
+		Call Me.log.exit( TypeName( Me ) & "." & GetThreadInfo(1))
+		Exit Function
+		
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Function
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------	
+	Function dialogSelectCardAgree( in_isMult As Boolean ) As MixCollection
+		On Error GoTo error_point
+		Call Me.log.enter( "<" & TypeName( Me ) & "." & GetThreadInfo(1) & ">" )
+		Call Me.log.parameter( "in_isMult", in_isMult )
+		
+		Dim mxResult As New MixCollection
+		Set dialogSelectCardAgree = mxResult
+		
+		Dim vw As NotesView, viewname As String
+		viewname = "cardagree.bycontragent.all_notdelete"
+		Set vw = Me.db.getView( viewname )
+		If ( vw Is Nothing ) Then
+			Error 1001, {View '} & viewname & {' is not exist}
+		End If		
+		
+		Dim ws As New NotesUIWorkspace, dc As NotesDocumentCollection
+		Set dc = ws.PickListCollection( 3, in_isMult, Me.db.Server, Me.db.FilePath, vw.Name, "Список договоров", "Выберите документ(ы) и нажмите  OK" )
+		If ( dc.Count > 0 ) Then
+			Dim doc As NotesDocument
+			Set doc = dc.GetFirstDocument
+			Do While Not ( doc Is Nothing )
+				Dim c As Variant
+				Set c = Me.getDocObject(doc)
+				Call mxResult.Append( c )
+				Set doc = dc.GetNextDocument( doc )
+			Loop
+		End If
+		
+		Call Me.log.exit( "</" & TypeName( Me ) & "." & GetThreadInfo(1) & ">" )
+		Exit Function
+		
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Function
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------	
+	Function dialogSelectObligations( in_isMult As Boolean, in_link As Variant ) As MixCollection
+		On Error GoTo error_point
+		Call Me.log.enter( "<" & TypeName( Me ) & "." & GetThreadInfo(1) & ">" )
+		Call Me.log.parameter( "in_isMult", in_isMult )
+				
+		Dim mxResult As New MixCollection
+		Set dialogSelectObligations = mxResult
+		
+		If ( in_link.domain = DOMAIN_TYPE_TPS_OBLIGATIONS_OBL_PCKG ) Then
+			Dim vw As NotesView, viewname As String
+			viewname = "(emb.obligations.bydate)"
+			Set vw = Me.db.getView( viewname )
+			If ( vw Is Nothing ) Then
+				Error 1001, {View '} & viewname & {' is not exist}
+			End If
+			
+			Dim ws As New NotesUIWorkspace, dc As NotesDocumentCollection
+			Set dc = ws.PickListCollection( 3, in_isMult, Me.db.Server, Me.db.FilePath, vw.Name, "Список обязательств", "Выберите документ(ы) и нажмите  OK", in_link.id )
+			If ( dc.Count > 0 ) Then
+				Dim doc As NotesDocument
+				Set doc = dc.GetFirstDocument
+				Do While Not ( doc Is Nothing )
+					Dim c As Variant
+					Set c = Me.getDocObject(doc)
+					Call mxResult.Append( c )
+					Set doc = dc.GetNextDocument( doc )
+				Loop
+			End If
+		Else
+			Error 1001, "The data of type '" & in_link.domain & "' of parameter 'in_link.domain' is wrong"
+		End If
+
+		Call Me.log.exit( "</" & TypeName( Me ) & "." & GetThreadInfo(1) & ">" )
+		Exit Function
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Function
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Function getConstant( in_key As Variant ) As Variant
+		On Error GoTo error_point
+		Call Me.log.enter( TypeName( Me ) & "." & GetThreadInfo(1))
+		
+		Dim key As String, vw As NotesView, dc As NotesDocumentCollection
+		key = Me.getId( in_key )
+		Set vw = Me.sm.core.cache.getView( "(UNID)", Me.db )
+		Set dc = vw.GetAllDocumentsByKey( key, True )
+		If ( dc.Count = 0 ) Then
+			Set Me.getConstant = Nothing
+		ElseIf ( dc.Count > 1 ) Then
+			Error 1001, "In database '" & Me.db.Title & "' ( path: " & Me.db.FilePath & " ) founded more than one 'constant' by key '" & in_key & "' ( count: " & CStr( dc.Count ) & " )"
+		Else
+			Set Me.getConstant = Me.getDocObject( dc.GetFirstDocument )
+		End If
+		
+		Call Me.log.traceObject( "result", getConstant )
+		Call Me.log.exit( TypeName( Me ) & "." & GetThreadInfo(1))
+		Exit Function
+		
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$ 
+	End Function
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Function getReminderrule( in_key As Variant ) As Variant
+		On Error GoTo error_point
+		Call Me.log.enter( TypeName( Me ) & "." & GetThreadInfo(1))
+		
+		Dim key As String, vw As NotesView, dc As NotesDocumentCollection
+		key = Me.getId( in_key )
+		Set vw = Me.sm.core.cache.getView( "(UNID)", Me.db )
+		Set dc = vw.GetAllDocumentsByKey( key, True )
+		If ( dc.Count = 0 ) Then
+			Set Me.getReminderrule = Nothing
+		ElseIf ( dc.Count > 1 ) Then
+			Error 1001, "In database '" & Me.db.Title & "' ( path: " & Me.db.FilePath & " ) founded more than one 'reminder rule' by key '" & in_key & "' ( count: " & CStr( dc.Count ) & " )"
+		Else
+			Set Me.getReminderrule = Me.getDocObject( dc.GetFirstDocument )
+		End If
+		
+		Call Me.log.traceObject( "result", getReminderrule )
+		Call Me.log.exit( TypeName( Me ) & "." & GetThreadInfo(1))
+		Exit Function
+		
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$ 
+	End Function
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Function createObligationDateUpdate( in_doc As NotesDocument ) As Variant
+		On Error GoTo error_point
+		
+		'
+		Set createObligationDateUpdate = Nothing
+		If ( Not ( in_doc Is Nothing ) ) Then
+			Dim obligation As Variant
+			Set obligation = Me.getDocObject( in_doc )
+			If Not IsEmpty( obligation ) Then
+				If ( obligation.domain = DOMAIN_TYPE_TPS_OBLIGATIONS_OBLIGATION ) Then
+					
+					Dim session As New NotesSession
+					Dim docNew As NotesDocument 
+					
+					Set docNew = Me.db.Createdocument()
+					Dim oblDateUpdate As New TPS_Obligations_DateUpdate(docNew, Me.Me_variant)
+					
+					Call oblDateUpdate.nd.Replaceitemvalue("Form", "tps.obligations.obligation_date_update")
+					Call oblDateUpdate.nd.Replaceitemvalue("domain", DOMAIN_TYPE_TPS_OBLIGATIONS_DATE_UPDATE)
+					Call oblDateUpdate.nd.Replaceitemvalue("id", obligation.nd.Universalid )
+					Call oblDateUpdate.nd.Replaceitemvalue("CustomID", obligation.nd.Universalid )
+					Call oblDateUpdate.nd.Replaceitemvalue("docKind", "ExtraDoc" )
+					
+					Call oblDateUpdate.nd.Replaceitemvalue("obligation_id", obligation.id )
+					Call oblDateUpdate.nd.Replaceitemvalue("obligation_title", obligation.title )
+					Call oblDateUpdate.nd.Replaceitemvalue("obligation_domain", obligation.domain )
+					'------------------------
+					Dim item As NotesItem
+					Set item = in_doc.Getfirstitem("DWF$Authors")
+					If ( Not item Is Nothing ) Then
+						Call item.Copyitemtodocument( oblDateUpdate.nd, item.Name )
+					End If
+					Set item = in_doc.Getfirstitem("DWF$Readers")
+					If ( Not item Is Nothing ) Then
+						Call item.Copyitemtodocument( oblDateUpdate.nd, item.Name )
+					End If
+					Set item = in_doc.Getfirstitem("DWF$Server")
+					If ( Not item Is Nothing ) Then
+						Call item.Copyitemtodocument( oblDateUpdate.nd, item.Name )
+					End If
+					'------------------------
+					Dim docTemp As New NotesDocument( Me.db ), ItemRef As NotesItem
+					Call docTemp.Makeresponse( in_doc )
+					Set ItemRef = docTemp.Getfirstitem("$Ref") 
+					If Not ( ItemRef Is Nothing ) Then
+						Call ItemRef.Copyitemtodocument( oblDateUpdate.nd, "ParentRef" )
+					Else
+						Error 4001, {Не удалось сформировать поле "$Ref"}
+					End If
+					'------------------------
+					Set ItemRef = in_doc.Getfirstitem("MainRef") 
+					If Not ( ItemRef Is Nothing ) Then
+						Call ItemRef.Copyitemtodocument( oblDateUpdate.nd, "MainRef" )
+					Else
+						Error 4001, {Не удалось сформировать поле "$Ref"}
+					End If
+					'------------------------
+				Else
+					Error 4001, {Не верный входящий параметр: Домен не равен домену 'карточки заявки'. UNID: } & in_doc.Universalid & { / domain: } & obligation.domain
+				End If
+			Else
+				Error 4001, {Не удалось получить объект по входящему параметру (документу). UNID: } & in_doc.Universalid
+			End If
+			
+		End If
+		Set createObligationDateUpdate = oblDateUpdate
+		
+		Exit Function
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$ 
+	End Function
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Function getParents( in_doc As NotesDocument ) As Variant
+		On Error GoTo error_point
+		
+		Dim result As New Mixcollection
+		Set getParents = result
+		
+		Dim vIDs As Variant, objLink As Variant, obl As Variant
+		If in_doc.Hasitem("parent_obl_id") Then
+			If ( in_doc.Getitemvalue("parent_obl_id")(0) <> "" ) Then
+				Set objLink =  New Objectlink( in_doc.Getitemvalue("parent_obl_id")(0), in_doc.Getitemvalue("parent_obl_title")(0), in_doc.Getitemvalue("parent_obl_domain")(0) )
+				Set obl = Me.getObject( objLink )
+				If ( Not ( obl Is Nothing ) ) Then
+					Call result.Append( obl )
+				End If
+			End If
+		End If
+		
+		If in_doc.Hasitem("parent_extra_obl_id") Then
+			vIDs = in_doc.Getfirstitem("parent_extra_obl_id").Values
+			If ( vIDs(0) <> "" ) Then
+				ForAll id In vIDs
+					If ( id <> "" ) Then
+						Set objLink = New Objectlink( CStr(id), "", DOMAIN_TYPE_TPS_OBLIGATIONS_OBLIGATION )
+						Set obl = Me.getObject( objLink )
+						If ( Not ( obl Is Nothing ) ) Then
+							Call result.Append( obl )
+						End If
+					End If
+				End ForAll
+			End If
+		End If
+		
+		
+		Exit Function
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Function
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------	
+	Function dialogSelectConstants( in_isMulty As Boolean ) As MixCollection
+		On Error GoTo error_point
+		
+		Dim mxResult As New MixCollection
+		Set dialogSelectConstants = mxResult
+		
+		Dim s As New NotesSession, db As NotesDatabase, ws As New NotesUIWorkspace, dc As NotesDocumentCollection
+		Set db = Me.db
+		Set dc = ws.PickListCollection( 3, in_isMulty, db.Server, db.FilePath, "ui.constant.active", "Выберите документ", " " )
+		If ( dc.Count > 0 ) Then
+			Dim doc As NotesDocument
+			Set doc = dc.GetFirstDocument
+			Do While Not ( doc Is Nothing )
+				Dim constant As Variant
+				Set constant = Me.getDocObject( doc )
+				Call mxResult.Append( constant )
+				Set doc = dc.GetNextDocument( doc )
+			Loop
+		End If
+		Exit Function
+		
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$			
+	End Function
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------	
+	Function dialogSelectOblConditionsDict( in_isMulty As Boolean, in_Companykey As String ) As MixCollection
+		On Error GoTo error_point
+		
+		Dim mxResult As New MixCollection
+		Set dialogSelectOblConditionsDict = mxResult
+		
+		Dim s As New NotesSession, db As NotesDatabase, ws As New NotesUIWorkspace, dc As NotesDocumentCollection
+		Set db = Me.db
+		Set dc = ws.PickListCollection( 3, in_isMulty, db.Server, db.FilePath, "(obl_conditions_dict.bycompany_id.active)",_
+		"Выберите документ", " ", in_Companykey )
+		If ( dc.Count > 0 ) Then
+			Dim doc As NotesDocument
+			Set doc = dc.GetFirstDocument
+			Do While Not ( doc Is Nothing )
+				Dim cndt As Variant
+				Set cndt = Me.getDocObject( doc )
+				Call mxResult.Append( cndt )
+				Set doc = dc.GetNextDocument( doc )
+			Loop
+		End If
+		Exit Function
+		
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$			
+	End Function
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------	
+	Public Function isAllObligationsComplete(cardAgree As Variant) As Boolean
+		' все ли обязательства из актуального пакета указанной рутовой карточки исполнены
+		' исполненными считаются закрытые обязательства
+		On Error GoTo error_point
+
+		Dim v As Variant
+		ReDim v(0) As String
+		isAllObligationsComplete = me.isAllObligationsCompleteExcept(cardAgree, v)
+		
+
+		Exit Function
+		
+error_point:
+		Error Err, TypeName(Me) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$		
+	End Function
+
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------	
+	Public Function isAllObligationsCompleteExcept(cardAgree As Variant, exceptOblIds As Variant) As Boolean
+		' все ли обязательства из актуального пакета указанной рутовой карточки исполнены
+		' исполненными считаются закрытые обязательства
+		' exceptOblUnids - массив юнидов обязательств, которые нужно ИГНОРИТЬ при проверке - так надо!
+		On Error GoTo error_point
+
+		Dim res As Boolean
+
+		Dim pkg As Variant
+		Set pkg = getOblPckgActual(cardAgree)
+		If(pkg Is Nothing)Then Error 8000, "Нет актуального пакета обязательств"
+		
+		Dim obls As mixcollection
+		Set obls = getObligations(pkg)
+		
+		If(obls Is Nothing)Then Error 8000, "В пакете нет обязательств"
+		If(obls.Count = 0)Then Error 8000, "В пакете нет обязательств"
+		
+		res = True
+		ForAll obl In obls.Array
+			If (IsNull(ArrayGetIndex(exceptOblIds, obl.id)))Then ' проверяем только те, которые нет в списке игнора
+				If(obl.nd.getItemValue("ProcessId")(0) <> "")Then
+					'вариант для обязательства с процессом
+					If(UCase(obl.nd.getItemValue("StatusState")(0)) <> "COMPLETE")Then
+						res = False
+						Exit ForAll
+					End If
+				Else
+					'вариант без процесса
+					If(obl.nd.getItemValue("is_complete")(0) <> "1")Then
+						res = False
+						Exit ForAll
+					End If
+				End If 
+			End If 
+		End ForAll
+		
+		isAllObligationsCompleteExcept = res
+		
+
+		Exit Function
+		
+error_point:
+		Error Err, TypeName(Me) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$		
+	End Function
+
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Public Function cancelAndCloseCardAgree(card As Variant)As Integer
+		On Error GoTo error_point
+
+		Dim ag As NotesAgent
+		Set ag = me.db.getAgent("(app.process.cancelAndCloseCard)")
+		Call ag.run(card.nd.noteId)
+
+		cancelAndCloseCardAgree = 1
+
+
+		Exit Function
+		
+error_point:
+		Error Err, TypeName(Me) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$		
+		
+	End Function
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Public Function fixBaseDates(card As Variant)As Integer
+		' фиксирует базовые сроки у переданной card через запуск агента на серванте
+		On Error GoTo error_point
+
+		Dim ag As Variant
+		Set ag = me.db.getAgent("(app.fixDatesBase.byCard)")
+		
+		Call ag.run(card.nd.noteId)
+
+
+		Exit Function
+		
+error_point:
+		Error Err, TypeName(Me) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$		
+		
+	End Function
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Public Sub startObligationsByCard(card As Variant)
+		'запускает обязательства указанной карточки по процессам, если он указан
+		'вывает агентскую версию функции
+		On Error GoTo error_point
+
+		Dim ag As NotesAgent
+		Set ag = me.db.getAgent("(app.startObligationsProcess)")
+		
+		Call ag.run(card.nd.noteId)
+
+
+		Exit Sub
+		
+error_point:
+		Error Err, TypeName(Me) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$		
+		
+	End Sub
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Public Sub startObligationsByCard_agent(card As Variant)
+		'данную функцию напрямую не вызывать - она вызывается через агента
+		'запускает обязательства указанной карточки по процессам, если он указан
+		On Error GoTo error_point
+		
+		Dim s As New NotesSession
+		Dim setting As Variant, sm As Variant
+		
+		Dim dbPC As NotesDatabase
+		Set dbPC = Me.sm.base.databases.get( "tps.core.process_center" )
+		If ( dbPC Is Nothing ) Then
+			Set dbPC = Me.sm.base.databases.get( "tps.systems.process_center" )
+			If ( dbPC Is Nothing ) Then
+				Set dbPC = Me.sm.base.databases.get( "tps.core.processcenter" )
+				If ( dbPC Is Nothing ) Then
+					Error 1001, "Не удалось получить БД 'tps.core.process_center'"
+				End If
+			End If
+		End If
+
+		Set sm = getServicesManager()
+		Set setting = sm.core.settings( me.db ).get( "tps.obligations.obligation.processId" )
+		If(setting Is Nothing)Then Exit Sub 'нет настройки - нет процесса
+
+		Dim processId As String
+		processId = setting.value
+		If(processId = "")Then Exit Sub 'нет настройки - нет процесса
+		
+		Dim pkg As Variant
+		Set pkg = getOblPckgActual(card)
+		If(pkg Is Nothing)Then Error 1001, "Нет актуального пакета обязательств"
+		
+		Dim obls As mixcollection
+		Set obls = getObligations(pkg)
+		If(obls.count = 0)Then Error 1001, "В актуальном пакете нет обязательств"
+		
+		ForAll obl In obls.array
+			If(obl.nd.getItemValue("ProcessId")(0) = "")Then
+				Dim docMail As NotesDocument
+				
+				Set docMail = dbPC.CreateDocument
+				docMail.Form 		= "Task"
+				docMail.Action 		= "InitProcess"
+				docMail.InitServer 	= Me.db.Server
+				docMail.AppPath 	= Me.db.FilePath
+				docMail.UserName 	= s.UserName
+				docMail.ProcessID 	= processId
+				docMail.InitPosID 	= obl.nd.getItemValue("ObligationRespObjAccess")(0)
+				docMail.InitObjID 	= obl.nd.getItemValue("ObligationRespObjAccess")(0)
+				docMail.initOnDocId = obl.nd.universalId
+				
+				Call docMail.Save(True, True)
+				If ( DWFAAskForAction( docMail ) <> 1 ) Then
+					'nothing
+				ElseIf ( docMail.Error(0) <> "" ) Then
+					Error 1001, docMail.Error(0)
+				Else
+					Dim oblDoc As NotesDocument
+					Set oblDoc = Me.db.GetDocumentByUNID( docMail.docMainUNID(0))
+					If ( oblDoc Is Nothing ) Then Error 1001, {Ошибка при инициации процесса: docMain Is Nothing}
+				End If
+			End If
+		End ForAll
+
+
+		Exit Sub
+		
+error_point:
+		Error Err, TypeName(Me) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$		
+	End Sub
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Public Sub copyObligationsFromContract(card As Variant)
+		On Error GoTo error_point
+
+		Dim ag As NotesAgent
+		Set ag = me.db.getAgent("(app.copyObligationsFromContract)")
+		Call ag.run(card.nd.noteid)
+
+
+		Exit Sub
+		
+error_point:
+		Error Err, TypeName(Me) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$		
+		
+	End Sub
+	
+End Class
+
+
+'======================================================================================================================================
+'	CLASS TPS_Obligations_CardAgree
+'======================================================================================================================================
+Class TPS_Obligations_CardAgree As Fbase_abstract_object_doc
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	'	PUBLIC:
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Sub New(in_doc As NotesDocument, in_ps As Variant)
+	End Sub
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Property Get id As String
+		On Error GoTo error_point
+		If (m_doc.HasItem( "id" )) Then
+			id = m_doc.id(0)
+		Else
+			id = m_doc.UniversalID
+		End If
+		Exit Property 
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Property
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Property Get domain As String
+		On Error GoTo error_point
+		domain = DOMAIN_TYPE_TPS_OBLIGATIONS_CARDAGREE
+		Exit Property 
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Property
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Property Get title As String
+		On Error GoTo error_point
+		If m_doc.Hasitem("ContractType") Then
+			title = m_doc.ContractType(0)	
+		End If
+		If m_doc.Hasitem("Company") Then
+			If (title <> "") Then
+				title = title & {. } & m_doc.Company(0)	
+			Else
+				title = m_doc.Company(0)
+			End If
+		End If
+		If m_doc.Hasitem("Contragent_title") Then
+			If (title <> "") Then
+				title = title & { и } & m_doc.Contragent_title(0)	
+			Else
+				title = m_doc.Contragent_title(0)
+			End If
+		End If
+		Exit Property 
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Property
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------	
+	Property Get contract As Variant
+		On Error GoTo error_point
+		Call Me.log.enter( TypeName( Me ) & "." & GetThreadInfo(1))
+		
+		Set contract = New ObjectLink( Me.nd.contract_id(0), Me.nd.contract_title(0), Me.nd.contract_domain(0) )
+		
+		Call Me.log.traceObject( "result", contract )
+		Call Me.log.exit( TypeName( Me ) & "." & GetThreadInfo(1))
+		Exit Property
+		
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Property
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------	
+	Property Get mall As Variant
+		On Error GoTo error_point
+		Call Me.log.enter( TypeName( Me ) & "." & GetThreadInfo(1))
+		
+		Set mall = New ObjectLink( Me.nd.mall_id(0), Me.nd.mall_title(0), Me.nd.mall_domain(0) )
+		
+		Call Me.log.traceObject( "result", Mall )
+		Call Me.log.exit( TypeName( Me ) & "." & GetThreadInfo(1))
+		Exit Property
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Property
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------	
+	Property Get places As MixCollection
+		On Error GoTo error_point
+		Call Me.log.enter( TypeName( Me ) & "." & GetThreadInfo(1))
+		
+		Dim mxResult As New MixCollection
+		Set places = mxResult
+		If ( Me.nd.place_id(0) <> "" ) Then
+			Dim i As Integer
+			For i=0 To UBound( Me.nd.place_id )
+				Dim cId As String, cTitle As String, cDomain As String
+				cId = Me.nd.place_id(i)
+				cTitle = Me.nd.place_title(i)
+				cDomain = Me.nd.place_domain(i)
+				
+				Dim c As New ObjectLink( cId, cTitle, cDomain )
+				Call mxResult.Append( c )
+			Next
+		End If
+		
+		Call Me.log.traceObject( "result", mxResult )
+		Call Me.log.exit( TypeName( Me ) & "." & GetThreadInfo(1))
+		Exit Property
+		
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Property
+		
+			
+End Class
+
+'======================================================================================================================================
+'	CLASS TPS_Obligations_OblPckg
+'======================================================================================================================================
+Class TPS_Obligations_OblPckg As Fbase_abstract_object_doc
+	Private m_ratePeriodType As String
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	'	PUBLIC:
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Sub New (in_doc As NotesDocument, in_ps As Variant)
+	End Sub
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Property Get id As String
+		On Error GoTo error_point
+		If (m_doc.HasItem( "id" )) Then
+			id = m_doc.id(0)
+		Else
+			id = m_doc.UniversalID
+		End If
+		Exit Property 
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Property
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Property Get domain As String
+		On Error GoTo error_point
+		domain = DOMAIN_TYPE_TPS_OBLIGATIONS_OBL_PCKG
+		Exit Property 
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Property
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Property Get title As String
+		On Error GoTo error_point
+		
+		If (m_doc.HasItem( "title" )) Then
+			title = m_doc.title(0)
+		End If
+		
+		Exit Property 
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Property
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Property Get dateBaseBlocked As Integer
+		On Error GoTo error_point
+		
+		If m_doc.HasItem( "date_base_blocked" ) Then
+			dateBaseBlocked = m_doc.date_base_blocked(0)
+		End If
+		
+		Exit Property 
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Property
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Property Set dateBaseBlocked As Integer
+		On Error GoTo error_point
+		Call m_doc.Replaceitemvalue( "date_base_blocked", dateBaseBlocked )
+		Exit Property 
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Property
+	
+	
+End Class
+
+'======================================================================================================================================
+'	CLASS TPS_Obligations_Obligation
+'======================================================================================================================================
+Class TPS_Obligations_Obligation As Fbase_abstract_object_doc
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	'	PUBLIC:
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Sub New (in_doc As NotesDocument, in_ps As Variant)
+	End Sub
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Property Get id As String
+		On Error GoTo error_point
+		If (m_doc.HasItem( "id" )) Then
+			id = m_doc.id(0)
+		Else
+			id = m_doc.UniversalID
+		End If
+		Exit Property 
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Property
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Property Get domain As String
+		On Error GoTo error_point
+		domain = DOMAIN_TYPE_TPS_OBLIGATIONS_OBLIGATION
+		Exit Property 
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Property
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Property Get title As String
+		On Error GoTo error_point
+		
+		If (m_doc.HasItem( "title" )) Then
+			title = m_doc.title(0)
+		End If
+		
+		Exit Property 
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Property
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Property Set title As String
+		On Error GoTo error_point
+		Call m_doc.Replaceitemvalue( "title", title )
+		Exit Property 
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Property
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Property Get number As Variant
+		On Error GoTo error_point
+		
+		If (m_doc.HasItem( "number" )) Then
+			number = m_doc.number(0)
+		End If
+		
+		Exit Property 
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Property
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Property Set number As Variant
+		On Error GoTo error_point
+		Call m_doc.Replaceitemvalue( "number", number )
+		Exit Property 
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Property
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Property Get isRepeate As Boolean
+		On Error GoTo error_point
+		
+		If m_doc.HasItem( "is_repeate" ) Then
+			isRepeate = ( m_doc.is_repeate(0) = "1" )
+		End If
+		
+		Exit Property 
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Property
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Property Set isRepeate As Boolean
+		On Error GoTo error_point
+		If ( isRepeate ) Then
+			Call m_doc.Replaceitemvalue( "is_repeate", "1" )	
+		Else
+			Call m_doc.Replaceitemvalue( "is_repeate", "0" )
+		End If
+		Exit Property 
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Property
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Property Get isMandatory As Boolean
+		On Error GoTo error_point
+		
+		If m_doc.HasItem( "is_mandatory" ) Then
+			isMandatory = ( Me.nd.is_mandatory(0) = "1" )
+		End If
+		
+		Exit Property 
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Property
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Property Set isMandatory As Boolean
+		On Error GoTo error_point
+		If ( isMandatory ) Then
+			Call m_doc.Replaceitemvalue( "is_mandatory", "1" )	
+		Else
+			Call m_doc.Replaceitemvalue( "is_mandatory", "0" )
+		End If
+		Exit Property 
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Property
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Property Get isMulti As Boolean
+		On Error GoTo error_point
+		
+		If m_doc.HasItem( "is_multi" ) Then
+			isMulti = ( Me.nd.is_multi(0) = "1" )
+		End If
+		
+		Exit Property 
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Property
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Property Set isMulti As Boolean
+		On Error GoTo error_point
+		If ( isMulti ) Then
+			Call m_doc.Replaceitemvalue( "is_multi", "1" )	
+		Else
+			Call m_doc.Replaceitemvalue( "is_multi", "0" )
+		End If
+		Exit Property 
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Property
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Property Get dateBase As Variant
+		On Error GoTo error_point
+		
+		If m_doc.HasItem( "date_base" ) Then
+			dateBase = m_doc.date_base(0)
+		End If
+		
+		Exit Property 
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Property
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Property Set dateBase As Variant
+		On Error GoTo error_point
+		If ( CStr(dateBase) <> "" ) Then
+			Dim dt As New NotesDateTime( CStr(dateBase) )
+			Call m_doc.Replaceitemvalue( "date_base", CDat(dt.DateOnly) )	
+		End If
+		Exit Property
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Property
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Property Get dateAdvice As Variant
+		On Error GoTo error_point
+		
+		If m_doc.HasItem( "date_advise" ) Then
+			dateAdvice = m_doc.date_advise(0)
+		End If
+		
+		Exit Property 
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Property
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Property Set dateAdvice As Variant
+		On Error GoTo error_point
+		If ( CStr(dateAdvice) <> "" ) Then
+			Dim dt As New NotesDateTime( CStr(dateAdvice) )
+			Call m_doc.Replaceitemvalue( "date_advise", CDat(dt.DateOnly) )	
+		End If
+		Exit Property 
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Property
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Property Get dependDescription As String
+		On Error GoTo error_point
+		
+		If m_doc.HasItem( "depend_description" ) Then
+			dependDescription = m_doc.depend_description(0)
+		End If
+		
+		Exit Property 
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Property
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Property Set dependDescription As String
+		On Error GoTo error_point
+		Call m_doc.Replaceitemvalue( "depend_description", dependDescription )
+		Exit Property 
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Property
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Property Get description As String
+		On Error GoTo error_point
+		
+		If m_doc.HasItem( "description" ) Then
+			description = m_doc.description(0)
+		End If
+		
+		Exit Property 
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Property
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Property Set description As String
+		On Error GoTo error_point
+		Call m_doc.Replaceitemvalue( "description", description )
+		Exit Property 
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Property
+	
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Property Get dateBaseBlocked As Integer
+		On Error GoTo error_point
+		
+		If m_doc.HasItem( "date_base_blocked" ) Then
+			dateBaseBlocked = m_doc.date_base_blocked(0)
+		End If
+		
+		Exit Property 
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Property
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Property Set dateBaseBlocked As Integer
+		On Error GoTo error_point
+		Call m_doc.Replaceitemvalue( "date_base_blocked", dateBaseBlocked )
+		Exit Property 
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Property
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Property Get isIndependent As Boolean
+		On Error GoTo error_point
+		
+		If ( Not m_doc.HasItem( "ParentRef" ) ) Then
+			isIndependent = True
+		Else
+			If m_doc.HasItem( "obl_Pckg_id" ) Then
+				If ( m_doc.Getitemvalue("ParentRef")(0) = m_doc.Getitemvalue("obl_Pckg_id")(0) ) Then
+					isIndependent = True
+				End If
+			End If
+			If m_doc.Hasitem("obl_repeat_source_id" ) Then 'add by Tambiev. При создании отдельных записей по повторам, parentRef остается; но такой парент уже не отображается и нужен только для истории
+				isIndependent = True
+			End If
+		End If
+		
+		Exit Property 
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Property
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Property Get datePrognostic As Variant
+		On Error GoTo error_point
+		
+		If m_doc.HasItem( "date_prognostic" ) Then
+			datePrognostic = m_doc.date_prognostic(0)
+		End If
+		
+		Exit Property 
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Property
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Property Set datePrognostic As Variant
+		On Error GoTo error_point
+		If ( CStr(datePrognostic) <> "" ) Then
+			Dim dt As New NotesDateTime( CStr(datePrognostic) )
+			Call m_doc.Replaceitemvalue( "date_prognostic", CDat(dt.DateOnly) )	
+		End If
+		Exit Property
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Property
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Property Get respondent As String
+		On Error GoTo error_point
+		
+		If m_doc.HasItem( "respondent" ) Then
+			respondent = m_doc.respondent(0)
+		End If
+		
+		Exit Property 
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Property
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Property Get obligationKind As String
+		On Error GoTo error_point
+		
+		If m_doc.HasItem( "obligation_kind" ) Then
+			obligationKind = m_doc.obligation_kind(0)
+		End If
+		
+		Exit Property 
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Property
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Property Get obligationType As String
+		On Error GoTo error_point
+		
+		If m_doc.HasItem( "obligation_type" ) Then
+			obligationType = m_doc.obligation_type(0)
+		End If
+		
+		Exit Property 
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Property
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Property Get obligationTypeSub As String
+		On Error GoTo error_point
+		
+		If m_doc.HasItem( "obligation_type_sub" ) Then
+			obligationTypeSub = m_doc.obligation_type_sub(0)
+		End If
+		
+		Exit Property 
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Property
+	'--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Property Get actIsProvided As String
+		On Error GoTo error_point
+		
+		If m_doc.GetItemValue ("obligation_type_sub" )(0) = "upfront_step" Then
+			If m_doc.hasitem ("actIsProvided") Then
+				actIsProvided = m_doc.GetItemValue ("actIsProvided" )(0)
+			End If
+		End If
+		
+		Exit Property 
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Property
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Property Get dateUpfrontClosing As Variant
+		On Error GoTo error_point
+		
+		If m_doc.GetItemValue ("obligation_type_sub" )(0) = "upfront_step" Then
+			If m_doc.GetItemValue ("actIsProvided" )(0) = "1" Then
+				If m_doc.HasItem ("date_upfront_closing") Then
+					dateUpfrontClosing = m_doc.date_upfront_closing(0)
+				End If
+			End If
+		End If
+				
+		Exit Property 
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Property
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Property Get isComplete As Boolean
+		On Error GoTo error_point
+		
+		If m_doc.HasItem( "is_complete" ) Then
+			isComplete = ( Me.nd.is_complete(0) = "1" )
+		End If
+		
+		Exit Property 
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Property
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Property Get dateComplete As Variant
+		On Error GoTo error_point
+		
+		If m_doc.HasItem( "date_complete" ) Then
+			dateComplete = m_doc.date_complete(0)
+		End If
+		
+		Exit Property 
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Property
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Property Get executors As Variant
+		On Error GoTo error_point
+		
+		Dim result As New Mixcollection
+		Set executors = result
+		
+		If (m_doc.HasItem( "ExecutorObjID" )) Then
+			Dim v As Variant, ODFiled As ODFields, i As Integer
+			v = m_doc.Getfirstitem("ExecutorObjID").Values
+			For i=0 To UBound( v )
+				If ( v(i) <> "" ) Then
+					Set ODFiled = New ODFields( i, "Executor", m_doc )
+					Call result.Append( ODFiled )	
+				End If
+			Next
+		End If
+		
+		Exit Property 
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Property
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Property Get isAsTemplate As Boolean
+		On Error GoTo error_point
+		
+		If m_doc.HasItem( "is_used_dictionary" ) Then
+			isAsTemplate = ( Me.nd.is_used_dictionary(0) = "1" )
+		End If
+		
+		Exit Property 
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Property
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Property Get sum As Currency
+		On Error GoTo error_point
+		
+		If m_doc.HasItem( "sum" ) Then
+			If ( CStr(m_doc.sum(0)) <> "" ) Then
+				sum = Me.nd.sum(0)	
+			End If
+		End If
+		
+		Exit Property 
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Property
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Property Get isInheritRepeats As Boolean
+		On Error GoTo error_point
+		
+		If m_doc.HasItem( "is_parent_is_repeat" ) Then
+			If ( m_doc.Getitemvalue("is_parent_is_repeat")(0) = "1" ) Then
+				If m_doc.HasItem( "inherit_repeats" ) Then
+					isInheritRepeats = ( m_doc.inherit_repeats(0) = "1" )		
+				End If	
+			End If
+		End If
+		
+		Exit Property 
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Property
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Property Get isParentIsRepeat As Boolean
+		On Error GoTo error_point
+		
+		If m_doc.HasItem( "is_parent_is_repeat" ) Then
+			isParentIsRepeat = ( m_doc.is_parent_is_repeat(0) = "1" )
+		End If
+		
+		Exit Property 
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Property
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Property Get isIndependentFromParentRepeats As Boolean
+		On Error GoTo error_point
+		
+		If m_doc.HasItem( "is_parent_is_repeat" ) Then
+			If ( m_doc.Getitemvalue("is_parent_is_repeat")(0) = "1" ) Then
+				If m_doc.HasItem( "inherit_repeats" ) Then
+					isIndependentFromParentRepeats = ( m_doc.inherit_repeats(0) = "0" )		
+				End If	
+			End If
+		End If
+		
+		Exit Property 
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Property
+	
+End Class
+'======================================================================================================================================
+'	CLASS TPS_Obligations_LinkRule
+'======================================================================================================================================
+Class TPS_Obligations_LinkRule As Fbase_abstract_object_doc
+	Private m_title As String
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	'	PUBLIC:
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Sub New (in_doc As NotesDocument, in_ps As Variant)
+	End Sub
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Property Get id As String
+		On Error GoTo error_point
+		If (m_doc.HasItem( "id" )) Then
+			id = m_doc.id(0)
+		Else
+			id = m_doc.UniversalID
+		End If
+		Exit Property 
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Property
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Property Get domain As String
+		On Error GoTo error_point
+		domain = DOMAIN_TYPE_TPS_OBLIGATIONS_LINKRULE
+		Exit Property 
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Property
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Property Get title As String
+		On Error GoTo error_point
+		If ( m_title = "" ) Then
+			If (m_doc.HasItem( "Name" )) Then
+				m_title = m_doc.Name(0)
+			End If
+		End If
+		title = m_title
+		Exit Property 
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Property
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	
+	
+End Class
+'======================================================================================================================================
+'	CLASS TPS_Obligations_Company
+'======================================================================================================================================
+Class TPS_Obligations_Company As Fbase_abstract_object_doc
+	
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	'	PUBLIC:
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Sub New (in_doc As NotesDocument, in_ps As Variant)
+	End Sub
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Property Get id As String
+		On Error GoTo error_point
+		If (m_doc.HasItem( "id" )) Then
+			id = m_doc.id(0)
+		Else
+			id = m_doc.UniversalID
+		End If
+		Exit Property 
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Property
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Property Get domain As String
+		On Error GoTo error_point
+		domain = DOMAIN_TYPE_TPS_OBLIGATIONS_COMPANY
+		Exit Property 
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Property
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Property Get title As String
+		On Error GoTo error_point
+		
+		If (m_doc.HasItem( "title" )) Then
+			title = m_doc.title(0)
+		End If
+		
+		Exit Property 
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Property
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Property Get contragent As Variant
+		On Error GoTo error_point
+		Call Me.log.enter( TypeName( Me ) & "." & GetThreadInfo(1))
+		
+		If Me.nd.Hasitem("contragent_id") Then
+			Set contragent = New ObjectLink( Me.nd.contragent_id(0), Me.nd.contragent_title(0), Me.nd.contragent_domain(0))
+		Else
+			Set contragent = Nothing
+		End If 
+		
+		Call Me.log.trace( "result: " & contragent )
+		Call Me.log.exit( TypeName( Me ) & "." & GetThreadInfo(1))
+		Exit Property
+		
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$		
+	End Property
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	
+End Class
+
+
+
+
+'======================================================================================================================================
+'	CLASS TPS_Obligations_OblConditition_Dict
+'======================================================================================================================================
+Class TPS_Obligations_OblCondititionDict As Fbase_abstract_object_doc
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	'	PUBLIC:
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Sub New (in_doc As NotesDocument, in_ps As Variant)
+	End Sub
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Property Get id As String
+		On Error GoTo error_point
+		If (m_doc.HasItem( "id" )) Then
+			id = m_doc.id(0)
+		Else
+			id = m_doc.UniversalID
+		End If
+		Exit Property 
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Property
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Property Get domain As String
+		On Error GoTo error_point
+		domain = DOMAIN_TYPE_TPS_OBLIGATIONS_OBL_CNDT_DIC
+		Exit Property 
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Property
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Property Get title As String
+		On Error GoTo error_point
+		
+		If (m_doc.HasItem( "title" )) Then
+			title = m_doc.title(0)
+		End If
+		
+		Exit Property 
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Property
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Property Get number As Integer
+		On Error GoTo error_point
+		
+		If (m_doc.HasItem( "number" )) Then
+			title = m_doc.number(0)
+		End If
+		
+		Exit Property 
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Property
+	
+	
+	
+	
+End Class
+'======================================================================================================================================
+'	CLASS TPS_Obligations_ObligationDict
+'======================================================================================================================================
+Class TPS_Obligations_ObligationDict As Fbase_abstract_object_doc
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	'	PUBLIC:
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Sub New (in_doc As NotesDocument, in_ps As Variant)
+	End Sub
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Property Get id As String
+		On Error GoTo error_point
+		If (m_doc.HasItem( "id" )) Then
+			id = m_doc.id(0)
+		Else
+			id = m_doc.UniversalID
+		End If
+		Exit Property 
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Property
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Property Get domain As String
+		On Error GoTo error_point
+		domain = DOMAIN_TYPE_TPS_OBLIGATIONS_OBL_DIC
+		Exit Property 
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Property
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Property Get title As String
+		On Error GoTo error_point
+		
+		If (m_doc.HasItem( "title" )) Then
+			title = m_doc.title(0)
+		End If
+		
+		Exit Property 
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Property
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Property Get isBase As Boolean
+		On Error GoTo error_point
+				
+		If (m_doc.HasItem( "is_base" )) Then
+			isBase = ( Me.nd.is_base(0) = "1" )
+		End If
+		
+		Exit Property 
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Property
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Property Get isRepeate As Boolean
+		On Error GoTo error_point
+		
+		If m_doc.HasItem( "is_repeate" ) Then
+			isRepeate = ( Me.nd.is_repeate(0) = "1" )
+		End If
+		
+		Exit Property 
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Property
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Property Get isMandatory As Boolean
+		On Error GoTo error_point
+		
+		If m_doc.HasItem( "is_mandatory" ) Then
+			isMandatory = ( Me.nd.is_mandatory(0) = "1" )
+		End If
+		
+		Exit Property 
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Property
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Property Get isMulti As Boolean
+		On Error GoTo error_point
+		
+		If m_doc.HasItem( "is_multi" ) Then
+			isMulti = ( Me.nd.is_multi(0) = "1" )
+		End If
+		
+		Exit Property 
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Property
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Property Get number As Variant
+		On Error GoTo error_point
+		
+		If (m_doc.HasItem( "number" )) Then
+			number = m_doc.number(0)
+		End If
+		
+		Exit Property 
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Property
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Property Get description As String
+		On Error GoTo error_point
+		
+		If m_doc.HasItem( "description" ) Then
+			description = m_doc.description(0)
+		End If
+		
+		Exit Property 
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Property
+	
+End Class
+
+
+'======================================================================================================================================
+'	CLASS TPS_Obligations_CategoryDict
+'======================================================================================================================================
+Class TPS_Obligations_CategoryDict As Fbase_abstract_object_doc
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	'	PUBLIC:
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Sub New (in_doc As NotesDocument, in_ps As Variant)
+	End Sub
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Property Get id As String
+		On Error GoTo error_point
+		If (m_doc.HasItem( "id" )) Then
+			id = m_doc.id(0)
+		Else
+			id = m_doc.UniversalID
+		End If
+		Exit Property 
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Property
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Property Get domain As String
+		On Error GoTo error_point
+		domain = DOMAIN_TYPE_TPS_OBLIGATIONS_EXECUTOR_DIC
+		Exit Property 
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Property
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Property Get title As String
+		On Error GoTo error_point
+		
+		If (m_doc.HasItem( "title" )) Then
+			title = m_doc.title(0)
+		End If
+		
+		Exit Property 
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Property
+End Class
+
+
+'======================================================================================================================================
+'	CLASS TPS_Obligations_LinkRuleDict
+'======================================================================================================================================
+Class TPS_Obligations_LinkRuleDict As Fbase_abstract_object_doc
+	Private m_title As String
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	'	PUBLIC:
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Sub New (in_doc As NotesDocument, in_ps As Variant)
+	End Sub
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Property Get id As String
+		On Error GoTo error_point
+		If (m_doc.HasItem( "id" )) Then
+			id = m_doc.id(0)
+		Else
+			id = m_doc.UniversalID
+		End If
+		Exit Property 
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Property
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Property Get domain As String
+		On Error GoTo error_point
+		domain = DOMAIN_TYPE_TPS_OBLIGATIONS_LINKRULE_DIC
+		Exit Property 
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Property
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Property Get title As String
+		On Error GoTo error_point
+		If ( m_title = "" ) Then
+			If (m_doc.HasItem( "Name" )) Then
+				m_title = m_doc.Name(0)
+			End If
+		End If
+		title = m_title
+		Exit Property 
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Property
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	
+End Class
+'======================================================================================================================================
+'	CLASS TPS_Obligations_ExecutorDict
+'======================================================================================================================================
+Class TPS_Obligations_ExecutorDict As Fbase_abstract_object_doc
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	'	PUBLIC:
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Sub New (in_doc As NotesDocument, in_ps As Variant)
+	End Sub
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Property Get id As String
+		On Error GoTo error_point
+		If (m_doc.HasItem( "id" )) Then
+			id = m_doc.id(0)
+		Else
+			id = m_doc.UniversalID
+		End If
+		Exit Property 
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Property
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Property Get domain As String
+		On Error GoTo error_point
+		domain = DOMAIN_TYPE_TPS_OBLIGATIONS_EXECUTOR_DIC
+		Exit Property 
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Property
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Property Get title As String
+		On Error GoTo error_point
+		
+		If (m_doc.HasItem( "title" )) Then
+			title = m_doc.title(0)
+		End If
+		
+		Exit Property 
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Property
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Property Get ODObjects As Variant
+		On Error GoTo error_point
+		
+		Dim result As New Mixcollection
+		Set ODObjects = result
+		
+		If (m_doc.HasItem( "ExecutorObjID" )) Then
+			Dim v As Variant, ODFiled As ODFields, i As Integer
+			v = m_doc.Getfirstitem("ExecutorObjID").Values
+			For i=0 To UBound( v )
+				If ( v(i) <> "" ) Then
+					Set ODFiled = New ODFields( i, "Executor", m_doc )
+					Call result.Append( ODFiled )	
+				End If
+			Next
+		End If
+		
+		Exit Property 
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Property
+	
+	
+End Class
+'======================================================================================================================================
+'	CLASS TPS_Obligations_Constant
+'======================================================================================================================================
+Class TPS_Obligations_Constant As Fbase_abstract_object_doc
+	
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	'	PUBLIC:
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Sub New (in_doc As NotesDocument, in_ps As Variant)
+	End Sub
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Property Get id As String
+		On Error GoTo error_point
+		If m_doc.HasItem( "id" ) Then
+			id = m_doc.id(0)
+		Else
+			id = m_doc.UniversalID
+		End If
+		Exit Property 
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Property
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Property Get domain As String
+		On Error GoTo error_point
+		domain = DOMAIN_TYPE_TPS_OBLIGATIONS_CONSTANT
+		Exit Property 
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Property
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Property Get title As String
+		On Error GoTo error_point
+		
+		If m_doc.HasItem( "title" ) Then
+			title = m_doc.title(0)
+		End If
+		
+		Exit Property 
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Property
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Property Get value As String
+		On Error GoTo error_point
+		
+		If m_doc.HasItem( "value" ) Then
+			value = m_doc.value(0)
+		End If
+		
+		Exit Property 
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Property
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Property Get number As Double
+		On Error GoTo error_point
+		
+		If m_doc.HasItem( "number" ) Then
+			number = m_doc.number(0)
+		End If
+		
+		Exit Property 
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Property
+	
+End Class
+
+'======================================================================================================================================
+'	CLASS TPS_Obligations_Reminderrule
+'======================================================================================================================================
+Class TPS_Obligations_Reminderrule As Fbase_abstract_object_doc
+	
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	'	PUBLIC:
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Sub New (in_doc As NotesDocument, in_ps As Variant)
+	End Sub
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Property Get id As String
+		On Error GoTo error_point
+		If m_doc.HasItem( "id" ) Then
+			id = m_doc.id(0)
+		Else
+			id = m_doc.UniversalID
+		End If
+		Exit Property 
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Property
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Property Get domain As String
+		On Error GoTo error_point
+		domain = DOMAIN_TYPE_TPS_OBLIGATIONS_REMINDERRULE
+		Exit Property 
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Property
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Property Get title As String
+		On Error GoTo error_point
+		
+		If m_doc.HasItem( "title" ) Then
+			title = m_doc.title(0)
+		End If
+		
+		Exit Property 
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Property
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Property Get value As String
+		On Error GoTo error_point
+		
+		If m_doc.HasItem( "value" ) Then
+			value = m_doc.value(0)
+		End If
+		
+		Exit Property 
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Property
+	
+End Class
+Class TPS_Obligations_DateUpdate As Fbase_abstract_object_doc
+	Private m_title As String
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	'	PUBLIC:
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Sub New (in_doc As NotesDocument, in_ps As Variant)
+	End Sub
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Property Get id As String
+		On Error GoTo error_point
+		If (m_doc.HasItem( "id" )) Then
+			id = m_doc.id(0)
+		Else
+			id = m_doc.UniversalID
+		End If
+		Exit Property 
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Property
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Property Get domain As String
+		On Error GoTo error_point
+		domain = DOMAIN_TYPE_TPS_OBLIGATIONS_DATE_UPDATE
+		Exit Property 
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Property
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Property Get title As String
+		On Error GoTo error_point
+		If ( m_title = "" ) Then
+			If (m_doc.HasItem( "date_prev" )) Then
+				m_title = "C " & CStr(m_doc.date_prev(0))
+				If (m_doc.HasItem( "date_new" )) Then
+					m_title = m_title & " на " & CStr(m_doc.date_new(0))
+				End If
+			End If
+		End If
+		title = m_title
+		Exit Property 
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Property
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	
+	
+End Class

@@ -1,0 +1,1723 @@
+'++LotusScript Development Environment:2:5:(Options):0:74
+Option Public
+Option Declare
+
+Use "DWFAppLib" 
+
+'++LotusScript Development Environment:2:5:(Forward):0:1
+Declare Sub Initialize
+Declare Function DWFRAdminCancelVisa() As Integer
+Declare Function DWFRInitSubProcess(docParentProcess As NotesDocument, docMain As NotesDocument) As Integer
+Declare Function DWFRCompleteVisaByVisaDoc() As Integer
+Declare Function DWFRAdminCompleteStagePickProcessDoc() As Integer
+Declare Function DWFRRespDocReturn() As Integer
+Declare Function DWFRCompleteVisa() As Integer
+Declare Function DWFRSetSolution() As Integer
+Declare Function DWFRCompleteStage() As Integer
+Declare Function DWFRReturnToFirstStage() As Integer
+Declare Private Sub changeField(dbPC As NotesDatabase, tdoc As NotesDocument, fieldName As String, v As Variant)
+Declare Function DWFRAddDocAddExisting() As Integer
+Declare Function DWFRAddStageOwner() As Integer
+Declare Function DWFRClaimCancel()
+Declare Function DWFRMakeVisa() As Integer
+Declare Function DWFRRespDocRemove() As Integer
+Declare Function DWFRClaim() As Integer
+Declare Function DWFRInitProcess() As Integer
+Declare Function DWFRAdminCompleteStage() As Integer
+Declare Function DWFREditVisa() As Integer
+Declare Function DWFRAddDocRemove() As Integer
+Declare Function DWFRAdminRemoveVisaWithOwner() As Integer
+Declare Function DWFRUserCancelVisa() As Integer
+Declare Function DWFRRespDocAdd() As Integer
+Declare Function DWFRInitProcessByProcessDoc( in_docProcess As NotesDocument ) As NotesDocument
+Declare Function DWFRAddDocReturn() As Integer
+Declare Function DWFRRemoveStageOwner() As Integer
+Declare Function DWFRAddDocAdd() As Integer
+
+'++LotusScript Development Environment:2:5:(Declarations):0:2
+
+'++LotusScript Development Environment:2:2:Initialize:1:10
+Sub Initialize
+	
+End Sub
+
+
+'++LotusScript Development Environment:2:1:DWFRAdminCancelVisa:1:8
+Function DWFRAdminCancelVisa() As Integer
+	On Error Goto errh
+	
+	
+	Dim ws As New NotesUIWorkspace
+	Dim session As New NotesSession
+	Dim db As NotesDatabase
+	Dim docUI As NotesUIDocument
+	Dim doc As NotesDocument
+	Dim v As Variant
+	Dim ODStoreUI As ODStoreUI
+	Dim ErrorStr As String
+	Dim docTemp As NotesDocument
+	Dim ObjAccess As Variant, ObjID As Variant, ObjName As Variant, ObjPath As Variant
+	Dim ItemPrefix  As String
+	Dim multi As Boolean
+	Dim Form As String
+	Dim i As Integer
+	Dim colVisa As NotesDocumentCollection
+	Dim docVisa As NotesDocument
+	Dim ViewVisa As NotesView
+	Dim key As String
+	Dim VisaID As Variant
+	
+	
+	ItemPrefix = {StageOwner}
+	multi = True
+	Set db = session.CurrentDatabase
+	Set docUI = ws.CurrentDocument
+	Set doc = docUI.Document
+	Set ODStoreUI = New ODStoreUI(doc.dbODPath(0), ErrorStr)
+	If (ErrorStr <> "") Then
+		Msgbox ErrorStr, 48, ERR_MSG_TITLE
+		Exit Function
+	End If
+	
+	Set ViewVisa = db.GetView("(VisaByFullID)")
+	If (ViewVisa Is Nothing) Then
+		Msgbox {Не найдено представление "(VisaByFullID)"}, 48, ERR_MSG_TITLE
+		Exit Function
+	End If
+	key = doc.UniversalID & {-} & doc.StageExclusionID(0)
+	
+	Set colVisa = ViewVisa.GetAllDocumentsByKey(key)
+	Redim VisaID(0) As String
+	If (colVisa.Count <> 0) Then
+		Set docVisa = colVisa.GetFirstDocument
+		While (Not (docVisa Is Nothing))
+			If docVisa.HasItem("Complete") Then
+				If (VisaID(0) <> "") Then
+					Redim Preserve VisaID(Ubound(VisaID)+1) As String
+				End If
+				
+				If (docVisa.VisaInitAsObjID(0) = docVisa.VisaInitiatorObjID(0)) Then
+					v = DWFSGetNameByODObjName(docVisa.VisaInitAsObjName(0), ErrorStr)
+					If (ErrorStr <> "") Then
+						Msgbox ErrorStr, 48, ERR_MSG_TITLE
+						Exit Function
+					End If
+				Else
+					v = DWFSGetNameByODObjName(docVisa.VisaInitiatorObjName(0), ErrorStr)
+					If (ErrorStr <> "") Then
+						Msgbox ErrorStr, 48, ERR_MSG_TITLE
+						Exit Function
+					End If
+					v = v & { от имени } & DWFSGetNameByODObjName(docVisa.VisaInitAsObjName(0), ErrorStr)
+					If (ErrorStr <> "") Then
+						Msgbox ErrorStr, 48, ERR_MSG_TITLE
+						Exit Function
+					End If
+				End If
+				VisaID(Ubound(VisaID)) = v & {|} & docVisa.UniversalID
+			End If
+			Set docVisa = colVisa.GetNextDocument(docVisa)
+		Wend
+	End If
+	If (VisaID(0) = "") Then
+		Exit Function
+	End If
+	
+	Set docTemp = db.CreateDocument
+	docTemp.Members = VisaID
+	docTemp.promt = "Выберите значение для отмены визы"
+	
+	If (multi = True) Then
+		Form = "DWF105"
+	Else
+		Form = "DWF104"
+	End If
+	
+	If Not (ws.DialogBox(Form, True, True, False, False, False, False, db.Title, docTemp, True, False, True)) Then
+		Exit Function
+	End If
+	If (docTemp.List(0) = "") Then
+		Exit Function
+	End If
+	v = docTemp.List
+	If (v(0) = "") Then
+		Exit Function
+	End If
+	
+	If (DWFAAdminCancelVisa(doc, v) <>1) Then
+		Exit Function
+	End If
+	
+	
+	Exit Function
+errh:
+	Msgbox Error$ & {. Error # } & Cstr(Err) & { on line # } & Cstr(Erl) & { in (DWFRAdminCancelVisa) "DWFRequest"},, {Error}
+	Resume endh
+endh:
+End Function
+
+'++LotusScript Development Environment:2:1:DWFRInitSubProcess:1:8
+Function DWFRInitSubProcess(docParentProcess As NotesDocument, docMain As NotesDocument) As Integer
+	On Error Goto errh
+	
+	Dim ws As New NotesUIWorkspace
+	Dim session As New NotesSession
+	Dim db As NotesDatabase
+	Dim docProcess As NotesDocument
+	Dim docSubMain As NotesDocument
+	Dim ViewID As NotesView
+	Dim ID As String
+	Dim docClaim As NotesDocument
+	
+	Print Cstr(Now) & { >>>}
+	
+	If (DWFAGetSubProcessDoc(docParentProcess, docProcess) <> 1) Then
+		DWFRInitSubProcess = 0
+		Exit Function
+	End If
+	
+	If (DWFAInitSubProcess(docProcess, docMain, docSubMain) <> 1) Then
+		DWFRInitSubProcess = 0
+		Exit Function
+	End If
+	
+	If (DWFAClaim(docSubMain) <> 1) Then
+		DWFRInitSubProcess = 0
+		Exit Function
+	End If
+	
+	Print Cstr(Now) & { <<<}
+	
+	DWFRInitSubProcess = 1
+	
+	
+	
+	Exit Function
+errh:
+	Msgbox Error$ & {. Error # } & Cstr(Err) & { on line # } & Cstr(Erl) & { in (DWFRInitSubProcess) "DWFRequest"},, {Error}
+	Resume endh
+endh:
+End Function
+
+
+'++LotusScript Development Environment:2:1:DWFRCompleteVisaByVisaDoc:1:8
+Function DWFRCompleteVisaByVisaDoc() As Integer
+	On Error Goto errh
+	
+	Dim ws As New NotesUIWorkspace
+	Dim session As New NotesSession
+	Dim db As NotesDatabase
+	Dim docUI As NotesUIDocument
+	Dim doc As NotesDocument
+	Dim ViewID As NotesView
+	Dim docMain As NotesDocument
+	Dim ID As String
+	Dim docVisa As NotesDocument
+	Dim docUIMain As NotesUIDocument
+	
+	
+	Set db = session.CurrentDatabase
+	Set docUI = ws.CurrentDocument
+	Set doc = docUI.Document
+	
+	If docUI.EditMode Then
+		Call docUI.Save()	
+	End If
+	ID = doc.GetItemValue("MainRef")(0)
+	
+	Set ViewID = db.GetView("(UNID)")
+	Call ViewID.Refresh()
+	ViewID.AutoUpdate = False
+	
+	Set docMain = ViewID.GetDocumentByKey(ID)
+	If (docMain Is Nothing) Then
+		Msgbox {Не найден главный документ. Переоткройте документ и повторите действие или обратитесь к администратору}, 48, ERR_MSG_TITLE
+		Exit Function
+	End If
+	
+	
+	If (DWFACompleteVisa(docMain, docVisa)<>1) Then
+		DWFRCompleteVisaByVisaDoc = 0
+		Exit Function
+	End If
+	
+	Call docUI.Close(True)
+	
+	Set docUIMain = ws.EditDocument(False, docMain,,, True, False)
+	Call docUIMain.Close(True)
+	
+	
+	
+	DWFRCompleteVisaByVisaDoc = 1
+	
+	Exit Function
+errh:
+	Msgbox Error$ & {. Error # } & Cstr(Err) & { on line # } & Cstr(Erl) & { in (DWFRCompleteVisaByVisaDoc) "DWFRequest"},, {Error}
+	Resume endh
+endh:
+End Function
+
+'++LotusScript Development Environment:2:1:DWFRAdminCompleteStagePickProcessDoc:1:8
+Function DWFRAdminCompleteStagePickProcessDoc() As Integer
+	On Error Goto errh
+	
+	Dim ws As New NotesUIWorkspace
+	Dim session As New NotesSession
+	Dim db As NotesDatabase
+	Dim docUI As NotesUIDocument
+	Dim doc As NotesDocument
+	Dim Continue As Integer
+	Dim docLink As NotesDocument
+	
+	
+	
+	Set db = session.CurrentDatabase
+	Set docUI = ws.CurrentDocument
+	
+	If (docUI.EditMode) Then
+		Call session.SetEnvironmentVar("DWFSaveUNID", docUI.Document.UniversalID)
+		On Error 4411 Goto lsERR_LSXUI_DOC_SAVE_CANCELLED
+		On Error 4412 Goto lsERR_LSXUI_NOTES_ERROR
+		Call docUI.Save
+		On Error Goto errh
+	End If
+	
+	Set doc = docUI.Document
+	
+	If (DWFAAdminGetProcessStagePostLink(doc, docLink)<>1) Then
+		DWFRAdminCompleteStagePickProcessDoc = 0
+		Exit Function
+	End If
+	
+	If (DWFAAdminCompleteStage(doc, docLink)<>1) Then
+		DWFRAdminCompleteStagePickProcessDoc = 0
+		Exit Function
+	End If
+	
+	Call docUI.Close(True)
+	
+	
+	Exit Function
+lsERR_LSXUI_DOC_SAVE_CANCELLED:
+	Resume endh	
+	
+	Exit Function
+lsERR_LSXUI_NOTES_ERROR:	
+	Msgbox {Необходимо переоткрыть документ и попробовать повторить действие}, 48, ERR_MSG_TITLE
+	Resume endh	
+	
+	Exit Function
+errh:
+	Msgbox Error$ & {. Error # } & Cstr(Err) & { on line # } & Cstr(Erl) & { in (DWFRAdminCompleteStagePickProcessDoc) "DWFRequest"},, {Error}
+	Resume endh
+endh:
+End Function
+
+'++LotusScript Development Environment:2:1:DWFRRespDocReturn:1:8
+Function DWFRRespDocReturn() As Integer
+	On Error Goto errh
+	
+	Dim ws As New NotesUIWorkspace
+	Dim session As New NotesSession
+	Dim db As NotesDatabase
+	Dim docUI As NotesUIDocument
+	Dim doc As NotesDocument
+	Dim docAddDoc As NotesDocument
+	
+	Set db = session.CurrentDatabase
+	Set docUI = ws.CurrentDocument
+	Set doc = docUI.Document
+	
+	If (DWFARespDocReturn(doc) <> 1) Then
+		DWFRRespDocReturn = 0
+		Exit Function
+	End If
+	
+	
+	
+	DWFRRespDocReturn = 1
+	
+	Exit Function
+errh:
+	Msgbox Error$ & {. Error # } & Cstr(Err) & { on line # } & Cstr(Erl) & { in (DWFRRespDocReturn) "DWFRequest"},, {Error}
+	Resume endh
+endh:
+End Function
+
+'++LotusScript Development Environment:2:1:DWFRCompleteVisa:1:8
+Function DWFRCompleteVisa() As Integer
+	On Error Goto errh
+	
+	Dim ws As New NotesUIWorkspace
+	Dim session As New NotesSession
+	Dim db As NotesDatabase
+	Dim docUI As NotesUIDocument
+	Dim doc As NotesDocument
+	Dim ViewID As NotesView
+	Dim docMain As NotesDocument
+	Dim ID As String
+	Dim docVisa As NotesDocument
+	
+	
+	Set db = session.CurrentDatabase
+	Set docUI = ws.CurrentDocument
+	Set doc = docUI.Document
+	'ID = doc.UniversalID
+	ID = doc.CustomID(0)
+	
+	Set ViewID = db.GetView("(UNID)")
+	Call ViewID.Refresh()
+	ViewID.AutoUpdate = False
+	
+	Set docMain = ViewID.GetDocumentByKey(ID)
+	If (docMain Is Nothing) Then
+		Msgbox {Не найден главный документ. Переоткройте документ и повторите действие или обратитесь к администратору}, 48, ERR_MSG_TITLE
+		Exit Function
+	End If
+	
+	
+	If (DWFACompleteVisa(docMain, docVisa)<>1) Then
+		DWFRCompleteVisa = 0
+		Exit Function
+	End If
+	
+	Call docUI.Close(True)
+	
+	
+	DWFRCompleteVisa = 1
+	
+	Exit Function
+errh:
+	Msgbox Error$ & {. Error # } & Cstr(Err) & { on line # } & Cstr(Erl) & { in (DWFRCompleteVisa) "DWFRequest"},, {Error}
+	Resume endh
+endh:
+End Function
+
+'++LotusScript Development Environment:2:1:DWFRSetSolution:1:8
+Function DWFRSetSolution() As Integer
+	On Error Goto errh
+	
+	Dim ws As New NotesUIWorkspace
+	Dim session As New NotesSession
+	Dim db As NotesDatabase
+	Dim docUI As NotesUIDocument
+	Dim doc As NotesDocument
+	Dim docTemp As NotesDocument
+	Dim Item As NotesItem
+	Dim ItemNameList As Variant
+	Dim ItemIsEditList As Variant
+	Dim i As Integer
+	
+	Set db = session.CurrentDatabase
+	Set docUI = ws.CurrentDocument
+	Set doc = docUI.Document
+	Set docTemp = db.CreateDocument
+	
+	Redim ItemNameList(3) As String
+	Redim ItemIsEditList(3) As String
+	
+	ItemNameList(0) = "SolutionComment"
+	ItemNameList(1) = "SolutionCommentHide"
+	ItemNameList(2) = "SolutionRange"
+	ItemNameList(3) = "SolutionValue"
+	
+	ItemIsEditList(0) = "yes"
+	ItemIsEditList(1) = "no"
+	ItemIsEditList(2) = "no"
+	ItemIsEditList(3) = "yes"
+	
+	For i=Lbound(ItemNameList) To Ubound(ItemNameList)
+		Set Item = doc.GetFirstItem(ItemNameList(i))
+		If (Not (Item Is Nothing)) Then
+			Call Item.CopyItemToDocument(docTemp, ItemNameList(i))
+		End If
+	Next
+	
+
+	Dim StageID As String, docStage As NotesDocument, editForm As String, docForm As Variant
+	StageID = doc.StageID(0)
+	If (StageID = "") Then
+		Error 2222, {Сбой: Нет информации о документе Стадии}
+		Exit Function	
+	End If
+	On Error 4091 Resume Next
+	Set docStage = db.GetDocumentByUNID(StageID)
+	If (docStage Is Nothing) Then
+		Error 2222, {Сбой: Не найден документ Стадии (docStage Is Nothing)}
+		Exit Function	
+	End If
+
+	If (docStage.EditForm(0) <> "") Then 
+		If (docStage.is_formula_editformname(0) = "1") Then
+			editForm = Join(Evaluate(docStage.editForm(0), doc), "")
+		Else	
+			editForm = docStage.EditForm(0)
+		End If
+		
+		Set docForm = db.Getform(editForm)
+		If (docForm Is Nothing) Then 
+			Error 2222, {Сбой: Не найдена форма документа решения: "} & editForm & {"}
+			Exit Function
+		End If
+	Else
+		editForm = "DWFSolution"
+	End If
+
+	
+	If (docUI.EditMode = True) Then
+		If (ws.DialogBox(editForm, True, True, False, False, False, False, "Редактирование решенения на этапе", docTemp, True, False, True))Then
+			
+			For i=Lbound(ItemIsEditList) To Ubound(ItemIsEditList)
+				If (Lcase(ItemIsEditList(i)) = Lcase("yes")) Then
+					Set Item = docTemp.GetFirstItem(ItemNameList(i))
+					If (Not (Item Is Nothing)) Then
+						If (doc.HasItem(ItemNameList(i))) Then
+							Call doc.RemoveItem(ItemNameList(i))
+						End If
+						Call Item.CopyItemToDocument(doc, ItemNameList(i))
+					End If
+				End If
+			Next
+			Call docUI.Refresh()
+		End If
+	Else
+		Call ws.DialogBox(editForm, True, True, True, False, False, True, "Просмотр решенения на этапе", docTemp, True, False, True)
+	End If
+	
+	
+	
+	DWFRSetSolution = 1
+	
+	Exit Function
+errh:
+	Msgbox Error$ & {. Error # } & Cstr(Err) & { on line # } & Cstr(Erl) & { in (DWFRSetSolution) "DWFRequest"},, {Error}
+	Resume endh
+endh:
+End Function
+
+
+'++LotusScript Development Environment:2:1:DWFRCompleteStage:1:8
+Function DWFRCompleteStage() As Integer
+	On Error Goto errh
+	
+	Dim ws As New NotesUIWorkspace
+	Dim session As New NotesSession
+	Dim db As NotesDatabase
+	Dim docUI As NotesUIDocument
+	Dim doc As NotesDocument
+	Dim Continue As Integer
+	
+	
+	Set db = session.CurrentDatabase
+	Set docUI = ws.CurrentDocument
+	
+	If (docUI.EditMode) Then
+		Call session.SetEnvironmentVar("DWFSaveUNID", docUI.Document.UniversalID)
+		On Error 4411 Goto lsERR_LSXUI_DOC_SAVE_CANCELLED
+		On Error 4412 Goto lsERR_LSXUI_NOTES_ERROR
+		Call docUI.Save
+		On Error Goto errh
+	End If
+	
+	Set doc = docUI.Document
+	
+	If (DWFACompleteStage(doc)<>1) Then
+		DWFRCompleteStage = 0
+		Exit Function
+	End If
+	
+	' http://jira.tpsgroup.ru/browse/TLD-3541
+	Call docUI.Document.Replaceitemvalue("SaveOptions", "0")
+	
+	Call docUI.Close(True)
+	
+	
+	Exit Function
+lsERR_LSXUI_DOC_SAVE_CANCELLED:
+	Resume endh	
+	
+	Exit Function
+lsERR_LSXUI_NOTES_ERROR:	
+	Msgbox {Необходимо переоткрыть документ и попробовать повторить действие}, 48, ERR_MSG_TITLE
+	Resume endh	
+	
+	Exit Function
+errh:
+	Msgbox Error$ & {. Error # } & Cstr(Err) & { on line # } & Cstr(Erl) & { in (DWFRCompleteStage) "DWFRequest"},, {Error}
+	Resume endh
+endh:
+End Function
+
+'++LotusScript Development Environment:2:1:DWFRReturnToFirstStage:1:8
+Function DWFRReturnToFirstStage() As Integer
+	On Error GoTo errh
+	
+	Const TITLE = "Административный возврат в Черновик"
+	
+	Dim ws As New NotesUIWorkspace
+	Dim s As New NotesSession, cdb As NotesDatabase, uidoc As NotesUIDocument, cdoc As NotesDocument
+	Set cdb = s.Currentdatabase
+	Set uidoc = ws.Currentdocument
+	Set cdoc = uidoc.Document
+	DWFRReturnToFirstStage = 0
+	If ws.prompt(2, TITLE, "Вы действительно хотите вернуть документ на стадию Черновик?") <> 1 Then Exit function
+	'-------------------------------------------------------------------------------------------
+	Dim docTemp As New NotesDocument(cdb)
+	docTemp.SolutionHide = "1" 
+dlg:
+	If Not ( ws.Dialogbox("DWFSolution", True, True, False, False, False, False, "Комментарий", docTemp, True, False, True) ) Then Exit Function
+	If ( docTemp.SolutionComment(0) = "" ) Then	GoTo dlg
+	
+	Dim comment As String
+	comment = docTemp.getItemValue("SolutionComment")(0)
+
+	Dim v As Variant, dbPC As NotesDatabase
+	v = cdoc.dbPCPath(0)
+	If (v = "") Then Error 1001, {В документе не задан Центр Обработки}
+	If (DWFSGetDatebase(CStr(v), dbPC) <> 1)Then Error 1001, {Не найдена база Центра Обработки}
+	
+	Call changeField( dbPC, cdoc, "SolutionComment", docTemp.SolutionComment(0))
+	'-------------------------------------------------------------------------------------------
+	Dim idProcess As String, docProcess As NotesDocument
+	idProcess = cdoc.Getitemvalue("PROCESSID")(0)
+	If ( idProcess <> "" ) Then
+		On Error 4091 Resume Next 'bad unid
+		Set docProcess = cdb.Getdocumentbyunid( idProcess )
+		On Error GoTo errh
+		'-------------------------------------------------------------------------------------------
+		Dim vw As NotesView		
+		Set vw = cdb.GetView("($DWFStageByProcessRef)")
+		If ( vw Is Nothing ) Then Error 1001, {Сбой: Не найдено представление "($DWFStageByProcessRef)"}
+		Call vw.Refresh
+		vw.AutoUpdate = False
+		
+		Dim col As NotesDocumentCollection, key As String, docStage As NotesDocument
+		Dim StageType As String
+		
+		key = docProcess.UniversalID
+		Set col = vw.GetAllDocumentsByKey(key)
+		If ( col.Count = 0 ) Then Error 1001, {Сбой: Не найдено описаний стадий по ключу процесса "} & key & {"}
+		StageType = "<<Начало>>"
+		
+		ReDim v(0) As String
+		Set docStage = col.GetFirstDocument
+		While (Not (docStage Is Nothing))
+			If ( docStage.Form(0) = "DWF02PSE" ) Then
+				If (LCase(docStage.Name(0)) = LCase(StageType)) Then
+					If (v(0) <> "") Then
+						ReDim Preserve v(UBound(v)+1) As String
+					End If
+					v(UBound(v)) = docStage.UniversalID
+				End If
+			End If
+			Set docStage = col.GetNextDocument( docStage )
+		Wend
+		If ( UBound(v) > 0 ) Then Error {Сбой: Ошибка в процессе (Документов с описанием "} & StageType & {": } & CStr(UBound(v)+1) &{)}
+		
+		On Error 4091 Resume Next 'bad unid
+		Set docStage = cdb.GetDocumentByUNID( v(0) )
+		On Error GoTo errh
+		If ( docStage Is Nothing ) Then Error 1001, {Сбой: Ошибка в процессе (Не найден документ с описанием "} & StageType & {")}
+		'-------------------------------------------------------------------------------------------
+		Dim ViewByEndID As NotesView
+		Set ViewByEndID = cdb.GetView("DWFLinkByStageIDEnd")
+		If ( ViewByEndID Is Nothing) Then Error 1001, {Сбой: Не найдено представление "DWFLinkByStageIDEnd"}
+		Call ViewByEndID.Refresh
+		ViewByEndID.AutoUpdate = False
+		
+		Dim colL As NotesDocumentCollection, docL As NotesDocument
+		Set colL = ViewByEndID.Getalldocumentsbykey( docStage.Universalid )
+		If ( colL.Count > 0 ) Then
+			
+			Dim hasMatch As Integer
+			Set docL = colL.GetFirstDocument
+			Do While (Not (docL Is Nothing))
+				If (docL.Type(0) = "absolute") Then
+					hasMatch = 1
+					Exit Do
+				End If
+				Set docL = colL.GetNextDocument(docL)
+			Loop
+			If (hasMatch = 0) Then Error 1001, {Сбой: Ошибка в процессе (Для документа с описанием "<<Начало>>" не найдено связи для последующего перехода)}
+			
+			'-------------------------------------------------------------------------------------------
+			If ( DWFAAdminCompleteStage_( cdoc, docL, comment, TITLE ) <> 1 ) Then Exit Function
+			'-------------------------------------------------------------------------------------------
+			Call uidoc.Close(True)
+			DWFRReturnToFirstStage = 1
+		End If
+	End If
+	
+	
+	Exit Function
+lsERR_LSXUI_DOC_SAVE_CANCELLED:
+	Resume endh	
+	
+	Exit Function
+lsERR_LSXUI_NOTES_ERROR:	
+	MsgBox {Необходимо переоткрыть документ и попробовать повторить действие}, 48, ERR_MSG_TITLE
+	Resume endh	
+	
+	Exit Function
+errh:
+	If Error = 1001 Then
+		MsgBox Error$, 48, ERR_MSG_TITLE
+	else
+		MsgBox Error$ & {. Error # } & CStr(Err) & { on line # } & CStr(Erl) & { in (DWFRReturnToFirstStage) "DWFRequest"},, {Error}
+	End If
+	Resume endh
+endh:
+End Function
+
+'++LotusScript Development Environment:2:2:changeField:1:8
+Private Sub changeField(dbPC As NotesDatabase, tdoc As NotesDocument, fieldName As String, v As Variant)
+		On Error GoTo error_point
+		
+		Dim session As New NotesSession
+		Dim docMail As NotesDocument
+		Set docMail = dbPC.CreateDocument
+		
+		docMail.Form 			= "Task"
+		docMail.Action 			= "ChangeItem"
+		docMail.InitServer 		= session.CurrentDatabase.Server
+		docMail.AppPath 		= tDoc.ParentDatabase.FilePath
+		docMail.docMainID 		= tDoc.Universalid
+		docMail.UserName 		= session.UserName
+		docMail.WriteInType		= "replace"
+		docMail.Itemname		= fieldName
+		docMail.NewValue		= v
+		
+		Call docMail.Save(True, True)
+		If (DWFAAskForAction(docMail) <> 1) Then
+			ReturnResult = -1
+			Exit Sub	
+		End If
+		
+		If (docMail.Error(0) <> "") Then
+			MsgBox docMail.Error(0), 48, ERR_MSG_TITLE
+			Exit Sub	
+		End If
+		Exit Sub
+		
+error_point:
+		Error Err, GetThreadInfo(2) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$	
+	End Sub
+
+'++LotusScript Development Environment:2:1:DWFRAddDocAddExisting:1:8
+Function DWFRAddDocAddExisting() As Integer
+	' TLD-4250
+	On Error GoTo errh
+	Dim ws As New NotesUIWorkspace
+	Dim session As New NotesSession
+	Dim db As NotesDatabase
+	Dim docUI As NotesUIDocument
+	Dim doc As NotesDocument
+	Dim AddDoc As NotesDocument
+	Dim docAddDoc As NotesDocument
+	
+	Set db = session.CurrentDatabase
+	Set docUI = ws.CurrentDocument
+	Set doc = docUI.Document
+
+	' выбор существующего доп. документа, из которого будет скопировано содержимое в новый
+	Dim View As NotesView
+	Dim ViewName As String
+	Dim col As NotesDocumentCollection
+	Dim vSort As Variant
+	Dim v As Variant
+	Dim docTemp As NotesDocument, oldadddoc As NotesDocument
+	Dim hasMatch As Boolean
+
+
+	ReDim vSort(0) As String
+	ReDim v(0) As String
+	Dim doclist List As NotesDocument
+
+	Set View = db.GetView("AddDocBasicWithVersionByFullID")
+	Set col = View.GetAllDocumentsByKey(doc.UniversalID)
+	If col.Count = 0 Then
+		MsgBox {Не обнаружено доп. документов}, 48, "Ошибка"
+		Exit Function
+	End If
+
+	Set adddoc = col.GetFirstDocument
+	Do Until adddoc Is Nothing
+		hasMatch = False
+		If adddoc.HasItem("IsRemove") Then
+			hasMatch = adddoc.IsRemove(0) = "0" 
+		Else
+			hasMatch = True
+		End If
+		If hasMatch Then
+			If v(0) <> "" Then
+				ReDim Preserve vSort(UBound(vSort) + 1) As String
+				ReDim Preserve v(UBound(v) + 1) As String
+			End If
+			vSort(UBound(vSort)) = adddoc.SortNumber(0)
+			v(UBound(v)) = adddoc.Created & { - } & adddoc.Title(0) & {|} & adddoc.UniversalID
+			Set doclist(adddoc.UniversalID) = adddoc
+		End If
+		Set adddoc = col.GetNextDocument(adddoc)
+	Loop
+	If v(0) = "" Then
+		MsgBox {Не обнаружено доп. документов}, 48, "Ошибка"
+		Exit Function
+	End If
+	
+	Dim Index As Variant
+	Call Arrays_ArraySort(vSort, Index, "Text", -1)
+	Call Arrays_RebuildArray(v, Index)
+	
+	Set docTemp = db.CreateDocument
+	docTemp.Members = v
+	docTemp.Promt = "Выберите дополнительный документ"
+	
+	If Not (ws.DialogBox("DWF101", True, True, False, False, False, False, db.Title, docTemp, True, False, True)) Then
+		Exit Function
+	End If
+	If docTemp.List(0) = "" Then
+		Exit Function
+	End If
+	Set oldadddoc = doclist(docTemp.List(0))
+	
+	' создание нового доп.документа 
+	If (DWFAAddDocAdd(doc, docAddDoc) <> 1) Then
+		DWFRAddDocAddExisting = 0
+		Exit Function
+	End If
+	
+	' настройки доп. документа из процесса
+	Dim docStage As NotesDocument
+	Dim docAddSetup As NotesDocument
+	Dim addDocStoreUI As AdditionalDocumentStoreUI
+	Dim AddDocID As String
+	Dim ErrorStr As String
+	Dim ItemListForCopy
+	
+	Set View = db.GetView("$DWFAddDocBasicByStageID")
+	Set col = View.GetAllDocumentsByKey(doc.StageID(0))
+	If col.Count = 0 Then
+		Error 1000, {Не обнаружено доп. документов}
+	End If
+	' если в процессе несколько типов доп. документов необходимо отсеить по форме oldadddoc
+	Set docAddSetup = col.GetFirstDocument
+
+	Select Case docAddSetup.FormType(0)
+		Case "Form", "Formula"	: ItemListForCopy = docAddSetup.ItemListForCopy
+		Case Else : ItemListForCopy = Split("Title Comment Files")
+	End Select
+	
+	' копирование полей из старого доп. документа в новый
+	Dim it As NotesItem
+	ForAll itname In ItemListForCopy
+		If oldadddoc.HasItem(itname)Then
+			Set it = oldadddoc.GetFirstItem(itname)
+			Call it.CopyItemToDocument(docAddDoc, itname)
+		End If
+	End ForAll
+	Call docAddDoc.Save(True, False)
+	
+	
+	
+	Call ws.EditDocument(True, docAddDoc,,,, False)
+	
+	
+	DWFRAddDocAddExisting = 1
+	
+endh:
+	Exit Function
+errh:
+	MsgBox Error$ & {. Error # } & CStr(Err) & { on line # } & CStr(Erl) & { in (DWFRAddDocAdd) "DWFRequest"},, {Error}
+	Resume endh
+End Function
+
+'++LotusScript Development Environment:2:1:DWFRAddStageOwner:1:8
+Function DWFRAddStageOwner() As Integer
+	On Error Goto errh
+	
+	Dim ws As New NotesUIWorkspace
+	Dim session As New NotesSession
+	Dim db As NotesDatabase
+	Dim docUI As NotesUIDocument
+	Dim doc As NotesDocument
+	Dim colOD As NotesDocumentCollection
+	Dim docOD As NotesDocument
+	Dim ODStoreUI As ODStoreUI
+	Dim ErrorStr As String
+	Dim docTemp As NotesDocument
+	Dim AddObjID As Variant
+	
+	
+	
+	Set db = session.CurrentDatabase
+	Set docUI = ws.CurrentDocument
+	Set doc = docUI.Document
+	
+	
+	Set ODStoreUI = New ODStoreUI(doc.dbODPath(0), ErrorStr)
+	If (ErrorStr <> "") Then
+		Msgbox ErrorStr, 48, ERR_MSG_TITLE
+		Exit Function
+	End If
+	
+	Set docTemp = db.CreateDocument
+	If Not (ws.DialogBox("DWF103", True, True, False, False, False, False, db.Title, docTemp, True, False, True)) Then
+		Exit Function
+	End If
+	
+	If (ODStoreUI.PickObject(Cstr(docTemp.List(0)), True, "", colOD, ErrorStr) <>1) Then
+		Exit Function
+	End If
+	
+	Redim AddObjID(0) As String
+	Set docOD = colOD.GetFirstDocument
+	While (Not (docOD Is Nothing))
+		If (AddObjID(0) <> "") Then
+			Redim Preserve AddObjID(Ubound(AddObjID)+1) As String
+		End If
+		AddObjID(Ubound(AddObjID)) = docOD.UniversalID
+		Set docOD = colOD.GetNextDocument(docOD)
+	Wend
+	
+	If (DWFAAddStageOwner(doc, AddObjID) <> 1) Then
+		DWFRAddStageOwner = 0
+		Exit Function
+	End If
+	
+	Msgbox {Выбранные участники добавлены успешно}, 64, {Внимание!}
+	
+	
+	DWFRAddStageOwner = 1
+	
+	
+	
+	Exit Function
+errh:
+	Msgbox Error$ & {. Error # } & Cstr(Err) & { on line # } & Cstr(Erl) & { in (DWFRAddStageOwner) "DWFRequest"},, {Error}
+	Resume endh
+endh:
+End Function
+
+'++LotusScript Development Environment:2:1:DWFRClaimCancel:1:8
+Function DWFRClaimCancel()
+	On Error Goto errh
+	
+	Dim ws As New NotesUIWorkspace
+	Dim session As New NotesSession
+	Dim db As NotesDatabase
+	Dim docUI As NotesUIDocument
+	Dim doc As NotesDocument
+	
+	Set db = session.CurrentDatabase
+	Set docUI = ws.CurrentDocument
+	Set doc = docUI.Document
+	
+	If (docUI.EditMode) Then
+		Msgbox {Необходимо перевести документ в режим чтения}, 64, ERR_MSG_TITLE
+		Exit Function
+	End If
+	
+	If (Messagebox({Вы уверены, что хотите отменить "захват" документа?},4+32+256, {Внимание!}) = 7) Then
+		Exit Function
+	End If
+	
+	
+	If (DWFAClaimCancel(doc) <>1) Then
+		DWFRClaimCancel = 0
+		Exit Function
+	End If
+	
+	
+	Msgbox {"Захват" документа успешно отменен}, 64, {Внимание!}
+	Call docUI.Close(True)
+	
+	DWFRClaimCancel = 1
+	
+	Exit Function
+errh:
+	Msgbox Error$ & {. Error # } & Cstr(Err) & { on line # } & Cstr(Erl) & { in (DWFRClaimCancel) "DWFRequest"},, {Error}
+	Resume endh
+endh:
+End Function
+
+'++LotusScript Development Environment:2:1:DWFRMakeVisa:1:8
+Function DWFRMakeVisa() As Integer
+	On Error Goto errh
+	
+	Dim ws As New NotesUIWorkspace
+	Dim session As New NotesSession
+	Dim db As NotesDatabase
+	Dim ViewID As NotesView
+	Dim docUI As NotesUIDocument
+	Dim doc As NotesDocument
+	Dim docMain As NotesDocument
+	Dim docVisa As NotesDocument
+	Dim docReOpen As NotesDocument
+	Dim ID As String
+	
+	Set db = session.CurrentDatabase
+	Set docUI = ws.CurrentDocument
+	Set doc = docUI.Document
+	'ID = doc.UniversalID
+	ID = doc.CustomID(0)
+	
+	Set ViewID = db.GetView("(UNID)")
+	Call ViewID.Refresh()
+	ViewID.AutoUpdate = False
+	
+	Set docMain = ViewID.GetDocumentByKey(ID)
+	If (docMain Is Nothing) Then
+		Msgbox {Не найден главный документ. Переоткройте документ и повторите действие или обратитесь к администратору}, 48, ERR_MSG_TITLE
+		Exit Function
+	End If
+	
+	If docMain.HasItem("VisaStageForVisaMinus") Then
+		If (Cstr(docMain.GetItemValue("VisaStageForVisaMinus")(0)) = "1") Then
+			If (DWFAMakeVisaBySetVisaParent(docMain, docVisa)<>1) Then
+				DWFRMakeVisa = 0
+				Exit Function
+			End If
+		Else
+			If (DWFAMakeVisa(docMain, docVisa)<>1) Then
+				DWFRMakeVisa = 0
+				Exit Function
+			End If
+		End If
+	Else
+		If (DWFAMakeVisa(docMain, docVisa)<>1) Then
+			DWFRMakeVisa = 0
+			Exit Function
+		End If
+	End If
+	
+	Call ViewID.Refresh()
+	ViewID.AutoUpdate = False
+	Set docReOpen = ViewID.GetDocumentByKey(ID)
+	
+	Call docUI.Close(True)
+	Call ws.EditDocument(False, docReOpen)
+	Call ws.EditDocument(True, docVisa)
+	
+	
+	DWFRMakeVisa = 1
+	
+	Exit Function
+errh:
+	Msgbox Error$ & {. Error # } & Cstr(Err) & { on line # } & Cstr(Erl) & { in (DWFRMakeVisa) "DWFRequest"},, {Error}
+	Resume endh
+endh:
+End Function
+
+'++LotusScript Development Environment:2:1:DWFRRespDocRemove:1:8
+Function DWFRRespDocRemove() As Integer
+	On Error Goto errh
+	
+	Dim ws As New NotesUIWorkspace
+	Dim session As New NotesSession
+	Dim db As NotesDatabase
+	Dim docUI As NotesUIDocument
+	Dim doc As NotesDocument
+	Dim docAddDoc As NotesDocument
+	
+	Set db = session.CurrentDatabase
+	Set docUI = ws.CurrentDocument
+	Set doc = docUI.Document
+	
+	If (DWFARespDocRemove(doc) <> 1) Then
+		DWFRRespDocRemove = 0
+		Exit Function
+	End If
+	
+	
+	
+	DWFRRespDocRemove = 1
+	
+	Exit Function
+errh:
+	Msgbox Error$ & {. Error # } & Cstr(Err) & { on line # } & Cstr(Erl) & { in (DWFRRespDocRemove) "DWFRequest"},, {Error}
+	Resume endh
+endh:
+End Function
+
+'++LotusScript Development Environment:2:1:DWFRClaim:1:8
+Function DWFRClaim() As Integer
+	On Error Goto errh
+	
+	Dim ws As New NotesUIWorkspace
+	Dim session As New NotesSession
+	Dim db As NotesDatabase
+	Dim ViewID As NotesView
+	Dim docUI As NotesUIDocument
+	Dim doc As NotesDocument
+	Dim col As NotesDocumentCollection
+	Dim docClaim As NotesDocument
+	Dim ID As String
+	
+	Set db = session.CurrentDatabase
+	Set docUI = ws.CurrentDocument
+	Set doc = docUI.Document
+	ID = doc.UniversalID
+	
+	
+	If (DWFAClaim(doc) <> 1) Then
+		DWFRClaim = 0
+		Exit Function
+	End If
+	
+	Set ViewID = db.GetView("(UNID)")
+	Call ViewID.Refresh()
+	ViewID.AutoUpdate = False
+	Set docClaim = ViewID.GetDocumentByKey(ID)
+	
+	Call docUI.Close(True)
+	Call session.SetEnvironmentVar("DWFEditUNID", docClaim.UniversalID)
+	Call ws.EditDocument(True, docClaim)
+	
+	
+	
+	Exit Function
+errh:
+	Msgbox Error$ & {. Error # } & Cstr(Err) & { on line # } & Cstr(Erl) & { in (DWFRClaim) "DWFRequest"},, {Error}
+	Resume endh
+endh:
+End Function
+
+'++LotusScript Development Environment:2:1:DWFRInitProcess:1:8
+Function DWFRInitProcess() As Integer
+	On Error GoTo errh
+	
+	Dim docProcess As NotesDocument
+	If (DWFAGetProcessDoc(docProcess) <> 1) Then
+		DWFRInitProcess = 0
+		Exit Function
+	End If
+	
+	Dim docClaim As NotesDocument
+	Set docClaim = DWFRInitProcessByProcessDoc( docProcess )
+	If ( docClaim Is Nothing ) Then
+		DWFRInitProcess = 0
+		Exit Function
+	End If
+	
+	Dim ws As New NotesUIWorkspace
+	Call ws.EditDocument(True, docClaim)
+	
+	DWFRInitProcess = 1
+	Exit Function
+	
+errh:
+	MsgBox Error$ & {. Error # } & CStr(Err) & { on line # } & CStr(Erl) & { in (DWFRInitProcess) "DWFRequest"},, {Error}
+	Resume endh
+endh:
+End Function
+
+'++LotusScript Development Environment:2:1:DWFRAdminCompleteStage:1:8
+Function DWFRAdminCompleteStage() As Integer
+	On Error Goto errh
+	
+	Dim ws As New NotesUIWorkspace
+	Dim session As New NotesSession
+	Dim db As NotesDatabase
+	Dim docUI As NotesUIDocument
+	Dim doc As NotesDocument
+	Dim Continue As Integer
+	Dim docLink As NotesDocument
+	
+	
+	
+	Set db = session.CurrentDatabase
+	Set docUI = ws.CurrentDocument
+	
+	If (docUI.EditMode) Then
+		Call session.SetEnvironmentVar("DWFSaveUNID", docUI.Document.UniversalID)
+		On Error 4411 Goto lsERR_LSXUI_DOC_SAVE_CANCELLED
+		On Error 4412 Goto lsERR_LSXUI_NOTES_ERROR
+		Call docUI.Save
+		On Error Goto errh
+	End If
+	
+	Set doc = docUI.Document
+	
+'	If (CheckCompleteStage(doc, Continue) <> 1) Then
+'		DWFRAdminCompleteStage = 0
+'		Exit Function
+'	End If
+'	If (Continue <> 1) Then
+'		DWFRAdminCompleteStage = 0
+'		Exit Function
+'	End If
+	
+	If (DWFAAdminGetStagePostLink(doc, docLink)<>1) Then
+		DWFRAdminCompleteStage = 0
+		Exit Function
+	End If
+	
+	If (DWFAAdminCompleteStage(doc, docLink)<>1) Then
+		DWFRAdminCompleteStage = 0
+		Exit Function
+	End If
+	
+	Call docUI.Close(True)
+	
+	
+	Exit Function
+lsERR_LSXUI_DOC_SAVE_CANCELLED:
+	Resume endh	
+	
+	Exit Function
+lsERR_LSXUI_NOTES_ERROR:	
+	Msgbox {Необходимо переоткрыть документ и попробовать повторить действие}, 48, ERR_MSG_TITLE
+	Resume endh	
+	
+	Exit Function
+errh:
+	Msgbox Error$ & {. Error # } & Cstr(Err) & { on line # } & Cstr(Erl) & { in (DWFRAdminCompleteStage) "DWFRequest"},, {Error}
+	Resume endh
+endh:
+End Function
+
+'++LotusScript Development Environment:2:1:DWFREditVisa:1:8
+Function DWFREditVisa() As Integer
+	On Error Goto errh
+	
+	Dim ws As New NotesUIWorkspace
+	Dim session As New NotesSession
+	Dim db As NotesDatabase
+	Dim docUI As NotesUIDocument
+	Dim doc As NotesDocument
+	Dim docVisa As NotesDocument
+	
+	Set db = session.CurrentDatabase
+	Set docUI = ws.CurrentDocument
+	Set doc = docUI.Document
+	
+	If (DWFAEditVisa(doc) <>1) Then
+		DWFREditVisa = 0
+		Exit Function
+	End If
+	
+	DWFREditVisa = 1
+	
+	Exit Function
+errh:
+	Msgbox Error$ & {. Error # } & Cstr(Err) & { on line # } & Cstr(Erl) & { in (DWFREditVisa) "DWFRequest"},, {Error}
+	Resume endh
+endh:
+End Function
+
+'++LotusScript Development Environment:2:1:DWFRAddDocRemove:1:8
+Function DWFRAddDocRemove() As Integer
+	On Error Goto errh
+	
+	Dim ws As New NotesUIWorkspace
+	Dim session As New NotesSession
+	Dim db As NotesDatabase
+	Dim docUI As NotesUIDocument
+	Dim doc As NotesDocument
+	Dim docAddDoc As NotesDocument
+	
+	Set db = session.CurrentDatabase
+	Set docUI = ws.CurrentDocument
+	Set doc = docUI.Document
+	
+	If (DWFAAddDocRemove(doc) <> 1) Then
+		DWFRAddDocRemove = 0
+		Exit Function
+	End If
+	
+	
+	
+	DWFRAddDocRemove = 1
+	
+	Exit Function
+errh:
+	Msgbox Error$ & {. Error # } & Cstr(Err) & { on line # } & Cstr(Erl) & { in (DWFRAddDocRemove) "DWFRequest"},, {Error}
+	Resume endh
+endh:
+End Function
+
+'++LotusScript Development Environment:2:1:DWFRAdminRemoveVisaWithOwner:1:8
+Function DWFRAdminRemoveVisaWithOwner() As Integer
+	On Error Goto errh
+	
+	Dim ws As New NotesUIWorkspace
+	Dim session As New NotesSession
+	Dim db As NotesDatabase
+	Dim docUI As NotesUIDocument
+	Dim doc As NotesDocument
+	Dim v As Variant
+	Dim ODStoreUI As ODStoreUI
+	Dim ErrorStr As String
+	Dim docTemp As NotesDocument
+	Dim ObjAccess As Variant, ObjID As Variant, ObjName As Variant, ObjPath As Variant
+	Dim ItemPrefix  As String
+	Dim multi As Boolean
+	Dim Form As String
+	Dim i As Integer
+	Dim colVisa As NotesDocumentCollection
+	Dim docVisa As NotesDocument
+	Dim ViewVisa As NotesView
+	Dim key As String
+	Dim VisaID As Variant
+	
+	
+	ItemPrefix = {StageOwner}
+	multi = True
+	Set db = session.CurrentDatabase
+	Set docUI = ws.CurrentDocument
+	Set doc = docUI.Document
+	Set ODStoreUI = New ODStoreUI(doc.dbODPath(0), ErrorStr)
+	If (ErrorStr <> "") Then
+		Msgbox ErrorStr, 48, ERR_MSG_TITLE
+		Exit Function
+	End If
+	
+	v = ODStoreUI.GetObjectValueByItem(doc, ItemPrefix, ObjAccess, ObjID, ObjName, ObjPath, ErrorStr)
+	If (ErrorStr <> "") Then
+		Msgbox ErrorStr, 48, ERR_MSG_TITLE
+		Exit Function
+	End If
+	If (v = 0) Then
+		Exit Function
+	End If
+	If (Ubound(ObjID) = 0) Then
+		Msgbox {Нельзя удалить последнего потенциального владельца стадии}, 48, ERR_MSG_TITLE
+		Exit Function
+	End If
+	
+	
+	Set docTemp = db.CreateDocument
+	Redim v(0) As String
+	For i=0 To Ubound(ObjID)
+		If (v(0) <> "") Then
+			Redim Preserve v(Ubound(v)+1) As String
+		End If
+		v(Ubound(v)) = ObjName(i) & {|} & ObjID(i)
+	Next
+	docTemp.Members = v
+	docTemp.promt = "Выберите значение для удаления"
+	
+	If (multi = True) Then
+		Form = "DWF105"
+	Else
+		Form = "DWF104"
+	End If
+	
+	If Not (ws.DialogBox(Form, True, True, False, False, False, False, db.Title, docTemp, True, False, True)) Then
+		Exit Function
+	End If
+	If (docTemp.List(0) = "") Then
+		Exit Function
+	End If
+	v = docTemp.List
+	
+	If Ubound(v) => Ubound(ObjID) Then
+		Msgbox {Нельзя удалить всех потенциальных владельцев стадии}, 48, ERR_MSG_TITLE
+		Exit Function
+	End If
+	
+	
+	Set ViewVisa = db.GetView("(VisaByFullID)")
+	If (ViewVisa Is Nothing) Then
+		Msgbox {Не найдено представление "(VisaByFullID)"}, 48, ERR_MSG_TITLE
+		Exit Function
+	End If
+	key = doc.UniversalID & {-} & doc.StageExclusionID(0)
+	
+	Set colVisa = ViewVisa.GetAllDocumentsByKey(key)
+	Redim VisaID(0) As String
+	If (colVisa.Count <> 0) Then
+		Set docVisa = colVisa.GetFirstDocument
+		While (Not (docVisa Is Nothing))
+			
+			Forall ID In v
+				If (Lcase(ID) = Lcase(docVisa.VisaInitAsObjID(0))) Then
+					If (VisaID(0) <> "") Then
+						Redim Preserve VisaID(Ubound(VisaID)+1) As String
+					End If
+					VisaID(Ubound(VisaID)) = docVisa.UniversalID
+				End If
+			End Forall
+			
+			Set docVisa = colVisa.GetNextDocument(docVisa)
+		Wend
+	End If
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	Exit Function
+errh:
+	Msgbox Error$ & {. Error # } & Cstr(Err) & { on line # } & Cstr(Erl) & { in (DWFRAdminRemoveVisaWithOwner) "DWFRequest"},, {Error}
+	Resume endh
+endh:
+End Function
+
+'++LotusScript Development Environment:2:1:DWFRUserCancelVisa:1:8
+Function DWFRUserCancelVisa() As Integer
+	On Error GoTo errh
+	
+	
+	Dim ws As New NotesUIWorkspace
+	Dim session As New NotesSession
+	Dim db As NotesDatabase
+	Dim docUI As NotesUIDocument
+	Dim doc As NotesDocument
+	Dim v As Variant	
+	Dim ODStoreUI As ODStoreUI
+	Dim ErrorStr As String
+	Dim docTemp As NotesDocument
+	Dim ObjAccess As Variant, ObjID As Variant, ObjName As Variant, ObjPath As Variant
+	Dim ItemPrefix  As String
+	Dim multi As Boolean
+	Dim Form As String
+	Dim i As Integer
+	Dim colVisa As NotesDocumentCollection
+	Dim docVisa As NotesDocument
+	Dim ViewVisa As NotesView
+	Dim key As String
+	Dim VisaID As Variant
+	Dim resUL As Variant
+	Dim ODObj As ODObj
+	Dim Person As New Person
+	Dim Position As ODObj
+	
+	
+	ItemPrefix = {StageOwner}
+	multi = True
+	Set db = session.CurrentDatabase
+	Set docUI = ws.CurrentDocument
+	Set doc = docUI.Document
+	Set ODStoreUI = New ODStoreUI(doc.dbODPath(0), ErrorStr)
+	If (ErrorStr <> "") Then
+		MsgBox ErrorStr, 48, ERR_MSG_TITLE
+		Exit Function
+	End If
+	
+	resUL = Evaluate({@If(@UpperCase(@UserNamesList) *= @UpperCase(StageVisaCompleteObjAccess); 1; 0)}, doc)
+	If resUL(0) = "0" Then		
+		MsgBox "У Вас отсутствует завершенное согласование"	
+		Exit Function
+	End If
+	
+	Set ViewVisa = db.GetView("(VisaByFullID)")
+	If (ViewVisa Is Nothing) Then
+		MsgBox {Не найдено представление "(VisaByFullID)"}, 48, ERR_MSG_TITLE
+		Exit Function
+	End If
+	key = doc.UniversalID & {-} & doc.StageExclusionID(0)
+	
+	Set colVisa = ViewVisa.GetAllDocumentsByKey(key)
+	ReDim VisaID(0) As String
+	If (colVisa.Count <> 0) Then
+		Set docVisa = colVisa.GetFirstDocument
+		While (Not (docVisa Is Nothing))
+			If docVisa.HasItem("Complete") Then
+				resUL = Evaluate({@If(@UpperCase(@UserNamesList) *= @UpperCase(VisaInitAsObjAccess); 1; 0)}, docVisa)
+				If resUL(0) = "1" Then			
+					If (VisaID(0) <> "") Then
+						ReDim Preserve VisaID(UBound(VisaID)+1) As String
+					End If
+					
+					If (docVisa.VisaInitAsObjID(0) = docVisa.VisaInitiatorObjID(0)) Then
+						v = DWFSGetNameByODObjName(docVisa.VisaInitAsObjName(0), ErrorStr)
+						If (ErrorStr <> "") Then
+							MsgBox ErrorStr, 48, ERR_MSG_TITLE
+							Exit Function
+						End If
+					Else
+						v = DWFSGetNameByODObjName(docVisa.VisaInitiatorObjName(0), ErrorStr)
+						If (ErrorStr <> "") Then
+							MsgBox ErrorStr, 48, ERR_MSG_TITLE
+							Exit Function
+						End If
+						v = v & { от имени } & DWFSGetNameByODObjName(docVisa.VisaInitAsObjName(0), ErrorStr)
+						If (ErrorStr <> "") Then
+							MsgBox ErrorStr, 48, ERR_MSG_TITLE
+							Exit Function
+						End If						
+					End If					
+					VisaID(UBound(VisaID)) = v & {|} & docVisa.UniversalID
+				End If
+			End If		
+			'VisaID(UBound(VisaID)) = v & {|} & docVisa.UniversalID				
+			Set docVisa = colVisa.GetNextDocument(docVisa)
+		Wend
+	End If
+	If (VisaID(0) = "") Then
+		Exit Function
+	End If
+	
+	Set docTemp = db.CreateDocument
+	docTemp.Members = VisaID
+	docTemp.promt = "Выберите значение для отмены визы"
+	
+	If (multi = True) Then
+		Form = "DWF105"
+	Else
+		Form = "DWF104"
+	End If
+	
+	If Not (ws.DialogBox(Form, True, True, False, False, False, False, db.Title, docTemp, True, False, True)) Then
+		Exit Function
+	End If
+	If (docTemp.List(0) = "") Then
+		Exit Function
+	End If
+	v = docTemp.List
+	If (v(0) = "") Then
+		Exit Function
+	End If
+	
+	If (DWFAAdminCancelVisa(doc, v) <>1) Then
+		Exit Function
+	End If
+	
+	' Переоткрытие документа
+	Dim ViewID As NotesView, unid$
+	Set ViewID = db.GetView("(UNID)")
+	Call ViewID.Refresh()
+	ViewID.AutoUpdate = False
+	
+	unid = doc.UniversalID
+	Call docUI.Close(True)
+	Set doc = viewID.Getdocumentbykey(unid, True)
+	If Not doc Is Nothing Then Call ws.Editdocument(False, doc)
+	
+	MsgBox "Выбранная виза отменена"
+	
+	
+	Exit Function
+errh:
+	MsgBox Error$ & {. Error # } & CStr(Err) & { on line # } & CStr(Erl) & { in (DWFRUserCancelVisa) "DWFRequest"},, {Error}
+	Resume endh
+endh:
+End Function
+
+'++LotusScript Development Environment:2:1:DWFRRespDocAdd:1:8
+Function DWFRRespDocAdd() As Integer
+	On Error Goto errh
+	
+	Dim ws As New NotesUIWorkspace
+	Dim session As New NotesSession
+	Dim db As NotesDatabase
+	Dim docUI As NotesUIDocument
+	Dim doc As NotesDocument
+	Dim docAddDoc As NotesDocument
+	
+	Set db = session.CurrentDatabase
+	Set docUI = ws.CurrentDocument
+	Set doc = docUI.Document
+	
+	If (DWFARespDocAdd(doc, docAddDoc) <> 1) Then
+		DWFRRespDocAdd = 0
+		Exit Function
+	End If
+	Call ws.EditDocument(True, docAddDoc,,,, False)
+	
+	
+	DWFRRespDocAdd = 1
+	
+	Exit Function
+errh:
+	Msgbox Error$ & {. Error # } & Cstr(Err) & { on line # } & Cstr(Erl) & { in (DWFRRespDocAdd) "DWFRequest"},, {Error}
+	Resume endh
+endh:
+End Function
+
+'++LotusScript Development Environment:2:1:DWFRInitProcessByProcessDoc:1:8
+Function DWFRInitProcessByProcessDoc( in_docProcess As NotesDocument ) As NotesDocument
+	On Error GoTo errh
+	
+	Print CStr(Now) & { >>>}
+	Dim docMain As NotesDocument
+	If (DWFAInitProcess(in_docProcess, docMain) <> 1) Then
+		Exit Function
+	End If
+	
+	If (DWFAClaim(docMain) <> 1) Then
+		Exit Function
+	End If
+	Print CStr(Now) & { <<<}
+	
+	Dim db As NotesDatabase, ViewID As NotesView
+	Set db = in_docProcess.Parentdatabase
+	Set ViewID = db.GetView("(UNID)")
+	Call ViewID.Refresh()
+	ViewID.AutoUpdate = False
+	
+	
+	Dim ID As String
+	ID = docMain.UniversalID
+	Set DWFRInitProcessByProcessDoc = ViewID.GetDocumentByKey(ID)
+	Exit Function
+	
+errh:
+	MsgBox Error$ & {. Error # } & CStr(Err) & { on line # } & CStr(Erl) & { in (DWFRInitProcess) "DWFRequest"},, {Error}
+	Resume endh
+endh:
+End Function
+
+
+'++LotusScript Development Environment:2:1:DWFRAddDocReturn:1:8
+Function DWFRAddDocReturn() As Integer
+	On Error Goto errh
+	
+	Dim ws As New NotesUIWorkspace
+	Dim session As New NotesSession
+	Dim db As NotesDatabase
+	Dim docUI As NotesUIDocument
+	Dim doc As NotesDocument
+	Dim docAddDoc As NotesDocument
+	
+	Set db = session.CurrentDatabase
+	Set docUI = ws.CurrentDocument
+	Set doc = docUI.Document
+	
+	If (DWFAAddDocReturn(doc) <> 1) Then
+		DWFRAddDocReturn = 0
+		Exit Function
+	End If
+	
+	
+	
+	DWFRAddDocReturn = 1
+	
+	Exit Function
+errh:
+	Msgbox Error$ & {. Error # } & Cstr(Err) & { on line # } & Cstr(Erl) & { in (DWFRAddDocReturn) "DWFRequest"},, {Error}
+	Resume endh
+endh:
+End Function
+
+'++LotusScript Development Environment:2:1:DWFRRemoveStageOwner:1:8
+Function DWFRRemoveStageOwner() As Integer
+	On Error Goto errh
+	
+	Dim ws As New NotesUIWorkspace
+	Dim session As New NotesSession
+	Dim db As NotesDatabase
+	Dim docUI As NotesUIDocument
+	Dim doc As NotesDocument
+	Dim v As Variant
+	Dim ODStoreUI As ODStoreUI
+	Dim ErrorStr As String
+	Dim docTemp As NotesDocument
+	Dim ObjAccess As Variant, ObjID As Variant, ObjName As Variant, ObjPath As Variant
+	Dim ItemPrefix  As String
+	Dim multi As Boolean
+	Dim Form As String
+	Dim i As Integer
+	
+	
+	ItemPrefix = {StageOwner}
+	multi = True
+	Set db = session.CurrentDatabase
+	Set docUI = ws.CurrentDocument
+	Set doc = docUI.Document
+	
+	Set ODStoreUI = New ODStoreUI(doc.dbODPath(0), ErrorStr)
+	If (ErrorStr <> "") Then
+		Msgbox ErrorStr, 48, ERR_MSG_TITLE
+		Exit Function
+	End If
+	
+	v = ODStoreUI.GetObjectValueByItem(doc, ItemPrefix, ObjAccess, ObjID, ObjName, ObjPath, ErrorStr)
+	If (ErrorStr <> "") Then
+		Msgbox ErrorStr, 48, ERR_MSG_TITLE
+		Exit Function
+	End If
+	If (v = 0) Then
+		Exit Function
+	End If
+	If (Ubound(ObjID) = 0) Then
+		Msgbox {Нельзя удалить последнего потенциального владельца стадии}, 48, ERR_MSG_TITLE
+		Exit Function
+	End If
+	
+	
+	Set docTemp = db.CreateDocument
+	Redim v(0) As String
+	For i=0 To Ubound(ObjID)
+		If (v(0) <> "") Then
+			Redim Preserve v(Ubound(v)+1) As String
+		End If
+		v(Ubound(v)) = ObjName(i) & {|} & ObjID(i)
+	Next
+	docTemp.Members = v
+	docTemp.promt = "Выберите значение для удаления"
+	
+	If (multi = True) Then
+		Form = "DWF105"
+	Else
+		Form = "DWF104"
+	End If
+	
+	If Not (ws.DialogBox(Form, True, True, False, False, False, False, db.Title, docTemp, True, False, True)) Then
+		Exit Function
+	End If
+	If (docTemp.List(0) = "") Then
+		Exit Function
+	End If
+	v = docTemp.List
+	
+	If Ubound(v) => Ubound(ObjID) Then
+		Msgbox {Нельзя удалить всех потенциальных владельцев стадии}, 48, ERR_MSG_TITLE
+		Exit Function
+	End If
+	
+	
+	
+	If (DWFARemoveStageOwner(doc, v)<>1) Then
+		DWFRRemoveStageOwner = 0
+		Exit Function
+	End If
+	
+	Msgbox {Выбранные участники удалены успешно}, 64, {Внимание!}
+	
+	
+	
+	DWFRRemoveStageOwner = 1
+	
+	Exit Function
+errh:
+	Msgbox Error$ & {. Error # } & Cstr(Err) & { on line # } & Cstr(Erl) & { in (DWFRRemoveStageOwner) "DWFRequest"},, {Error}
+	Resume endh
+endh:
+End Function
+
+'++LotusScript Development Environment:2:1:DWFRAddDocAdd:1:8
+Function DWFRAddDocAdd() As Integer
+	On Error Goto errh
+	
+	Dim ws As New NotesUIWorkspace
+	Dim session As New NotesSession
+	Dim db As NotesDatabase
+	Dim docUI As NotesUIDocument
+	Dim doc As NotesDocument
+	Dim docAddDoc As NotesDocument
+	
+	Set db = session.CurrentDatabase
+	Set docUI = ws.CurrentDocument
+	Set doc = docUI.Document
+	
+	If (DWFAAddDocAdd(doc, docAddDoc) <> 1) Then
+		DWFRAddDocAdd = 0
+		Exit Function
+	End If
+	Call ws.EditDocument(True, docAddDoc,,,, False)
+	
+	
+	DWFRAddDocAdd = 1
+	
+	Exit Function
+errh:
+	Msgbox Error$ & {. Error # } & Cstr(Err) & { on line # } & Cstr(Erl) & { in (DWFRAddDocAdd) "DWFRequest"},, {Error}
+	Resume endh
+endh:
+End Function

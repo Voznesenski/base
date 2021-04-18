@@ -1,0 +1,317 @@
+'++LotusScript Development Environment:2:5:(Options):0:74
+Option Public
+Option Declare
+
+Use "fbyte"
+Use "fbyte.base"
+
+
+'++LotusScript Development Environment:2:5:(Forward):0:1
+Declare Public Class TPS_Gateway_Service As FBase_Abstract_Service
+Declare Class TPS_Gateway_System As FBase_Abstract_Object_Doc
+Declare Class TPS_Gateway_SystemInternal As TPS_Gateway_System
+Declare Class TPS_Gateway_SystemExternal As TPS_Gateway_System
+Declare Public Class TPS_Gateway_TransportSettings
+
+'++LotusScript Development Environment:2:5:(Declarations):0:10
+Const LAYER_EXTERNAL = "external"
+Const LAYER_INTERNAL = "internal"
+
+'==========================================================================
+'					 						CLASS GatewayManager
+'==========================================================================
+Public Class TPS_Gateway_Service As FBase_Abstract_Service
+	Private m_db As NotesDatabase
+	'----------------------------------------------------------------------------------------------------------------------------------
+	Sub New( in_parentService As Variant )
+	End Sub
+'----------------------------------------------------------------------------------------------------------------------------------
+	Property Get database As NotesDatabase
+		On Error GoTo error_point
+		Const DB_KEY = "tps.gateway"
+		
+		If ( m_db Is Nothing ) Then
+			Dim fBase As FBaseService, fBaseDatabases As Fbase_databasesservice
+			Set fBase = Me.sm.Base
+			Set fBaseDatabases = fBase.Databases
+			Set m_db = fBaseDatabases.get( DB_KEY )
+		End If
+		Set Database = m_db
+		Exit Property
+		
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Property
+	'----------------------------------------------------------------------------------------------------------------------------------
+	Property Get baseSystem As TPS_Gateway_System
+		On Error GoTo error_point
+		
+		Dim dc As NotesDocumentCollection
+		Set dc = Me.database.Search( {( Form = "system" ) & ( type="base")}, Nothing, 0 )
+		If ( dc.Count = 0 ) Then Exit Property
+		
+		Dim docSystem As NotesDocument
+		Set docSystem = dc.Getfirstdocument()
+		Set baseSystem = Me.getDocObject( docSystem )
+		Exit Property
+		
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Property
+'----------------------------------------------------------------------------------------------------------------------------------
+	Function getDocObject( in_doc As NotesDocument ) As Variant
+		On Error GoTo error_point
+		Set getDocObject = Nothing
+		
+		Select Case LCase( in_doc.form(0))
+		Case "system":
+			Select Case in_doc.type(0)
+				Case "base":		Set getDocObject = New TPS_Gateway_SystemInternal( in_doc, Me.Me_Variant )
+				Case "external":	Set getDocObject = New TPS_Gateway_SystemExternal( in_doc, Me.Me_Variant )
+			End Select
+		End Select
+		Exit Function
+		
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Function
+'----------------------------------------------------------------------------------------------------------------------------------
+	Function getSystem( in_id As String ) As Variant
+		On Error GoTo error_point
+		
+		Set getSystem = Nothing
+		Dim vw As NotesView, docSystem As NotesDocument
+	'	Set vw = cacheVIew( Me.Database, "systems" )
+		Set docSystem = vw.GetDocumentByKey( LCase( in_id ), True )
+		If ( docSystem Is Nothing ) Then Exit Function
+		Set getSystem = Me.getDocObject( docSystem )
+		Exit Function
+		
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Function
+'----------------------------------------------------------------------------------------------------------------------------------
+	Function getSystemByParam( in_param As String, in_value As String ) As Variant
+		On Error GoTo error_point
+		
+		Set getSystemByParam = Me.getSystem( in_param & "~" & in_value )
+		Exit Function
+		
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Function
+'----------------------------------------------------------------------------------------------------------------------------------
+	Function dialogSelectSystems( in_systemType As String, in_isMult As Boolean ) As MixCollection
+		On Error GoTo error_point
+		
+		Dim mx As New MixCollection
+		Set dialogSelectSystems = mx
+		
+		Dim ws As New NotesUIWorkspace, dc As NotesDocumentCollection
+		Set dc = ws.PickListCollection( 3, in_isMult, Me.database.Server, Me.database.FilePath, "systems_pl", "Выбор системы", in_systemType )
+		If ( dc.Count = 0 ) Then Exit Function
+		
+		Dim docProtocol As NotesDocument
+		Set docProtocol = dc.GetFirstDocument
+		Do While Not ( docProtocol Is Nothing )
+			Dim protocol As Variant
+			Set protocol = Me.getDocObject( docProtocol )
+			Call mx.Append( protocol )
+			Set docProtocol = dc.GetNextDocument( docProtocol )
+		Loop
+		Exit Function
+		
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$		
+	End Function
+End Class
+
+'==========================================================================
+'					 						CLASS TPS_Gateway_System
+'==========================================================================
+Class TPS_Gateway_System As FBase_Abstract_Object_Doc
+	'----------------------------------------------------------------------------------------------------------------------------------
+	Sub New( in_doc As NotesDocument, in_parentService As Variant )
+		If ( UCase( TypeName( Me )) = "TPS_Gateway_SYSTEM" ) Then
+			Error 1001, "Класс TPS_Gateway_System является абстрактным"
+		End If
+	End Sub
+	'----------------------------------------------------------------------------------------------------------------------------------
+	Property Get domain As String
+		Me.domain = "tps.gateway.system"
+	End Property
+	'----------------------------------------------------------------------------------------------------------------------------------
+	Property Get Type As String
+		Me.type = m_doc.type(0)
+	End Property
+	'----------------------------------------------------------------------------------------------------------------------------------
+	Property Get isTransport( in_pfx As String ) As Boolean
+		isTransport = Not IsNull( ArrayGetIndex( m_doc.communication_types, in_pfx ))
+	End Property
+	'----------------------------------------------------------------	
+	Property Set isTransport( in_pfx As String ) As Boolean
+		Dim mx As New MixCollection, isFind As Boolean
+		If ( m_doc.communication_type(0) <> "" ) Then
+			Call mx.AppendCollection( m_doc.communication_type )
+		End If
+		
+		If ( isTransport ) Then
+			Call mx.Append( in_pfx )
+		Else
+			Call mx.Remove( in_pfx )
+		End If
+		
+		If ( mx.Count = 0 ) Then
+			m_doc.communication_type = ""
+		Else
+			m_doc.communication_type = FullTrim( mx.Array )
+		End If
+	End Property
+	'----------------------------------------------------------------------------------------------------------------------------------	
+	Property Get settings( in_pfx As String ) As Variant
+		Set settings = New TPS_Gateway_TransportSettings( Me, in_pfx )
+	End Property		
+	'----------------------------------------------------------------------------------------------------------------------------------
+	Property Get isEmailTransport As Boolean
+		isEmailTransport = Not IsNull( ArrayGetIndex( m_doc.communication_types, "email" ))
+	End Property
+	'----------------------------------------------------------------	
+	Property Set isEmailTransport As Boolean
+		Dim mx As New MixCollection
+		Call mx.Append( "" )
+		If ( isEmailTransport ) Then Call mx.Append( "email" )
+		If ( isMEDOTransport ) Then Call mx.Append( "medo" )
+		m_doc.communication_type = FullTrim( mx.Array )
+	End Property
+	'----------------------------------------------------------------------------------------------------------------------------------	
+	Property Get isMEDOTransport As Boolean
+		isMEDOTransport = Not IsNull( ArrayGetIndex( m_doc.communication_types, "medo" ))
+	End Property
+	'----------------------------------------------------------------	
+	Property Set isMEDOTransport As Boolean
+		Dim mx As New MixCollection
+		Call mx.Append( "" )
+		If ( isEmailTransport ) Then Call mx.Append( "email" )
+		If ( isMEDOTransport ) Then Call mx.Append( "medo" )
+		m_doc.communication_type = FullTrim( mx.Array )
+	End Property
+	'----------------------------------------------------------------------------------------------------------------------------------
+	Property Get emailSettings As Variant
+		Set emailSettings = New TPS_Gateway_TransportSettings( Me, "email" )
+	End Property
+	'----------------------------------------------------------------------------------------------------------------------------------	
+	Property Get medoSettings As Variant
+		Set medoSettings = New TPS_Gateway_TransportSettings( Me, "medo" )
+	End Property		
+End Class
+
+
+'==========================================================================
+'					 						CLASS TPS_Gateway_SystemInternal
+'==========================================================================
+Class TPS_Gateway_SystemInternal As TPS_Gateway_System
+'----------------------------------------------------------------------------------------------------------------------------------
+	Sub New( in_doc As NotesDocument, in_parentService As Variant )
+	End Sub
+'----------------------------------------------------------------------------------------------------------------------------------
+End Class
+
+
+'==========================================================================
+'					 						CLASS TPS_Gateway_SystemExternal
+'==========================================================================
+Class TPS_Gateway_SystemExternal As TPS_Gateway_System
+'----------------------------------------------------------------------------------------------------------------------------------
+	Sub New( in_doc As NotesDocument, in_parentService As Variant )
+	End Sub
+'----------------------------------------------------------------------------------------------------------------------------------	
+End Class
+
+
+'==========================================================================
+'					 						CLASS TransportSettings
+'==========================================================================
+Public Class TPS_Gateway_TransportSettings
+	Private m_system As TPS_Gateway_System
+	Private m_preffix As String
+	
+	Private m_keys As MixCollection
+	Private m_prms List As Variant
+'----------------------------------------------------------------------------------------------------------------------------------
+	Private Sub commitParameters()
+		If ( m_keys.Count = 0 ) Then
+			Call m_system.nd.ReplaceItemValue( m_preffix & "_params_name", "" )
+			Call m_system.nd.ReplaceItemValue( m_preffix & "_params_data", "" )
+		Else
+			Dim mxValues As New MixCollection
+			ForAll key In m_keys.Array
+				Call mxValues.Append( m_prms( key ))
+			End ForAll
+			Call m_system.nd.ReplaceItemValue( m_preffix & "_params_name", m_keys.Array )
+			Call m_system.nd.ReplaceItemValue( m_preffix & "_params_data", mxValues.Array )
+		End If
+	End Sub
+'----------------------------------------------------------------------------------------------------------------------------------
+	Sub New( in_system As TPS_Gateway_System, in_preffix As String )
+		Set m_system = in_system
+		m_preffix = in_preffix
+		
+		Set m_keys = New MixCollection
+		If ( m_system.nd.getItemValue( m_preffix & "_params_name" )(0) <> "" ) Then
+			Dim i As Integer
+			For i=0 To UBound( m_system.nd.getItemValue( m_preffix & "_params_name" ))
+				Dim pName As String, pValue As String
+				pName	= m_system.nd.getItemValue( m_preffix & "_params_name" )(i)
+				pValue	= m_system.nd.getItemValue( m_preffix & "_params_data" )(i)
+				Call m_keys.Append( pName )
+				m_prms( pName ) = pValue
+			Next
+		End If
+	End Sub
+'----------------------------------------------------------------------------------------------------------------------------------
+	Property Get protocol As Variant
+		Set protocol = Nothing
+		
+		Dim id As String, title As String
+		id = m_system.nd.getItemValue( m_preffix & "_protocol_id" )(0)
+		title = m_system.nd.getItemValue( m_preffix & "_protocol_title" )(0)
+		If ( id <> "" ) Then
+	'		Set protocol = New ObjectMetaInfo
+	'		protocol.id = id
+	'		protocol.title = title
+		End If
+	End Property
+'----------------------------------------------------------------------------------------------------------------------------------	
+	Property Get parametersKeys As MixCollection
+		Set parametersKeys = m_keys
+	End Property
+'----------------------------------------------------------------------------------------------------------------------------------
+	Property Get parameter( in_key As String ) As Variant
+		If Not IsElement( m_prms( in_key )) Then Exit Property
+		parameter = m_prms( in_key )
+	End Property
+'----------------------------------------------------------------
+	Property Set parameter( in_key As String ) As Variant
+		If Not IsElement( m_prms( in_key )) Then Call m_keys.Append( in_key )
+		m_prms( in_key ) = parameter
+		Call Me.commitParameters()
+	End Property
+'----------------------------------------------------------------------------------------------------------------------------------
+	Sub removeParameter( in_key As String )
+		Call m_keys.Remove(in_key)
+		Erase m_prms(in_key)
+		Call Me.commitParameters()
+	End Sub
+'----------------------------------------------------------------------------------------------------------------------------------
+	Sub clearParameters()
+		Call m_keys.Clear()
+		Erase m_prms
+		Call Me.commitParameters()
+	End Sub
+End Class

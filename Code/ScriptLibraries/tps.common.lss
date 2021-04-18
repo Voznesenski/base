@@ -1,0 +1,53 @@
+'++LotusScript Development Environment:2:5:(Options):0:74
+Option Public
+Option Declare
+
+Use "DWFODLib"
+Use "DWFAppLib"
+
+'++LotusScript Development Environment:2:5:(Forward):0:1
+Declare Class ODFields
+Declare Function getODStore( in_key As String ) As ODStore
+
+'++LotusScript Development Environment:2:5:(Declarations):0:10
+'======================================================================================================================================
+'	CLASS ODFields
+'======================================================================================================================================
+Class ODFields
+	Public Access As String
+	Public id As String
+	Public Name As String
+	Public path As String	
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	'	PUBLIC:
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Sub New( in_index As Integer, in_prefix As String, in_doc As NotesDocument )
+		On Error GoTo error_point
+		
+		Me.access = in_doc.GetItemValue( in_prefix & "ObjAccess" )( in_index )
+		Me.id = in_doc.GetItemValue( in_prefix & "ObjID" )( in_index )
+		Me.name = in_doc.GetItemValue( in_prefix & "ObjName" )( in_index )
+		Me.path = in_doc.GetItemValue( in_prefix & "ObjPath" )( in_index )
+		
+		Exit Sub 
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) ( prefix: " & in_prefix & ", index: " & CStr(in_index)& " ) >> " & Error$
+	End Sub
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+End Class
+'++LotusScript Development Environment:2:1:getODStore:1:8
+Function getODStore( in_key As String ) As ODStore
+	On Error GoTo error_point
+	Dim ErrorStr As String
+	Set getODStore = New ODStore( in_key, ErrorStr )
+	If ( ErrorStr <> "" ) Then
+		Error 1001, ErrorStr
+	End If
+	Exit Function
+error_point:
+	On Error GoTo 0
+	Error Err, GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+End Function
+
+

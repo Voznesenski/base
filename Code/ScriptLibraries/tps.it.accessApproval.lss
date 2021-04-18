@@ -1,0 +1,2958 @@
+'++LotusScript Development Environment:2:5:(Options):0:74
+Option Public
+Option Declare
+Option Compare NoCase
+
+Use "ArrayTools"
+Use "fbyte"
+
+
+'++LotusScript Development Environment:2:5:(Forward):0:1
+Declare Public Class TPS_It_AccessApproval_Link As Fbase_abstract_object_doc
+Declare Class TPS_It_AccessApproval_PM As Fbase_abstract_object_doc
+Declare Class TPS_It_AccessApproval_Form As Fbase_abstract_object_doc
+Declare Class TPS_It_AccessApproval_FormField As Fbase_abstract_object_doc
+Declare Class TPS_It_AccessApproval_Ability As Fbase_abstract_object_doc
+Declare Class TPS_It_AccessApproval_CardAgree As Fbase_abstract_object_doc
+Declare Class TPS_It_AccessApproval_IS As Fbase_abstract_object_doc
+Declare Public Class TPS_It_AccessApproval_AbilsGroup As Fbase_abstract_object_doc
+Declare Public Class TPS_It_AccessApproval_AclGroup As Fbase_abstract_object_doc
+Declare Public Class TPS_It_AccessApprovalService As FBase_Abstract_Service
+Declare Public Class MiniOdObj
+Declare Sub Initialize
+Declare 	Private Function getAllResponses(doc As NotesDocument, currentMix As Mixcollection) As mixCollection
+Declare Private Sub appendValueToField ( doc As NotesDocument, fieldName As String, valueToAdd As Variant )
+Declare Private Function getDbViaPM(pm As Variant, dbKey As String)As NotesDatabase
+
+'++LotusScript Development Environment:2:5:(Declarations):0:10
+
+Public Const SETTINGS_TECHSUPPORT_EMAIL = "tps.it.accessApproval.helpDesk.email"
+Public Const SETTINGS_ADDRESSBOOK = "tps.it.accessApproval.addressBook"
+
+
+Private Const DATABASE_KEY = "tps.it.accessApproval"
+
+Public Const DOMAIN_TPS_IT_ACCAPPR_CARDAGREE = "tps.it.accessApproval.cardagree"
+
+Public Const DOMAIN_TPS_IT_ACCAPPR_LINK = "tps.it.accessApproval.link"
+
+Public Const DOMAIN_TPS_IT_ACCAPPR_SPR_IS = "tps.it.accessApproval.sprIS"
+Public Const DOMAIN_TPS_IT_ACCAPPR_SPR_PM = "tps.it.accessApproval.sprPM"
+Public Const DOMAIN_TPS_IT_ACCAPPR_SPR_FORM = "tps.it.accessApproval.sprForm"
+Public Const DOMAIN_TPS_IT_ACCAPPR_SPR_FORMFIELD = "tps.it.accessApproval.sprFormField"
+Public Const DOMAIN_TPS_IT_ACCAPPR_SPR_ABILITY = "tps.it.accessApproval.sprAbility"
+Public Const DOMAIN_TPS_IT_ACCAPPR_SPR_ABGROUP = "tps.it.accessApproval.sprAbilsGroup"
+Public Const DOMAIN_TPS_IT_ACCAPPR_SPR_ACLGROUP = "tps.it.accessApproval.sprAclGroup"
+
+Public Const IS_TYPE_TECHSUPPORT = "other"
+Public Const IS_TYPE_LOTUS = "Lotus"
+
+Public Const ACL_USERTYPE_UNSPECIFIED = "Unspecified"
+Public Const ACL_USERTYPE_PERSON = "Person"
+Public Const ACL_USERTYPE_SERVER = "Server"
+Public Const ACL_USERTYPE_MIXEDGROUP = "Mixed group"
+Public Const ACL_USERTYPE_PERSONGROUP = "Person group"
+Public Const ACL_USERTYPE_SERVERGROUP = "Server group"
+
+Public Const ACL_ACCESSLEVEL_MANAGER = ACLLEVEL_MANAGER
+Public Const ACL_ACCESSLEVEL_DESIGNER = ACLLEVEL_DESIGNER
+Public Const ACL_ACCESSLEVEL_EDITOR = ACLLEVEL_EDITOR
+Public Const ACL_ACCESSLEVEL_AUTHOR = ACLLEVEL_AUTHOR
+Public Const ACL_ACCESSLEVEL_READER = ACLLEVEL_READER
+Public Const ACL_ACCESSLEVEL_DEPOSITOR = ACLLEVEL_DEPOSITOR
+Public Const ACL_ACCESSLEVEL_NOACCESS = ACLLEVEL_NOACCESS
+
+
+
+
+
+
+Public Class TPS_It_AccessApproval_Link As Fbase_abstract_object_doc
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------	
+	Public Sub New( in_doc As NotesDocument, in_ps As Variant )
+		'nothing
+	End Sub
+	
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------	
+	'const :(
+	Private Property Get link_field_prefix As String
+		link_field_prefix = "link"
+	End Property
+	
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------	
+	Public Property Get id As String
+		On Error GoTo error_point
+
+		id = me.nd.Getitemvalue("id")(0)
+		If(id = "")Then id = me.nd.Universalid
+
+		Exit Property
+		
+error_point:
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$		
+	End Property
+	
+	
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------	
+	Public Property Get domain As String
+		domain = DOMAIN_TPS_IT_ACCAPPR_LINK
+	End Property
+	
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------	
+	Public Property Get title As String
+		title = me.nd.getItemValue(me.link_field_prefix & "_title")(0)
+	End Property
+	
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------	
+	Public Property Get link As Objectlink
+		On Error GoTo error_point
+
+		Dim res As Objectlink
+		With me.nd
+			Set res = New Objectlink( _
+			.getItemValue(me.link_field_prefix & "_id")(0), _
+			.getItemValue(me.link_field_prefix & "_title")(0), _
+			.getItemValue(me.link_field_prefix & "_domain")(0))
+		End With
+		Set link = res
+		
+
+		Exit Property
+		
+error_point:
+		Error Err, GetThreadInfo(2) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$		
+	End Property
+	
+	'--------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Public Property Set link As Objectlink
+		On Error GoTo error_point
+		
+		Call me.setLinkFromStrings(link.id, link.title, link.domain)
+
+
+		Exit Property
+		
+error_point:
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Property
+	
+	
+	'--------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Public Sub setLinkFromStrings ( id As String, title As String, domain As String )
+		On Error GoTo error_point
+
+		With me.nd
+			Call .replaceItemValue(me.link_field_prefix & "_id", id)
+			Call .replaceItemValue(me.link_field_prefix & "_title", title)
+			Call .replaceItemValue(me.link_field_prefix & "_domain", domain)
+		End With
+		
+
+		Exit Sub
+		
+error_point:
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Sub
+
+
+	'--------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Public Sub setLinkFromObject ( obj As Variant )
+		On Error GoTo error_point
+
+		Call me.setLinkFromStrings(obj.id, obj.title, obj.domain)
+		
+
+		Exit Sub
+		
+error_point:
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Sub
+	
+	
+	'--------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Public Function save () As Boolean
+		On Error GoTo error_point
+
+		save = me.nd.save(True, False)
+		
+
+		Exit Function
+		
+error_point:
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Function
+	
+	
+	'--------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Public Sub uiOpenLinkObject ()
+		On Error GoTo error_point
+
+		Dim ws As New NotesUIWorkspace()
+		Dim link As Objectlink
+		Set link = me.link
+		Dim doc As NotesDocument
+		Set doc = me.nd.parentDatabase.getDocumentByUnid(link.id)
+		Call ws.Editdocument(False, doc)
+		
+
+		Exit Sub
+		
+error_point:
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Sub
+	
+	
+End Class
+
+Class TPS_It_AccessApproval_PM As Fbase_abstract_object_doc
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------	
+	Public Sub New( in_doc As NotesDocument, in_ps As Variant )
+		'nothing
+	End Sub
+	
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------	
+	Public Property Get domain As String
+		domain = DOMAIN_TPS_IT_ACCAPPR_SPR_PM
+	End Property
+	
+	
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------	
+	Public Property Get id As String
+		On Error GoTo error_point
+
+		id = me.nd.Getitemvalue("id")(0)
+		If(id = "")Then id = me.nd.Universalid
+
+		Exit Property
+		
+error_point:
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$		
+	End Property
+	
+	
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------	
+	Public Property Get title As String
+		On Error GoTo error_point
+
+		title = me.nd.Getitemvalue("Title")(0)
+
+		Exit Property
+		
+error_point:
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$		
+	End Property
+	
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------	
+	Public Property Get description As String
+		description = me.nd.Getitemvalue("Description")(0)
+	End Property
+	
+	Public Property Set description As String
+		Call me.nd.Replaceitemvalue("Description", description)
+	End Property
+	
+	
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	'возвращает массив object'ов дефолтных абилок
+	Public Property Get defaultAbilitiesLinks As MixCollection
+		On Error GoTo error_point
+		
+		Const prefix = "defaultAbilities"
+		
+		Set defaultAbilitiesLinks = New Mixcollection()
+		
+		Dim aId As Variant, aName As Variant, aDomain As Variant
+		
+		aId = me.nd.Getitemvalue(prefix & "_id")
+		If(aId(0) = "")Then Exit Property 'ничего нет
+		
+		aName = me.nd.Getitemvalue(prefix & "_title")
+		aDomain = me.nd.getitemValue(prefix & "_domain")
+		
+		Dim i As Integer
+		Dim docObj As Variant, lnk As Variant
+		Dim docSrv As Variant
+		Set docSrv = me.ps
+		
+		For i = 0 To UBound(aId)
+			Set lnk = New ObjectLink(aId(i), aName(i), aDomain(i))
+			Call defaultAbilitiesLinks.Append(lnk)
+		Next
+		
+
+		Exit Property
+		
+error_point:
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$		
+	End Property
+	
+	
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------	
+	Public Property Get isActive As Boolean
+		isActive = (me.nd.Getitemvalue("Status")(0) = "active")
+	End Property
+	
+	Public Property Set isActive As Boolean
+		If(isActive)Then
+			Call me.nd.Replaceitemvalue("Status", "active")
+		Else
+			Call me.nd.Replaceitemvalue("Status", "passive")
+		End If
+	End Property
+	
+	
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Private m_owners As Variant
+	%REM
+		Public Property Get pmOwners As MixCollection
+		Description: возвращает коллекцию MiniOdObj
+	%END REM	
+	Public Property Get owners As MixCollection
+		On Error GoTo error_point
+		
+		If(IsEmpty(me.m_owners))Then
+			Set me.m_owners = New Mixcollection() 
+			
+			Dim owns As Variant, i As Integer
+			Dim link As MiniOdObj
+			
+			Const fldName = "owners"
+			Dim postfixes As Variant
+			
+			owns = me.nd.Getitemvalue(fldName & "ObjId")
+			If(owns(0) <> "")Then
+				For i = 0 To UBound(owns)
+					Set link = New MiniOdObj()
+					Call link.initFromField(me.nd, fldName, i)
+					Call me.m_owners.append(link)
+				Next
+			End If
+		End If 
+		Set owners = me.m_owners
+
+
+		Exit Property
+		
+error_point:
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$		
+	End Property
+	
+
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------	
+	Public Property Get forms As MixCollection
+		On Error GoTo error_point
+
+		Dim res As New Mixcollection
+		Set forms = res
+		
+		Dim view As NotesView
+		Set view = me.nd.Parentdatabase.Getview("(lookup.spr.forms.byRef)")
+		
+		Dim col As NotesDocumentCollection, doc As NotesDocument, obj As Variant
+		Set col = view.Getalldocumentsbykey(me.Id, True)
+		If(col.count = 0)Then Exit Property
+		
+		Set doc = col.Getfirstdocument()
+		While Not(doc Is Nothing)
+			Set obj = me.ps.getDocObject(doc)
+			Call res.Append(obj)
+			Set doc = col.Getnextdocument(doc)
+		Wend
+		
+
+		Exit Property
+		
+error_point:
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$		
+	End Property
+
+
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------	
+	Public Property Get pmId As String
+		On Error GoTo error_point
+
+		pmId = me.nd.Getitemvalue("pm_id")(0)
+
+		Exit Property
+		
+error_point:
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$		
+	End Property
+	
+	
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	%REM
+		прописывает в документ линк на соотв запись в конфигураторе
+	%END REM	
+	Public Property Set pmLink As Objectlink
+		On Error GoTo error_point
+
+		Call me.nd.Replaceitemvalue("pm_id", pmLink.id)
+		Call me.nd.Replaceitemvalue("pm_title", pmLink.title)
+		Call me.nd.Replaceitemvalue("pm_domain", pmLink.domain)
+		
+
+		Exit Property
+		
+error_point:
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$		
+	End Property
+	
+
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------	
+	Public Property Get pmSubDomain As String
+		On Error GoTo error_point
+
+		pmSubDomain = me.nd.Getitemvalue("pmSubDomain")(0)
+
+		Exit Property
+		
+error_point:
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$		
+	End Property
+	
+	
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------	
+	%REM
+		возвращает ссылку на себя
+	%END REM
+	Public Property Get link As Objectlink
+		On Error GoTo error_point
+
+		Set link = New Objectlink( me.id, me.title, me.domain )
+
+		Exit Property
+		
+error_point:
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$		
+	End Property
+	
+	
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------	
+	%REM
+		коллекция ссылок на группы АЦЛей
+	%END REM
+	Public Property Get access_aclGroupsLinks As Mixcollection
+		On Error GoTo error_point
+
+		Dim res As New Mixcollection()
+		Set access_aclGroupsLinks = res
+		
+		Dim view As NotesView
+		Set view = me.nd.Parentdatabase.Getview("(lookup.spr.aclGroups.byRef.byName)")
+		
+		Dim col As NotesDocumentCollection
+		Set col = view.Getalldocumentsbykey(me.nd.Universalid, True)
+		If(col.Count = 0)Then Exit Property
+		
+		Dim doc As NotesDocument
+		Set doc = col.Getfirstdocument()
+		While Not(doc Is Nothing)
+			Dim lnk As objectlink
+			Set lnk = New objectlink(doc.Getitemvalue("id")(0), doc.Getitemvalue("title")(0), doc.Getitemvalue("domain")(0))
+			Call res.Append(lnk)
+			
+			Set doc = col.Getnextdocument(doc)
+		Wend
+
+
+		Exit Property
+		
+error_point:
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$		
+	End Property
+	
+	
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------	
+	Public Property Get access_aclGroups As Mixcollection
+		On Error GoTo error_point
+
+		Dim res As New Mixcollection()
+		Set access_aclGroups = res
+		
+		Dim lnks As mixcollection
+		Set lnks = me.access_aclGroupsLinks
+		If(lnks.count = 0)Then Exit Property
+		
+		ForAll lnk In lnks.Array
+			Dim acl As TPS_It_AccessApproval_AclGroup
+			Set acl = me.ps.getObject(lnk)
+			Call res.Append(acl)
+		End ForAll
+		
+
+		Exit Property
+		
+error_point:
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$		
+	End Property
+	
+	
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------	
+	Public Property Get pmConfiguratorPath As String
+		pmConfiguratorPath = me.nd.Getitemvalue("pmConfiguratorPath")(0)
+	End Property
+	
+	Public Property Set pmConfiguratorPath As String
+		Call me.nd.replaceItemValue("pmConfiguratorPath", pmConfiguratorPath)
+	End Property
+	
+
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------	
+	Public Property Get pmAddressBookPath As String
+		pmAddressBookPath = me.nd.Getitemvalue("pmAddressBookPath")(0)
+	End Property
+	
+	
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------	
+	%rem
+		возвращает АК, актуальную для текущего ПМ
+	%end rem
+	Private m_addressBook As NotesDatabase
+	Private m_addressBook_opened As String
+	Public Property Get addressBook As NotesDatabase
+		On Error GoTo error_point
+
+		Dim s As New NotesSession()
+		
+		Dim ab As NotesDatabase
+		Dim abPath As String
+		
+		
+		abPath = me.pmAddressBookPath
+
+		If(me.m_addressBook_opened = abPath And Not me.m_addressBook Is Nothing)Then
+			Set addressBook = me.m_addressBook
+			Exit Property
+		End If
+
+		If(abPath <> "")Then
+			Set ab = New NotesDatabase("", "")
+			On Error Resume Next
+			If(InStr(abPath, "!!") > 0)Then
+				Call ab.open(StrLeft(abPath, "!!"), StrRight(abPath, "!!"))
+			Else
+				Call ab.Open(me.nd.parentDatabase.Server, abPath)
+			End If
+			On Error GoTo error_point
+			If Not(ab.Isopen)Then Error 1001, "Не могу открыть адресную книжку по адресу: " & abPath
+		End If
+		
+		
+		If(ab Is Nothing)Then
+			'дефолтная адресная книжка
+			Set ab = New NotesDatabase("", "")
+
+			Dim abFileNameSetting As FCORE_SETTING
+			Set abFileNameSetting = sm.core.settings( s.Currentdatabase ).get( SETTINGS_ADDRESSBOOK )
+			If Not(abFileNameSetting Is Nothing)Then
+				abPath = CStr(abFileNameSetting.value)
+				If(abPath = "")Then Error 1001, "Настройка " & SETTINGS_ADDRESSBOOK & " не заполнена (пустая)"
+				
+				On Error Resume Next
+				If(InStr(abPath, "!!") > 0)Then
+					Call ab.open(StrLeft(abPath, "!!"), StrRight(abPath, "!!"))
+				Else
+					Call ab.Open(me.nd.parentDatabase.Server, abPath)
+				End If
+				On Error GoTo error_point
+			End If 
+			
+			If Not(ab.Isopen)Then 'совсем дефолтная АК
+				If(abPath <> "")Then me.log.warning("Не могу найти БД с именем: " & abPath)
+				Call ab.Open(s.Currentdatabase.Server, "names.nsf")
+			End If
+		End If
+		
+		Set me.m_addressBook = ab
+		me.m_addressBook_opened = abPath
+		
+		Set addressBook = ab
+		
+
+		Exit Property
+		
+error_point:
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$		
+	End Property
+	
+	
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------	
+	%rem
+		возвращает БД Конфигуратора, если она прописана в ПМ, иначе дефолтный конфигуратор
+	%end rem
+	Public Property Get configurator As NotesDatabase
+		On Error GoTo error_point
+
+		Dim confDb As NotesDatabase
+		Dim configPath As String
+		configPath = me.pmConfiguratorPath
+		
+		If(configPath <> "")Then
+			Set confDb = New NotesDatabase("", "")
+			If(InStr(configPath, "!!") > 0)Then
+				Call confDb.open(StrLeft(configPath, "!!"), StrRight(configPath, "!!"))
+			Else
+				Call confDb.open(me.nd.Parentdatabase.Server, configPath)
+			End If
+		Else
+			Set confDb = Me.sm.base.databases.get( "tps.core.settings" )
+		End If
+		
+		Set configurator = confDb
+		
+
+		Exit Property
+		
+error_point:
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$		
+	End Property
+	
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------	
+	%rem
+		возвращает орг.директорию, актуальную для текущего ПМ
+	%end rem
+	Private m_orgDirectory As NotesDatabase
+	Private m_orgDirectory_conf As String
+	Public Property Get orgDirectory As NotesDatabase
+		On Error GoTo error_point
+
+		Dim conf As String
+		conf = me.pmConfiguratorPath
+		If(me.m_orgDirectory_conf = conf And Not(me.m_orgDirectory Is Nothing))Then
+			Set orgDirectory = me.m_orgDirectory
+		End If
+		 
+		Set me.m_orgDirectory = getDbViaPM(Me, "tps.core.directory")
+		me.m_orgDirectory_conf = me.pmConfiguratorPath
+		
+		Set orgDirectory = me.m_orgDirectory
+		
+
+		Exit Property
+		
+error_point:
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$		
+	End Property
+	
+	
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------	
+	%rem
+		возвращает привязанную к ПМ БД с учётом потенциального изменения в конфигураторе
+	%end rem
+	Public Property Get db As NotesDatabase
+		On Error GoTo error_point
+
+		Set db = getDbViaPM(Me, me.pmId)
+
+		Exit Property
+		
+error_point:
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$		
+	End Property
+	
+	
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------	
+	Private m_parentIS As Variant
+	Public Property Get parentIS As TPS_It_AccessApproval_IS
+		On Error GoTo error_point
+
+		If(IsEmpty(m_parentIS))Then
+			Dim pUnid As String
+			
+			pUnid = me.nd.Parentdocumentunid
+			If(pUnid = "")Then pUnid = CStr(me.nd.getItemValue("ParentRef")(0))
+			
+			Dim pDoc As NotesDocument
+			Set pdoc = me.ps.db.getDocumentByUNID(pUnid)
+			Set me.m_parentIS = me.ps.getDocObject(pdoc)
+		End If
+		Set parentIS = me.m_parentIS
+
+		Exit Property
+		
+error_point:
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$		
+	End Property
+	
+	
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------	
+	%rem
+		возвращает коллекцию линков связанных абилок
+	%end rem
+	Public Property Get abilitiesLinks As Mixcollection
+		On Error GoTo error_point
+		
+		Dim res As New Mixcollection()
+		Set abilitiesLinks = res
+		
+		Dim db As NotesDatabase, view As NotesView
+		Dim col As NotesDocumentCollection, doc As NotesDocument
+		Set db = me.ps.db
+		
+		Set view = db.Getview("(lookup.spr.abilities.byRef.active)")
+		Set col = view.Getalldocumentsbykey(me.id, True)
+		
+		If(col.count = 0)Then Exit Property
+		
+		Set doc = col.Getfirstdocument()
+		While Not(doc Is Nothing)
+			Dim lnk As objectlink
+			Set lnk = New Objectlink(doc.getItemValue("id")(0), _
+				doc.getItemValue("title")(0), _
+				doc.getItemValue("domain")(0) )
+			Call res.append(lnk)
+			
+			If(doc.getItemValue("isFolder")(0) = "1")Then
+				Dim rMix As mixcollection
+				Set rMix = getAllResponses(doc, Nothing)
+				If(rMix.count > 0)Then
+					ForAll d In rMix.Array
+						Set lnk = New Objectlink(d.getItemValue("id")(0), _
+						d.getItemValue("title")(0), _
+						d.getItemValue("domain")(0) )
+						Call res.append(lnk)
+					End ForAll
+				End If
+			End If
+			
+			Set doc = col.Getnextdocument(doc)
+		Wend
+		
+
+		Exit Property
+		
+error_point:
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$		
+	End Property
+	
+	
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------	
+	%rem
+		возвращает коллекцию свяазанных абилок
+	%end rem
+	Public Property Get abilities As Mixcollection
+		On Error GoTo error_point
+
+		Dim res As New Mixcollection()
+		Set abilities = res
+		
+		Dim db As NotesDatabase, view As NotesView
+		Dim col As NotesDocumentCollection, doc As NotesDocument
+		Set db = me.ps.db
+		
+		Set view = db.Getview("(lookup.spr.abilities.byRef.active)")
+		Set col = view.Getalldocumentsbykey(me.id, True)
+		
+		If(col.count = 0)Then Exit Property
+		
+		Set doc = col.Getfirstdocument()
+		While Not(doc Is Nothing)
+			Dim obj As TPS_It_AccessApproval_Ability
+			Set obj = me.ps.getDocObject(doc)
+			Call res.append(obj)
+
+			If(obj.isFolder)Then
+				Dim rMix As mixcollection
+				Set rMix = getAllResponses(doc, Nothing)
+				If(rMix.count > 0)Then
+					ForAll d In rMix.Array
+						Dim tempDoc As NotesDocument
+						Set tempDoc = d
+						Dim o As TPS_It_AccessApproval_Ability
+						Set o = me.ps.getDocObject(tempDoc)
+						Call res.append(o)
+					End ForAll
+				End If
+			End If
+			
+			Set doc = col.Getnextdocument(doc)
+		Wend
+		
+		
+		Exit Property
+		
+error_point:
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$		
+	End Property
+	
+
+End Class
+Class TPS_It_AccessApproval_Form As Fbase_abstract_object_doc
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------	
+	Public Sub New( in_doc As NotesDocument, in_ps As Variant )
+		'nothing
+	End Sub
+	
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------	
+	Public Property Get domain As String
+		domain = DOMAIN_TPS_IT_ACCAPPR_SPR_FORM
+	End Property
+	
+	
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------	
+	Public Property Get id As String
+		On Error GoTo error_point
+
+		id = me.nd.Getitemvalue("id")(0)
+		If(id = "")Then id = me.nd.Universalid
+
+		Exit Property
+		
+error_point:
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$		
+	End Property
+	
+	
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------	
+	Public Property Get title As String
+		On Error GoTo error_point
+
+		title = me.nd.Getitemvalue("Title")(0)
+
+		Exit Property
+		
+error_point:
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$		
+	End Property
+	
+	
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------	
+	Public Property Get isActive As Boolean
+		isActive = (me.nd.Getitemvalue("Status")(0) = "active")
+	End Property
+	
+	
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------	
+	Public Property Get fields As MixCollection
+		On Error GoTo error_point
+
+		Dim res As New Mixcollection()
+		Set fields = res
+		
+		Dim view As NotesView
+		Set view = me.nd.Parentdatabase.Getview("(lookup.spr.formFields.byRef)")
+		
+		Dim col As NotesDocumentCollection, doc As NotesDocument, obj As Variant
+		Set col = view.Getalldocumentsbykey(me.id, True)
+		
+		Set doc = col.Getfirstdocument()
+		While Not(doc Is Nothing)
+			Set obj = me.ps.getDocObject(doc)
+			Call res.Append(obj)
+			Set doc = col.Getnextdocument(doc)
+		Wend
+		
+
+		Exit Property
+		
+error_point:
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$		
+	End Property
+	
+	
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------	
+	Public Property Get formName As String
+		On Error GoTo error_point
+
+		formName = me.nd.Getitemvalue("formName")(0)
+
+		Exit Property
+		
+error_point:
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$		
+	End Property
+	
+	
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------	
+	Public Property Get activeDocumentsFormula As String
+		On Error GoTo error_point
+
+		activeDocumentsFormula = me.nd.Getitemvalue("activeDocsFormula")(0)
+
+		Exit Property
+		
+error_point:
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$		
+	End Property
+	
+	
+End Class
+Class TPS_It_AccessApproval_FormField As Fbase_abstract_object_doc
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------	
+	Public Sub New( in_doc As NotesDocument, in_ps As Variant )
+		'nothing
+	End Sub
+	
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------	
+	Public Property Get domain As String
+		domain = DOMAIN_TPS_IT_ACCAPPR_SPR_FORMFIELD
+	End Property
+	
+	
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------	
+	Public Property Get id As String
+		On Error GoTo error_point
+
+		id = me.nd.Getitemvalue("id")(0)
+		If(id = "")Then id = me.nd.Universalid
+
+		Exit Property
+		
+error_point:
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$		
+	End Property
+	
+	
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------	
+	Public Property Get title As String
+		title = me.nd.Getitemvalue("Title")(0)
+	End Property
+
+	Public Property Set title As String
+		Call me.nd.Replaceitemvalue("Title", title)
+	End Property
+	
+	
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------	
+	Public Property Get isActive As Boolean
+		isActive = (me.nd.Getitemvalue("Status")(0) = "active")
+	End Property
+	
+	Public Property Set isActive As Boolean
+		If(isActive)Then
+			Call me.nd.replaceItemValue("Status", "active")
+		Else
+			Call me.nd.replaceItemValue("Status", "passive")
+		End If
+	End Property
+	
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------	
+	Public Property Get fieldName As String
+		fieldName = me.nd.Getitemvalue("fieldName")(0)
+	End Property
+	
+	Public Property Set fieldName As String
+		Call me.nd.Replaceitemvalue("fieldName", fieldName)
+	End Property
+	
+	
+End Class
+Class TPS_It_AccessApproval_Ability As Fbase_abstract_object_doc
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------	
+	Public Sub New( in_doc As NotesDocument, in_ps As Variant )
+		'nothing
+	End Sub
+	
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------	
+	Public Property Get domain As String
+		domain = DOMAIN_TPS_IT_ACCAPPR_SPR_ABILITY
+	End Property
+	
+	'--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------	
+	Public Property Get id As String
+		On Error GoTo error_point
+
+		id = me.nd.Getitemvalue("id")(0)
+		If(id = "")Then id = me.nd.Universalid
+
+		Exit Property
+		
+error_point:
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$		
+	End Property
+	
+	'--------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Public Property Get fullPath As String
+		On Error GoTo error_point
+		
+		Dim pIs As Variant, pPm As Variant
+		Set pIs = me.parentIs
+		Set pPm = me.parentPm
+		fullPath = pIs.title & "$$" & pPm.title & "$$" & me.path
+		
+
+		Exit Property
+		
+error_point:
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Property
+
+	
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------	
+	Public Property Get path As String
+		On Error GoTo error_point
+
+		Dim title As String
+		
+		Dim pm As Variant, iis As Variant, apath As String, pDoc As NotesDocument
+		Dim pUnid As String, v As Variant
+		
+		title = ""
+		
+		Set iis = me.parentIS
+		Set pm = me.parentPM
+		
+		pUnid = me.nd.Universalid
+		If(pUnid = "")Then pUnid = CStr(me.nd.Getitemvalue("parentRef")(0))
+		Set pDoc = me.nd.Parentdatabase.Getdocumentbyunid(pUnid)
+		While (pdoc.Getitemvalue("Form")(0) <> DOMAIN_TPS_IT_ACCAPPR_SPR_PM)
+			If(apath <> "")Then apath = apath & "$$"
+			apath = apath & pdoc.getItemValue("Title")(0)
+			pUnid = pdoc.Parentdocumentunid
+			If(pUnid = "")Then pUnid = CStr(pdoc.getItemValue("parentRef")(0))
+			Set pdoc = me.ps.db.getDocumentByUNID(pUnid)
+		Wend
+		
+		If Not(iis Is Nothing)Then title = iis.title
+		If Not(pm Is Nothing)Then
+			If(title <> "")Then title = title & "$$"
+			title = title & pm.title
+		End If
+		
+		If(title <> "")Then title = title & "$$"
+		title = title & apath
+		
+		If(title <> "")Then title = title & "$$"
+		title = title & me.nd.Getitemvalue("Title")(0)
+		
+		Dim tdoc As NotesDocument
+		Set tdoc = New NotesDocument(pm.nd.parentDatabase)
+		Call tdoc.replaceItemValue("path", apath)
+		v = Evaluate({ a:= @explode(path; "$$"); @unique(a) }, tdoc) '//да, мне лениво делать unique
+		'reversing list
+		title = ""
+		Dim i As Integer
+		For i = UBound(v) To 0 Step -1
+			If(title <> "")Then title = title & "$$"
+			title = title & v(i)
+		Next
+		
+		path = title
+		
+
+		Exit Property
+		
+error_point:
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$		
+	End Property
+	
+	
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------	
+	%rem
+		title без приписок ИС или ПМ
+	%end rem
+	Public Property Get title As String
+		On Error GoTo error_point
+
+		title = me.nd.Getitemvalue("Title")(0)
+
+		Exit Property
+		
+error_point:
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$		
+	End Property
+	
+	
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------	
+	Private m_parentPM As Variant
+	Public Property Get parentPM As TPS_It_AccessApproval_PM
+		On Error GoTo error_point
+		
+		If(IsEmpty(m_parentPM))Then
+			Dim pUnid As String
+			Dim pDoc As NotesDocument
+			
+			pUnid = me.nd.Parentdocumentunid
+			If(pUnid = "")Then pUnid = CStr(me.nd.getItemValue("ParentRef")(0))
+			Set pdoc = me.ps.db.getDocumentByUNID(pUnid)
+			While (pdoc.Getitemvalue("Form")(0) <> DOMAIN_TPS_IT_ACCAPPR_SPR_PM)
+				pUnid = pdoc.Parentdocumentunid
+				If(pUnid = "")Then pUnid = CStr(pdoc.getItemValue("ParentRef")(0))
+				Set pdoc = me.ps.db.getDocumentByUNID(pUnid)
+			Wend
+			Set me.m_parentPM = me.ps.getDocObject(pdoc)
+		End If
+		Set parentPM = me.m_parentPM
+
+
+		Exit Property
+		
+error_point:
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$		
+	End Property
+	
+	
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------	
+	Private m_parentIS As Variant
+	Public Property Get parentIS As TPS_It_AccessApproval_IS
+		On Error GoTo error_point
+
+		If(IsEmpty(m_parentIS))Then
+			Dim pDoc As NotesDocument
+			
+			Dim parentPm As TPS_It_AccessApproval_PM
+			Set parentPm = me.parentPm
+			
+			Set me.m_parentIS = parentPm.parentIS
+		End If 
+		
+		Set parentIS = me.m_parentIS
+
+
+		Exit Property
+		
+error_point:
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$		
+	End Property
+	
+	
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------	
+	Public Property Get isActive As Boolean
+		isActive = (me.nd.Getitemvalue("Status")(0) = "active")
+	End Property
+	
+	
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------	
+	%REM
+		возвращает список ацл групп, которые указаны для текущей абилки
+	%END REM
+	Public Property Get f_aclGroupNames As Variant
+		f_aclGroupNames = me.nd.Getitemvalue("f_aclGroupsName")
+	End Property
+	
+	Public Property Get f_aclGroupNames_expanded As Variant
+		If(parentPm Is Nothing)Then
+			f_aclGroupNames_expanded = me.f_aclGroupNames
+		Else
+			Dim acls As Variant
+			acls = me.f_aclGroupNames
+			If(acls(0) <> "")Then
+				Dim domain As String
+				Dim subDomain As String
+				domain = me.parentPM.parentIS.is_domain
+				subDomain = me.parentPM.pmSubDomain
+				
+				ForAll acl In acls
+					acl = Replace(acl, "<Domain>", domain)
+					acl = Replace(acl, "<SubDomain>", subDomain)
+				End ForAll
+			End If
+			f_aclGroupNames_expanded = acls
+		End If
+		
+	End Property
+	
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------	
+	%REM
+		возвращает коллекцию функциональных групп, которые привязаны к абилке
+	%END REM
+	Public Property Get f_funcGroups As MixCollection
+		On Error GoTo error_point
+
+		Dim res As New Mixcollection()
+		Set f_funcGroups = res
+		
+		Dim ids As Variant, i As Integer, fg As MiniOdObj
+		ids = me.nd.Getitemvalue("f_funcGroupsObjId")
+		If(ids(0) <> "")Then
+			For i = 0 To UBound(ids)
+				Set fg = New MiniOdObj()
+				Call fg.initFromField(me.nd, "f_funcGroups", i)
+				Call res.Append(fg)
+			Next
+		End If 
+		
+
+		Exit Property
+		
+error_point:
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$		
+	End Property
+	
+	
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------	
+	%REM
+		возвращает текстовое описание возможности, которую необходимо реализовать
+	%END REM
+	Public Property Get f_textDescription As String
+		f_textDescription = me.nd.Getitemvalue("f_textDescription")(0)
+	End Property
+	
+	'--------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Public Property Get isFolder As Boolean
+		On Error GoTo error_point
+
+		isFolder = (me.nd.getItemValue("isFolder")(0) = "1")
+
+		
+		Exit Property
+		
+error_point:
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Property
+	
+	
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------	
+	%rem
+		возвращает коллекцию свяазанных абилок
+	%end rem
+	Public Property Get abilities As Mixcollection
+		On Error GoTo error_point
+
+		Dim res As New Mixcollection()
+		Set abilities = res
+		
+		If(Not me.isFolder)Then
+			Exit Property
+		End If
+
+		Dim db As NotesDatabase, view As NotesView
+		Dim col As NotesDocumentCollection, doc As NotesDocument
+		Set db = me.ps.db
+		
+		Set view = db.Getview("(lookup.spr.abilities.byRef.active)")
+		Set col = view.Getalldocumentsbykey(me.id, True)
+		
+		If(col.count = 0)Then Exit Property
+		
+		Set doc = col.Getfirstdocument()
+		While Not(doc Is Nothing)
+			Dim obj As TPS_It_AccessApproval_Ability
+			Set obj = me.ps.getDocObject(doc)
+			Call res.append(obj)
+
+			If(obj.isFolder)Then
+				Dim rMix As mixcollection
+				Set rMix = getAllResponses(doc, Nothing)
+				If(rMix.count > 0)Then
+					ForAll d In rMix.Array
+						Dim tempDoc As NotesDocument
+						Set tempDoc = d
+						Dim o As TPS_It_AccessApproval_Ability
+						Set o = me.ps.getDocObject(tempDoc)
+						Call res.append(o)
+					End ForAll
+				End If
+			End If
+			
+			Set doc = col.Getnextdocument(doc)
+		Wend
+		
+		
+		Exit Property
+		
+error_point:
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$		
+	End Property
+	
+	
+	%REM
+		Property Get isSpecial
+		Description: Comments for Property Get
+	%END REM
+	Private m_specialType As String
+	Public Property Get specialType As String
+		specialType = m_specialType
+	End Property
+
+	Public Property Set specialType As String
+		m_specialType = specialType
+	End Property
+	
+End Class
+Class TPS_It_AccessApproval_CardAgree As Fbase_abstract_object_doc
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------	
+	Public Sub New( in_doc As NotesDocument, in_ps As Variant )
+		'nothing
+	End Sub
+	
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------	
+	Public Property Get domain As String
+		domain = DOMAIN_TPS_IT_ACCAPPR_CARDAGREE
+	End Property
+	
+	
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------	
+	Public Property Get id As String
+		On Error GoTo error_point
+
+		id = me.nd.Getitemvalue("id")(0)
+		If(id = "")Then id = nd.Universalid
+
+		Exit Property
+		
+error_point:
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$		
+	End Property
+	
+	
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------	
+	Public Property Get title As String
+		On Error GoTo error_point
+
+		title = me.nd.Getitemvalue("Title")(0)
+
+		Exit Property
+		
+error_point:
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$		
+	End Property
+
+	
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------	
+	Public Property Get accessRequestType As String
+		On Error GoTo error_point
+
+		accessRequestType = me.nd.getItemValue("accessRequestType")(0)
+
+		Exit Property
+		
+error_point:
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$		
+	End Property
+	
+	
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------	
+	Public Property Get accessToAbilities As MixCollection
+		On Error GoTo error_point
+
+		Const fld = "accessToAbility"
+
+		Dim res As New Mixcollection()
+		Set accessToAbilities = res
+		
+		If(me.nd.getItemValue(fld & "_id")(0) = "")Then 'new variant
+			Dim view As NotesView
+			Set view = me.nd.Parentdatabase.Getview("(lookup.links.toAbility.byRef)")
+			
+			Dim lcol As NotesDocumentCollection
+			Set lcol = view.Getalldocumentsbykey(me.id, True)
+			
+			Dim ldoc As NotesDocument
+			Set ldoc = lcol.Getfirstdocument()
+			While Not(ldoc Is Nothing)
+				Dim link As TPS_It_AccessApproval_Link
+				Dim ability As TPS_It_AccessApproval_Ability
+
+				Set link = me.ps.getDocObject(ldoc)
+				Set ability = me.ps.getObject(link.link)
+				Call res.append(ability)
+				
+				Set ldoc = lcol.Getnextdocument(ldoc)
+			Wend
+			
+		Else 'old variant
+			Dim i As Integer 
+			Dim ids As Variant, nms As Variant, doms As Variant
+			ids = me.nd.Getitemvalue(fld & "_id")
+			If(ids(0) = "")Then Exit Property
+			
+			nms = me.nd.Getitemvalue(fld & "_title")
+			doms = me.nd.Getitemvalue(fld & "_domain")
+			
+			For i = 0 To UBound(ids)
+				Dim lnk As objectLink, obj As Variant
+				Set lnk = New Objectlink(ids(i), nms(i), doms(i))
+				Set obj = me.ps.getObject(lnk)
+				Call res.Append(obj)
+			Next
+		End If
+
+		
+		Exit Property
+		
+error_point:
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$		
+	End Property
+	
+	
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------	
+	Public Property Get accessToAbilitiesLinks As MixCollection
+		On Error GoTo error_point
+
+		Const fld = "accessToAbility"
+
+		Dim res As New Mixcollection()
+		Set accessToAbilitiesLinks = res
+		
+		If(me.nd.getItemValue(fld & "_id")(0) = "")Then 'new variant only
+			Dim view As NotesView
+			Set view = me.nd.Parentdatabase.Getview("(lookup.links.toAbility.byRef)")
+			
+			Dim lcol As NotesDocumentCollection
+			Set lcol = view.Getalldocumentsbykey(me.id, True)
+			
+			Dim ldoc As NotesDocument
+			Set ldoc = lcol.Getfirstdocument()
+			While Not(ldoc Is Nothing)
+				Dim link As TPS_It_AccessApproval_Link
+
+				Set link = me.ps.getDocObject(ldoc)
+				Call res.append(link)
+				
+				Set ldoc = lcol.Getnextdocument(ldoc)
+			Wend
+		End If
+
+		
+		Exit Property
+		
+error_point:
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$		
+	End Property
+	
+	
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------	
+	Public Property Get accessFor(i As Integer) As MiniOdObj
+		On Error GoTo error_point
+
+		Dim res As New MiniOdObj()
+		Set accessFor = res
+		
+		Call res.initFromField(me.Nd, "accessFor", i)
+		
+
+		Exit Property
+		
+error_point:
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$		
+	End Property
+	
+	
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------	
+	Public Property Get accessForAll As Variant
+		On Error GoTo error_point
+
+		Dim res() As MiniOdObj
+		ReDim res(0) As MiniOdObj
+		
+		Dim i As Integer, v As Variant
+		v = me.nd.getItemValue("accessForObjAccess")
+		For i = LBound(v) To UBound(v)
+			If Not(res(0) Is Nothing)Then ReDim Preserve res(UBound(res) + 1)
+			Set res(i) = New MiniOdObj()
+			Call res(i).initFromField(me.nd, "accessFor", i)
+		Next
+		
+		accessForAll = res
+		
+
+		Exit Property
+		
+error_point:
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$		
+	End Property
+	
+	
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------	
+	Public Property Get numberTotal As String
+		On Error GoTo error_point
+
+		numberTotal = me.nd.Getitemvalue("NumberTotal")(0)
+
+		Exit Property
+		
+error_point:
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$		
+	End Property
+	
+	'--------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Public Property Get isAbilityVotedPositive( abil As TPS_It_AccessApproval_Ability ) As Boolean
+		On Error GoTo error_point
+
+		If(me.nd.getItemValue("accessToAbility_id")(0) = "")Then 'новый вариант
+			Dim view As NotesView
+			Set view = me.nd.Parentdatabase.getView("(lookup.links.toAbility.byRef)")
+			
+			Dim doc As NotesDocument, keys(0 To 1)
+			keys(0) = me.id
+			keys(1) = abil.id
+			Set doc = view.Getdocumentbykey(keys, True)
+			If(doc Is Nothing)Then Error 1001, "запись об указанной ф-возможности не найдена"
+			isAbilityVotedPositive = (doc.getItemValue("voted")(0) = "+")
+			
+		Else 'старый вариант
+
+			Dim plusExperts As Variant, minusExperts As Variant
+			plusExperts = me.nd.getItemValue("VisaPlusExpertObjAccess")
+			minusExperts = me.nd.getItemValue("VisaMinusExpertObjAccess")
+			
+			'если нет полей с результатами голосования - считаем, что абилка положительна
+			If(plusExperts(0) = "" And minusExperts(0) = "")Then
+				isAbilityVotedPositive = True
+				Exit Property
+			End If
+
+			Dim ids As Variant, owners As Variant, idx As Variant
+			ids = me.nd.getItemValue("accessToAbility_id")
+			owners = me.nd.getItemValue("accessToAbilityOwners")
+			idx = ArrayGetIndex(ids, abil.id)
+			If(IsNull(idx))Then
+				isAbilityVotedPositive = False
+				Exit Property
+			End If
+			
+			isAbilityVotedPositive = False
+			
+			owners = owners(idx)
+			owners = Split(owners, "#")
+			Dim isPositive As Boolean, isNegative As Boolean
+			isPositive = False
+			isNegative = False
+			
+			ForAll owner In owners
+				If Not(IsNull(ArrayGetIndex(plusExperts, owner)))Then isPositive = True
+				If Not(IsNull(ArrayGetIndex(minusExperts, owner)))Then isNegative = True
+			End ForAll
+			
+			If(isNegative)Then 'приоритет на отрицательное согласование
+				isAbilityVotedPositive = False
+			ElseIf(isPositive)Then 
+				isAbilityVotedPositive = True
+			Else
+				isAbilityVotedPositive = False
+			End If
+		End If 
+		
+
+		Exit Property
+		
+error_point:
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$		
+	End Property
+	
+	
+	'--------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Public Sub setAbilityLinksVotes ()
+		On Error GoTo error_point
+
+		If(me.nd.getItemValue("accessToAbility_id")(0) <> "")Then 'старая версия
+			Exit Sub
+		End If
+
+		Dim abLinks As Mixcollection
+		Set abLinks = me.accessToAbilitiesLinks
+		
+		Dim plus As Variant, minus As Variant
+		ReDim plus(0) As String
+		ReDim minus(0) As String
+		'plus = me.nd.getItemValue("VisaPlusExpertObjAccess")
+		'minus = me.nd.getItemValue("VisaMinusExpertObjAccess")
+		
+		Dim db As NotesDatabase
+		Set db = me.nd.parentDatabase
+		Dim viewVisa As NotesView
+		
+		Set ViewVisa = db.GetView("(VisaByFullID)")
+		Call ViewVisa.Refresh()
+		ViewVisa.AutoUpdate = False
+		Dim key As String, colVisa As NotesDocumentCollection
+		key = me.nd.UniversalID & {-} & me.nd.StageExclusionID(0)
+		Set colVisa = ViewVisa.GetAllDocumentsByKey(key)
+		
+		Dim docVisa As NotesDocument
+		Set docVisa = colVisa.GetFirstDocument
+		While (Not (docVisa Is Nothing))
+			If (docVisa.VisaValueTotal(0) = "1") Then
+				If(plus(0) <> "")Then ReDim Preserve plus(UBound(plus) + 1)
+				plus(UBound(plus)) = docVisa.VisaInitAsObjAccess(0)
+			End If
+			If (docVisa.VisaValueTotal(0) = "0") Then
+				If(minus(0) <> "")Then ReDim Preserve minus(UBound(minus) + 1)
+				minus(UBound(minus)) = docVisa.VisaInitAsObjAccess(0)
+			End If 
+			Set docVisa = colVisa.GetNextDocument(docVisa)
+		Wend
+		
+		Print "pluses: " & Join(plus, ", ")
+		Print "minuses: " & Join(minus, ", ")
+		
+		Dim ab As TPS_It_AccessApproval_Ability
+		
+		ForAll abLink In abLinks.Array
+			Set ab = me.ps.getObject(abLink.link)
+			If(ab Is Nothing)Then
+				Call abLink.nd.replaceItemValue("status", "ability not found")
+				Call abLink.nd.replaceItemValue("voted", "?")
+			Else
+				Dim pm As TPS_It_AccessApproval_PM
+				Set pm = ab.parentPM
+				
+				Dim votedPlus As Boolean
+				votedPlus = False
+				
+				'дважды проходим - один раз ищем плюсы, второй раз минусы (чтоб минус был приоритетнее в случае чего)
+				ForAll owner In pm.owners.Array
+					Dim w As MiniOdObj
+					Set w = owner
+					Print "plus: " & owner.odObjAccess
+					If Not IsNull(ArrayGetIndex(plus, owner.odObjAccess))Then
+						votedPlus = True
+						Exit ForAll 'достаточно одного
+					End If
+				End ForAll
+				ForAll owner In pm.owners.Array
+					Set w = owner
+					Print "minus: " & owner.odObjAccess
+					If Not IsNull(ArrayGetIndex(minus, owner.odObjAccess))Then
+						votedPlus = False
+						Exit ForAll 'достаточно одного
+					End If
+				End ForAll
+				
+				If(votedPlus)Then
+					Call abLink.nd.replaceItemValue("voted", "+")
+				Else
+					Call abLink.nd.replaceItemValue("voted", "-")
+				End If
+				Call abLink.nd.replaceItemValue("status", "")
+			End If
+			Call abLink.save()
+		End ForAll
+		
+
+		Exit Sub
+		
+error_point:
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Sub
+	
+	
+End Class
+Class TPS_It_AccessApproval_IS As Fbase_abstract_object_doc
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------	
+	Public Sub New( in_doc As NotesDocument, in_ps As Variant )
+		'nothing
+	End Sub
+	
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------	
+	Public Property Get domain As String
+		domain = DOMAIN_TPS_IT_ACCAPPR_SPR_IS
+	End Property
+	
+	
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------	
+	Public Property Get id As String
+		On Error GoTo error_point
+
+		id = me.nd.Getitemvalue("id")(0)
+		If(id = "")Then id = me.nd.Universalid
+
+		Exit Property
+		
+error_point:
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$		
+	End Property
+	
+	
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------	
+	Public Property Get title As String
+		On Error GoTo error_point
+
+		title = me.nd.Getitemvalue("Title")(0)
+
+		Exit Property
+		
+error_point:
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$		
+	End Property
+	
+	
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------	
+	Public Property Get isActive As Boolean
+		isActive = (me.nd.Getitemvalue("Status")(0) = "active")
+	End Property
+	
+	
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	%REM
+		возвращает коллекцию ПМок
+	%END REM	
+	Public Property Get pmCollection As mixcollection
+		On Error GoTo error_point
+
+		Dim res As New mixcollection()
+		Set pmCollection = res
+		
+		Dim view As NotesView
+		Set view = me.Nd.Parentdatabase.Getview("(lookup.spr.pms.byRef)")
+		
+		Dim col As NotesDocumentCollection, doc As NotesDocument
+		Set col = view.Getalldocumentsbykey(me.nd.id, True)
+		If(col.Count = 0)Then Exit Property
+		
+		Set doc = col.Getfirstdocument()
+		While Not(doc Is Nothing)
+			Dim lnk As Variant
+			Set lnk = me.ps.getDocObject(doc)
+			Call res.Append(lnk)
+			Set doc = col.Getnextdocument(doc)
+		Wend
+
+
+		Exit Property
+		
+error_point:
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$		
+	End Property
+	
+	
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------	
+	%REM
+		Property Get is_type
+		Description: тип ИС
+	%END REM
+	Public Property Get is_type As String
+		On Error GoTo error_point
+
+		is_type = me.nd.Getitemvalue("infoSysType")(0)
+
+		Exit Property
+		
+error_point:
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$		
+	End Property
+	
+	
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------	
+	%REM
+		Property Get is_typeDescription
+		Description: описание типа ИС, если тип = другое (other)
+	%END REM
+	Public Property Get is_typeDescription As String
+		On Error GoTo error_point
+
+		is_typeDescription = ""
+		If(me.is_type = "other")Then is_typeDescription = me.nd.Getitemvalue("infoSysTypeDescription")(0)
+
+		Exit Property
+		
+error_point:
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$		
+	End Property
+	
+	
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------	
+	%REM
+		Property Get is_requestTypes
+		Description: массив типов запросов на доступ для данной ИС
+	%END REM
+	Public Property Get is_requestTypes As Variant
+		On Error GoTo error_point
+
+		is_requestTypes = me.nd.Getitemvalue("infoSysRequestTypes")
+
+		Exit Property
+		
+error_point:
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$		
+	End Property
+	
+	
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------	
+	%REM
+		Property Get is_requestSubform
+		Description: подформа для ввода данных на запрос для данной ИС
+	%END REM
+	Public Property Get is_requestSubform As String
+		On Error GoTo error_point
+
+		is_requestSubform = me.nd.Getitemvalue("infoSysRequestSubform")(0)
+
+		Exit Property
+		
+error_point:
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$		
+	End Property
+	
+	
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------	
+	%REM
+		Property Get techSupport
+		Description: возвращает коллекцию MiniOdObj тех.суппортов
+	%END REM
+	Public Property Get techSupport As MixCollection
+		On Error GoTo error_point
+
+		Dim res As New Mixcollection()
+		Set techSupport = res
+
+		Dim ids As Variant, i As Integer
+		ids = me.nd.Getitemvalue("techSupportObjId")
+		If(ids(0) = "")Then Exit Property
+		
+		For i = 0 To UBound(ids)
+			Dim tp As MiniOdObj
+			Set tp = New MiniOdObj()
+			Call tp.initFromField(me.nd, "techSupport", i)
+			Call res.Append(tp)
+		Next
+		
+
+		Exit Property
+		
+error_point:
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$		
+	End Property
+	
+	
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	%REM
+		Public Property Get owners As MixCollection
+		Description: возвращает коллекцию MiniOdObj
+	%END REM	
+	Public Property Get owners As MixCollection
+		On Error GoTo error_point
+		
+		Set me.owners = New Mixcollection() 
+		
+		Dim owns As Variant, i As Integer
+		Dim link As MiniOdObj
+		
+		Const fldName = "owners"
+		Dim postfixes As Variant
+		
+		owns = me.nd.Getitemvalue(fldName & "ObjId")
+		If(owns(0) <> "")Then
+			For i = 0 To UBound(owns)
+				Set link = New MiniOdObj()
+				Call link.initFromField(me.nd, fldName, i)
+				Call me.owners.append(link)
+			Next
+		End If
+
+
+		Exit Property
+		
+error_point:
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$		
+	End Property
+	
+	
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------	
+	Public Property Get is_domain As String
+		On Error GoTo error_point
+
+		is_domain = me.nd.Getitemvalue("infoSysDomain")(0)
+
+
+		Exit Property
+		
+error_point:
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$		
+	End Property
+	
+	
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------	
+	%rem
+		возвращает БД Конфигуратора, если она прописана в ПМ, иначе дефолтный конфигуратор
+	%end rem
+	Public Property Get configurator As NotesDatabase
+		On Error GoTo error_point
+
+		Dim confDb As NotesDatabase
+		Dim configPath As String
+		configPath = me.pmConfiguratorPath
+		
+		If(configPath <> "")Then
+			Set confDb = New NotesDatabase("", "")
+			If(InStr(configPath, "!!") > 0)Then
+				Call confDb.open(StrLeft(configPath, "!!"), StrRight(configPath, "!!"))
+			Else
+				Call confDb.open(me.nd.Parentdatabase.Server, configPath)
+			End If
+		Else
+			Set confDb = Me.sm.base.databases.get( "tps.core.settings" )
+		End If
+		
+		Set configurator = confDb
+		
+
+		Exit Property
+		
+error_point:
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$		
+	End Property
+	
+	
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------	
+	Public Property Get pmConfiguratorPath As String
+		pmConfiguratorPath = me.nd.Getitemvalue("pmConfiguratorPath")(0)
+	End Property
+	
+	
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------	
+	%rem
+		возвращает орг.директорию, актуальную для текущего ПМ
+	%end rem
+	Public Property Get orgDirectory As NotesDatabase
+		On Error GoTo error_point
+
+		Set orgDirectory = getDbViaPM(Me, "tps.core.directory")
+
+
+		Exit Property
+		
+error_point:
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$		
+	End Property
+	
+	
+End Class
+Public Class TPS_It_AccessApproval_AbilsGroup As Fbase_abstract_object_doc
+	'constructor
+	Sub New ( in_doc As NotesDocument, in_ps As Variant )
+		'nothing
+	End Sub
+
+
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------	
+	Public Property Get domain As String
+		domain = DOMAIN_TPS_IT_ACCAPPR_SPR_ABGROUP
+	End Property
+	
+	
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------	
+	Public Property Get id As String
+		On Error GoTo error_point
+
+		id = me.nd.Getitemvalue("id")(0)
+		If(id = "")Then id = me.nd.Universalid
+
+		Exit Property
+		
+error_point:
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$		
+	End Property
+	
+	
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------	
+	Public Property Get title As String
+		On Error GoTo error_point
+
+		title = me.nd.Getitemvalue("Title")(0)
+
+		Exit Property
+		
+error_point:
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$		
+	End Property
+	
+
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------	
+	Public Property Get isActive As Boolean
+		isActive = (me.nd.Getitemvalue("Status")(0) = "active")
+	End Property
+	
+
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------	
+	Public Property Get accessToAbilities As MixCollection
+		On Error GoTo error_point
+
+		Const fld = "accessToAbility"
+
+		Dim res As New Mixcollection()
+		Set accessToAbilities = res
+		
+		If(me.nd.getItemValue(fld & "_id")(0) = "")Then 'new variant
+			Dim view As NotesView
+			Set view = me.nd.Parentdatabase.Getview("(lookup.links.toAbility.byRef)")
+			
+			Dim lcol As NotesDocumentCollection
+			Set lcol = view.Getalldocumentsbykey(me.id, True)
+			
+			Dim ldoc As NotesDocument
+			Set ldoc = lcol.Getfirstdocument()
+			While Not(ldoc Is Nothing)
+				Dim link As TPS_It_AccessApproval_Link
+				Dim ability As TPS_It_AccessApproval_Ability
+
+				Set link = me.ps.getDocObject(link)
+				Set ability = me.ps.getDocObject(link.link)
+				Call res.append(ability)
+				
+				Set ldoc = lcol.Getnextdocument(ldoc)
+			Wend
+		Else 'old variant
+			Dim i As Integer 
+			Dim ids As Variant, nms As Variant, doms As Variant
+			ids = me.nd.Getitemvalue(fld & "_id")
+			If(ids(0) = "")Then Exit Property
+			
+			nms = me.nd.Getitemvalue(fld & "_title")
+			doms = me.nd.Getitemvalue(fld & "_domain")
+			
+			For i = 0 To UBound(ids)
+				Dim lnk As objectLink, obj As Variant
+				Set lnk = New Objectlink(ids(i), nms(i), doms(i))
+				Set obj = me.ps.getObject(lnk)
+				Call res.Append(obj)
+			Next
+		End If
+		
+
+		Exit Property
+		
+error_point:
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$		
+	End Property
+	
+	
+End Class
+Public Class TPS_It_AccessApproval_AclGroup As Fbase_abstract_object_doc
+	'constructor
+	Sub New ( in_doc As NotesDocument, in_ps As Variant )
+		'nothing
+	End Sub
+
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------	
+	Public Property Get domain As String
+		domain = DOMAIN_TPS_IT_ACCAPPR_SPR_ACLGROUP
+	End Property
+	
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------	
+	Public Property Get id As String
+		On Error GoTo error_point
+
+		id = me.nd.Getitemvalue("id")(0)
+		If(id = "")Then id = me.nd.Universalid
+
+		Exit Property
+		
+error_point:
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$		
+	End Property
+	
+	
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------	
+	Public Property Get title As String
+		title = Trim(me.nd.Getitemvalue("Title")(0))
+	End Property
+	
+	Public Property Set title As String
+		Call me.nd.Replaceitemvalue("title", Trim(title))
+		If(me.groupName = "")Then me.groupName = me.title
+	End Property
+	
+	
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------	
+	Public Property Get description As String
+		description = me.nd.Getitemvalue("Description")(0)
+	End Property
+	
+	Public Property Set description As String
+		Call me.nd.Replaceitemvalue("Description", description)
+	End Property
+
+
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------	
+	Public Property Get isActive As Boolean
+		isActive = (me.nd.Getitemvalue("Status")(0) = "active")
+	End Property
+	
+	Public Property Set isActive As Boolean
+		If(isActive)Then
+			Call me.nd.Replaceitemvalue("Status", "active")
+		Else
+			Call me.nd.Replaceitemvalue("Status", "passive")
+		End If
+	End Property
+	
+	
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------	
+	Public Property Get accessLevel As Integer
+		Dim tmp As String
+		tmp = me.nd.Getitemvalue("aclAccess")(0)
+		If(tmp = "")Then tmp = "-1"
+		accessLevel = CInt( tmp )
+	End Property
+	
+	Public Property Set accessLevel As Integer
+		If(accessLevel < 0 Or accessLevel > 6)Then Error 1001, "Неизвестный уровень доступа: " & CStr(accessLevel)
+		Call me.nd.Replaceitemvalue("aclAccess", CStr(accessLevel))
+		
+		Call setDefaultAccessOptions()
+	End Property
+	
+	
+	%REM
+		Sub setDefaultAccessOptions
+		Description: проставляет дефолтный доступ в соответствии с уровнем доступа
+	%END REM
+	Private Sub setDefaultAccessOptions()
+		Select Case me.accessLevel
+			Case ACL_ACCESSLEVEL_MANAGER 'manager defaults
+				me.aclOption_createDocs = True
+				me.aclOption_deleteDocs = False
+				me.aclOption_createPvtAgents = True
+				me.aclOption_createPvtFolders = True
+				me.aclOption_createSharedFolders = True
+				me.aclOption_createSharedAgents = True
+				me.aclOption_readPublicDocs = True
+				me.aclOption_writePublicDocs = True
+				me.aclOption_replicateDocs = True 
+				
+			Case ACL_ACCESSLEVEL_DESIGNER 'designer defaults
+				me.aclOption_createDocs = True
+				me.aclOption_deleteDocs = False
+				me.aclOption_createPvtAgents = True
+				me.aclOption_createPvtFolders = True
+				me.aclOption_createSharedFolders = True
+				me.aclOption_createSharedAgents = False
+				me.aclOption_readPublicDocs = True
+				me.aclOption_writePublicDocs = True
+				me.aclOption_replicateDocs = True 
+				
+			Case ACL_ACCESSLEVEL_EDITOR 'editor defaults
+				me.aclOption_createDocs = True
+				me.aclOption_deleteDocs = False
+				me.aclOption_createPvtAgents = False
+				me.aclOption_createPvtFolders = False
+				me.aclOption_createSharedFolders = False
+				me.aclOption_createSharedAgents = False
+				me.aclOption_readPublicDocs = True
+				me.aclOption_writePublicDocs = True
+				me.aclOption_replicateDocs = True 
+				
+			Case ACL_ACCESSLEVEL_AUTHOR 'author defaults
+				me.aclOption_createDocs = False
+				me.aclOption_deleteDocs = False
+				me.aclOption_createPvtAgents = False
+				me.aclOption_createPvtFolders = False
+				me.aclOption_createSharedFolders = False
+				me.aclOption_createSharedAgents = False
+				me.aclOption_readPublicDocs = True
+				me.aclOption_writePublicDocs = True
+				me.aclOption_replicateDocs = True 
+				
+			Case ACL_ACCESSLEVEL_READER 'reader defaults
+				me.aclOption_createDocs = False
+				me.aclOption_deleteDocs = False
+				me.aclOption_createPvtAgents = False
+				me.aclOption_createPvtFolders = False
+				me.aclOption_createSharedFolders = False
+				me.aclOption_createSharedAgents = False
+				me.aclOption_readPublicDocs = True
+				me.aclOption_writePublicDocs = True
+				me.aclOption_replicateDocs = True 
+				
+			Case ACL_ACCESSLEVEL_DEPOSITOR 'depositor defaults
+				me.aclOption_createDocs = True
+				me.aclOption_deleteDocs = False
+				me.aclOption_createPvtAgents = False
+				me.aclOption_createPvtFolders = False
+				me.aclOption_createSharedFolders = False
+				me.aclOption_createSharedAgents = False
+				me.aclOption_readPublicDocs = True
+				me.aclOption_writePublicDocs = True
+				me.aclOption_replicateDocs = True 
+				
+			Case ACL_ACCESSLEVEL_NOACCESS 'no access defaults
+				me.aclOption_createDocs = False
+				me.aclOption_deleteDocs = False
+				me.aclOption_createPvtAgents = False
+				me.aclOption_createPvtFolders = False
+				me.aclOption_createSharedFolders = False
+				me.aclOption_createSharedAgents = False
+				me.aclOption_readPublicDocs = False
+				me.aclOption_writePublicDocs = False
+				me.aclOption_replicateDocs = False 
+		End Select
+	End Sub
+	
+	
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------	
+	Public Property Get aclOption_replicateDocs As Boolean
+		aclOption_replicateDocs = ( me.nd.Getitemvalue("aclOption_replicateDocs")(0) = "1" )
+	End Property
+	
+	Public Property Set aclOption_replicateDocs As Boolean
+		If(aclOption_replicateDocs)Then
+			Call me.nd.Replaceitemvalue("aclOption_replicateDocs", "1")
+		Else
+			Call me.nd.Replaceitemvalue("aclOption_replicateDocs", "")
+		End If
+	End Property
+	
+	
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------	
+	Public Property Get aclOption_writePublicDocs As Boolean
+		aclOption_writePublicDocs = ( me.nd.Getitemvalue("aclOption_writePublicDocs")(0) = "1" )
+	End Property
+	
+	Public Property Set aclOption_writePublicDocs As Boolean
+		If(aclOption_writePublicDocs)Then
+			Call me.nd.Replaceitemvalue("aclOption_writePublicDocs", "1")
+		Else
+			Call me.nd.Replaceitemvalue("aclOption_writePublicDocs", "")
+		End If
+	End Property
+	
+	
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------	
+	Public Property Get aclOption_readPublicDocs As Boolean
+		aclOption_readPublicDocs = ( me.nd.Getitemvalue("aclOption_readPublicDocs")(0) = "1" )
+	End Property
+	
+	Public Property Set aclOption_readPublicDocs As Boolean
+		If(aclOption_readPublicDocs)Then
+			Call me.nd.Replaceitemvalue("aclOption_readPublicDocs", "1")
+		Else
+			Call me.nd.Replaceitemvalue("aclOption_readPublicDocs", "")
+		End If
+	End Property
+	
+	
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------	
+	Public Property Get aclOption_createSharedAgents As Boolean
+		aclOption_createSharedAgents = ( me.nd.Getitemvalue("aclOption_createSharedAgents")(0) = "1" )
+	End Property
+	
+	Public Property Set aclOption_createSharedAgents As Boolean
+		If(aclOption_createSharedAgents)Then
+			Call me.nd.Replaceitemvalue("aclOption_createSharedAgents", "1")
+		Else
+			Call me.nd.Replaceitemvalue("aclOption_createSharedAgents", "")
+		End If
+	End Property
+	
+	
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------	
+	Public Property Get aclOption_createSharedFolders As Boolean
+		aclOption_createSharedFolders = ( me.nd.Getitemvalue("aclOption_createSharedFolders")(0) = "1" )
+	End Property
+	
+	Public Property Set aclOption_createSharedFolders As Boolean
+		If(aclOption_createSharedFolders)Then
+			Call me.nd.Replaceitemvalue("aclOption_createSharedFolders", "1")
+		Else
+			Call me.nd.Replaceitemvalue("aclOption_createSharedFolders", "")
+		End If
+	End Property
+	
+	
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------	
+	Public Property Get aclOption_createPvtFolders As Boolean
+		aclOption_createPvtFolders = ( me.nd.Getitemvalue("aclOption_createPvtFolders")(0) = "1" )
+	End Property
+	
+	Public Property Set aclOption_createPvtFolders As Boolean
+		If(aclOption_createPvtFolders)Then
+			Call me.nd.Replaceitemvalue("aclOption_createPvtFolders", "1")
+		Else
+			Call me.nd.Replaceitemvalue("aclOption_createPvtFolders", "")
+		End If
+	End Property
+	
+	
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------	
+	Public Property Get aclOption_createDocs As Boolean
+		aclOption_createDocs = ( me.nd.Getitemvalue("aclOption_createDocs")(0) = "1" )
+	End Property
+	
+	Public Property Set aclOption_createDocs As Boolean
+		If(aclOption_createDocs)Then
+			Call me.nd.Replaceitemvalue("aclOption_createDocs", "1")
+		Else
+			Call me.nd.Replaceitemvalue("aclOption_createDocs", "")
+		End If
+	End Property
+	
+
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------	
+	Public Property Get aclOption_deleteDocs As Boolean
+		aclOption_deleteDocs = ( me.nd.Getitemvalue("aclOption_deleteDocs")(0) = "1" )
+	End Property
+	
+	Public Property Set aclOption_deleteDocs As Boolean
+		If(aclOption_deleteDocs)Then
+			Call me.nd.Replaceitemvalue("aclOption_deleteDocs", "1")
+		Else
+			Call me.nd.Replaceitemvalue("aclOption_deleteDocs", "")
+		End If
+	End Property
+	
+	
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------	
+	Public Property Get aclOption_createPvtAgents As Boolean
+		aclOption_createPvtAgents = ( me.nd.Getitemvalue("aclOption_createPvtAgents")(0) = "1" )
+	End Property
+	
+	Public Property Set aclOption_createPvtAgents As Boolean
+		If(aclOption_createPvtAgents)Then
+			Call me.nd.Replaceitemvalue("aclOption_createPvtAgents", "1")
+		Else
+			Call me.nd.Replaceitemvalue("aclOption_createPvtAgents", "")
+		End If
+	End Property
+
+	
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------	
+	Public Property Get userType As String
+		userType = me.nd.Getitemvalue("aclUserType")(0)
+	End Property
+	
+	Public Property Set userType As String
+		Call me.nd.Replaceitemvalue("aclUserType", userType)
+	End Property
+	
+	
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------	
+	Public Property Get groupName As String
+		groupName = Trim(me.nd.Getitemvalue("aclGroupName")(0))
+	End Property
+	
+	Public Property Set groupName As String
+		Call me.nd.Replaceitemvalue("aclGroupName", Trim(groupName))
+		If(me.title = "")Then me.title = me.groupName
+	End Property
+	
+	
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------	
+	Public Property Get roles As Variant
+		Dim tmp As Variant
+		tmp = FullTrim(me.nd.Getitemvalue("aclRoles"))
+		If(tmp(0) <> "")Then
+			ForAll role In tmp
+				role = Trim(CStr(role))
+				If(Left(role, 1) <> "[" And role <> "*")Then
+					role = "[" & role & "]"
+				End If
+			End ForAll
+		End If 
+		roles = tmp
+	End Property
+	
+	Public Property Set roles As Variant
+		Call me.nd.replaceItemValue("aclRoles", FullTrim(roles))
+	End Property
+	
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------	
+	%rem
+
+	%end rem
+	Public Property Get isNotCreatableInAB As Boolean
+		isNotCreatableInAB = (me.nd.Getitemvalue("isNotCreatableInAB")(0) = "1")
+	End Property
+	
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------	
+	%rem
+
+	%end rem
+	Public Property Set isNotCreatableInAB As Boolean
+		If(isNotCreatableInAB)Then
+			Call me.nd.Replaceitemvalue("isNotCreatableInAB", "1")
+		Else
+			Call me.nd.Replaceitemvalue("isNotCreatableInAB", "")
+		End If
+	End Property
+	
+	
+End Class
+
+Public Class TPS_It_AccessApprovalService As FBase_Abstract_Service
+	Private m_db As NotesDatabase
+	
+	'constructor
+	Public Sub New (in_ps As Variant)
+		'nothing
+	End Sub
+	
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Property Get db As NotesDatabase
+		On Error GoTo error_point
+		Call Me.log.enter( TypeName( Me ) & "." & GetThreadInfo(1))
+		
+		If ( m_db Is Nothing )Then
+			Set m_db = Me.sm.base.databases.get( DATABASE_KEY )
+			If ( m_db Is Nothing )Then
+				Set m_db = Me.sm.base.databases.get( "tps.it.accessApproval" )
+			End If
+		End If
+		Set db = m_db
+		
+		If(m_db Is Nothing)Then Error 1001, "В конфигураторе не зарегистрирована база с ключем " & DATABASE_KEY
+		
+		Call Me.log.traceObject( "result", db )		
+		Call Me.log.exit( TypeName( Me ) & "." & GetThreadInfo(1))
+		Exit Property
+		
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Property
+	
+	
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------	
+	Public Function getDocObject ( in_doc As NotesDocument ) As Variant
+		On Error GoTo error_point
+
+		Call Me.log.enter( TypeName( Me ) & "." & GetThreadInfo(1))
+		Call Me.log.parameter( "in_doc", in_doc )
+
+		Select Case in_doc.Getitemvalue("Form")(0)
+			Case DOMAIN_TPS_IT_ACCAPPR_SPR_IS 'ИСы
+				Set getDocObject = New TPS_It_AccessApproval_IS(in_doc, me.Me_variant)
+
+			Case DOMAIN_TPS_IT_ACCAPPR_SPR_PM 'ПМы
+				Set getDocObject = New TPS_It_accessApproval_PM(in_doc, Me.Me_variant)
+				
+			Case DOMAIN_TPS_IT_ACCAPPR_SPR_FORM 'форма
+				Set getDocObject = New TPS_It_accessApproval_Form(in_doc, me.me_variant)
+				
+			Case DOMAIN_TPS_IT_ACCAPPR_SPR_FORMFIELD 'поле формы
+				Set getDocObject = New TPS_It_accessApproval_FormField(in_doc, me.me_variant)
+				
+			Case DOMAIN_TPS_IT_ACCAPPR_SPR_ABILITY 'абилка
+				Set getDocObject = New TPS_It_accessApproval_Ability(in_doc, me.me_variant)
+				
+			Case DOMAIN_TPS_IT_ACCAPPR_SPR_ABGROUP 'шаблон заявки
+				Set getDocObject = New TPS_It_AccessApproval_AbilsGroup(in_doc, me.Me_variant)
+				
+			Case DOMAIN_TPS_IT_ACCAPPR_SPR_ACLGROUP
+				Set getDocObject = New TPS_It_AccessApproval_AclGroup(in_doc, me.Me_variant)
+				
+			Case DOMAIN_TPS_IT_ACCAPPR_CARDAGREE 'сам док заявки
+				Set getDocObject = New TPS_It_accessApproval_CardAgree(in_doc, me.me_variant)
+				
+			Case DOMAIN_TPS_IT_ACCAPPR_LINK:
+				Set getDocObject = New TPS_It_AccessApproval_Link(in_doc, me.me_variant)
+				
+			Case Else
+				Error 1001, "Форма '" & in_doc.getItemValue("Form")(0) & "' не поддерживается"
+				
+		End Select
+
+		Call Me.log.traceObject( "result", getDocObject )
+		Call Me.log.exit( TypeName( Me ) & "." & GetThreadInfo(1))
+
+
+		Exit Function
+		
+error_point:
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$		
+	End Function
+	
+
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------	
+	Public Function getObject ( in_link As Variant ) As Variant
+		On Error GoTo error_point
+
+		Select Case in_link.domain
+			Case DOMAIN_TPS_IT_ACCAPPR_CARDAGREE, _
+			DOMAIN_TPS_IT_ACCAPPR_LINK, _
+			DOMAIN_TPS_IT_ACCAPPR_SPR_IS, _
+			DOMAIN_TPS_IT_ACCAPPR_SPR_ABILITY, _
+			DOMAIN_TPS_IT_ACCAPPR_SPR_FORM, _
+			DOMAIN_TPS_IT_ACCAPPR_SPR_FORMFIELD, _
+			DOMAIN_TPS_IT_ACCAPPR_SPR_ACLGROUP, _
+			DOMAIN_TPS_IT_ACCAPPR_SPR_PM, _
+DOMAIN_TPS_IT_ACCAPPR_SPR_ACLGROUP:
+				Set getObject = me.getSimpleObject(in_link)				
+				
+			Case Else
+				Error 1001, "The data of type '" & in_link.domain & "' of parameter 'in_link.domain' is not supported"
+				
+		End Select
+		
+
+		Exit Function
+		
+error_point:
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$		
+	End Function
+
+
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Private Function getId( in_key As Variant ) As String
+		On Error GoTo error_point
+		Call Me.log.enter( TypeName( Me ) & "." & GetThreadInfo(1))
+		
+		Dim key As String
+		If ( TypeName( in_key ) = "ObjectLink" ) Then
+			key = in_key.id 
+		ElseIf IsScalar( in_key ) Then 
+			key = in_key
+		Else
+			Error 1001, "The type of data of parameter 'in_key' is '" & TypeName( in_key ) & "'. It is not supported"
+		End If
+		
+		getId = key
+		
+		Call Me.log.trace( "result: " & getId )
+		Call Me.log.exit( TypeName( Me ) & "." & GetThreadInfo(1))
+
+		Exit Function
+		
+error_point:
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Function
+	
+	
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------	
+	Private Function getSimpleObject ( in_link As Variant ) As Variant
+		On Error GoTo error_point
+		On Error 4091 Resume Next
+		Call Me.log.enter( TypeName( Me ) & "." & GetThreadInfo(1))
+		Call Me.log.parameter( "in_link", in_link )
+		
+		Set getSimpleObject = Nothing
+		
+		Dim id As String, doc As NotesDocument
+		id = Me.getId( in_link )
+		Set doc = Me.db.Getdocumentbyunid( id )
+		If(doc Is Nothing)Then Exit Function
+		
+		Set getSimpleObject = Me.getDocObject( doc )
+		
+		
+		Call Me.log.traceObject( "result", getSimpleObject )
+		Call Me.log.exit( TypeName( Me ) & "." & GetThreadInfo(1))
+		Exit Function	
+		
+error_point:
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$ 	
+	End Function
+	
+	
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------	
+	Public Function createObject( objectDomain As String, parentObject As Variant ) As Variant
+		On Error GoTo error_point
+
+		Dim newDoc As NotesDocument
+		Set newDoc = me.db.Createdocument()
+		Call newDoc.Replaceitemvalue("Form", objectDomain)
+		Call newDoc.Replaceitemvalue("id", newDoc.Universalid)
+		Call newDoc.Replaceitemvalue("domain", objectDomain)
+		If Not(IsEmpty(parentObject))Then
+			If Not(parentObject Is Nothing)Then
+				If(parentObject IsA "NotesDocument")Then
+					Dim p As NotesDocument
+					Set p = parentObject
+					Call makeParentRef(newDoc, p)
+				Else
+					Call makeParentRef(newDoc, parentObject.Nd)
+				End If 
+			End If 
+		End If
+		Set createObject = me.Getdocobject(newDoc)
+		
+
+		Exit Function
+		
+error_point:
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$		
+	End Function
+	
+	
+	'--------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Private Sub makeParentRef(doc As NotesDocument, refDoc As NotesDocument)
+		On Error GoTo error_point
+		
+		Dim tDoc As NotesDocument
+		Set tDoc = New NotesDocument(doc.parentDatabase)
+		Call tDoc.makeResponse(refDoc)
+		Dim itm As NotesItem
+		Set itm = tDoc.getFirstItem("$Ref")
+		Call itm.Copyitemtodocument(doc, "parentRef")
+
+
+		Exit Sub
+		
+error_point:
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Sub
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Function dialogSelectAbilsGroup (in_isMult As Boolean) As MixCollection
+		On Error GoTo error_point
+		Call Me.log.enter( TypeName( Me ) & "." & GetThreadInfo(1))
+		
+		Dim mxResult As New MixCollection
+		Set dialogSelectAbilsGroup = mxResult
+		
+		Dim ws As New NotesUIWorkspace, ndc As NotesDocumentCollection
+		Set ndc = ws.PickListCollection (3, in_isMult, Me.db.Server, Me.db.FilePath, "(dlg.spr.abilsGroup.active)", "Окно выбора шаблона доступа", "Выделите необходимые документы и нажмите OK")
+		
+		Dim doc As NotesDocument
+		Set doc = ndc.GetFirstDocument
+		Do While Not (doc Is Nothing)
+			Call mxResult.Append (Me.getDocObject (doc))
+			Set doc = ndc.GetNextDocument (doc)
+		Loop
+		
+		Call Me.log.traceObject( "result", mxResult )
+		Call Me.log.exit( TypeName( Me ) & "." & GetThreadInfo(1))
+		Exit Function
+		
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$ 
+	End Function
+	
+End Class
+%REM
+	Class odObj
+	Description: мини-класс, представляющий OdObject для локальных манипуляций
+	ВНИМАНИЕ! LAZY-объект! ни в какие базы не лезет, просто значения полей хранит! 
+%END REM
+Public Class MiniOdObj
+	Private m_id As String
+	Private m_access As String
+	Private m_name As String
+	Private m_path As String
+	
+	
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------	
+	Public Sub New()
+		'nothing
+	End Sub
+	
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------	
+	Private Property Get isInit As Boolean
+		If(me.m_id <> "" And me.m_access <> "" And me.m_name <> "" And me.m_path <> "")Then
+			isInit = True
+		Else
+			isInit = False
+		End If
+	End Property
+
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------	
+	Public Property Get odObjId As String
+		odObjId = me.m_id
+	End Property
+	
+	Public Property Set odObjId As String
+		me.m_id = odObjId
+	End Property
+	
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------	
+	Public Property Get odObjName As String
+		odObjName = me.m_name
+	End Property
+
+	Public Property Set odObjName As String
+		me.m_name = odObjName
+	End Property
+
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------	
+	Public Property Get odObjAccess As String
+		odObjAccess = me.m_access
+	End Property
+
+	Public Property Set odObjAccess As String
+		me.m_access = odObjAccess
+	End Property
+
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------	
+	Public Property Get odObjPath As String
+		odObjPath = m_path
+	End Property
+
+	Public Property Set odObjPath As String
+		me.m_path = odObjPath
+	End Property
+	
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------	
+	Public Sub initFromField ( doc As NotesDocument, itemPrefix As String, itemIndex As Integer )
+		On Error GoTo error_point
+
+		me.m_id = doc.getItemValue(itemPrefix & "ObjId")(itemIndex)
+		me.m_name = doc.getItemValue(itemPrefix & "ObjName")(itemIndex)
+		me.m_access = doc.getItemValue(itemPrefix & "ObjAccess")(itemIndex)
+		me.m_path = doc.getItemValue(itemPrefix & "ObjPath")(itemIndex)
+
+
+		Exit Sub
+		
+error_point:
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$		
+	End Sub
+
+	
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	%REM
+		appendToField
+		добавляет текущий объект в указанные поля документа
+		isUnique: если true, то при добавлении проводится проверка на уникальность 
+			(проверка по ObjID, если элемент уже присутствует - новый не добавляется)
+		возвращает true, если в поле что-то реально было добавлено (уникальность и всё такое)
+	%END REM	
+	Public Function appendToFieldValue ( doc As NotesDocument, itemPrefix As String, isUnique As Boolean ) As Boolean
+		On Error GoTo error_point
+
+		If Not(me.isInit)Then Error 1001, "Объект не инициализирован"
+		
+		appendToFieldValue = False
+		
+		If( doc.getItemValue(itemPrefix & "ObjId")(0) = "")Then
+			Call me.replaceFieldValue(doc, itemPrefix)
+			appendToFieldValue = True
+			Exit Function
+		End If
+
+		Dim i As Integer, ids As Variant
+		ids = doc.getitemvalue(itemPrefix & "ObjId")
+		i = UBound(ids)
+		
+		Dim doAdd As Boolean
+
+		If(Not isUnique)Then
+			doAdd = True
+		Else
+			If(IsNull(ArrayGetIndex(ids, me.odObjId)))Then
+				doAdd = True
+			Else
+				doAdd = False
+			End If
+		End If
+		
+		If(doAdd)Then
+			Call appendValueToField(doc, itemPrefix & "ObjId", me.odObjId)
+			Call appendValueToField(doc, itemPrefix & "ObjAccess", me.odObjAccess)
+			Call appendValueToField(doc, itemPrefix & "ObjName", me.odObjName)
+			Call appendValueToField(doc, itemPrefix & "ObjPath", me.odObjPath)
+			appendToFieldValue = True
+		End If
+
+
+		Exit Function
+		
+error_point:
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$		
+	End Function
+
+	
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------	
+	Public Sub replaceFieldValue ( doc As NotesDocument, itemPrefix As String )
+		On Error GoTo error_point
+
+		If Not(me.isInit)Then Error 1001, "Объект не инициализирован"
+
+		Call doc.replaceItemValue(itemPrefix & "ObjId", me.odObjId)
+		Call doc.replaceItemValue(itemPrefix & "ObjAccess", me.odObjAccess)
+		Call doc.replaceItemValue(itemPrefix & "ObjName", me.odObjName)
+		Call doc.replaceItemValue(itemPrefix & "ObjPath", me.odObjPath)
+
+
+		Exit Sub
+		
+error_point:
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$		
+	End Sub
+
+	
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------	
+	%REM
+		STATIC Sub eraseFieldValues
+		Description: удаляет из дока соотв.поля 
+	%END REM
+	Public Sub removeFieldValues ( doc As NotesDocument, itemPrefix As String )
+		On Error GoTo error_point
+
+		Call doc.Removeitem(itemPrefix & "ObjId")
+		Call doc.Removeitem(itemPrefix & "ObjAccess")
+		Call doc.Removeitem(itemPrefix & "ObjName")
+		Call doc.Removeitem(itemPrefix & "ObjPath")
+
+
+		Exit Sub
+		
+error_point:
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$		
+	End Sub
+
+
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------	
+	%REM
+		Function removeFromFieldValues
+		Description: удаляет себя из поля
+		возвращает true, если значение поля действительно было изменено
+	%END REM
+	Public Function removeFromFieldValues( doc As NotesDocument, itemPrefix As String ) As Boolean
+		On Error GoTo error_point
+
+		Dim tmp As Variant 
+		tmp = doc.Getitemvalue(itemPrefix & "ObjId")
+		
+		removeFromFieldValues = False 
+		
+		Dim i As Variant
+		i = ArrayGetIndex(tmp, me.odObjId)
+		If(IsNull(i))Then Exit Function
+		
+		removeFromFieldValues = True
+		
+		tmp = Arrays_RemoveElement(tmp, i)
+		Call doc.Replaceitemvalue(itemPrefix & "ObjId", tmp)
+		
+		tmp = doc.Getitemvalue(itemPrefix & "ObjAccess")
+		tmp = Arrays_RemoveElement(tmp, i)
+		Call doc.Replaceitemvalue(itemPrefix & "ObjAccess", tmp)
+		
+		tmp = doc.Getitemvalue(itemPrefix & "ObjName")
+		tmp = Arrays_RemoveElement(tmp, i)
+		Call doc.Replaceitemvalue(itemPrefix & "ObjName", tmp)
+		
+		tmp = doc.Getitemvalue(itemPrefix & "ObjPath")
+		tmp = Arrays_RemoveElement(tmp, i)
+		Call doc.Replaceitemvalue(itemPrefix & "ObjPath", tmp)
+		
+		
+		Exit Function
+		
+error_point:
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$		
+	End Function
+
+
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------	
+	%REM
+		Property Get cleanOdObjName
+		Description: возвращает "чистое" имя (без скобок, кавычек и прочих штук)
+	%END REM
+	Public Property Get cleanOdObjName As String
+		On Error GoTo error_point
+
+		Dim res As String, i As Integer, k As Integer
+		
+		res = m_name
+		i = InStr(res, ".> ")
+		If(i > 0)Then
+			res = Mid$(res, i + 3)
+		End If
+		i = InStr(res, "(")
+		k = InStr(res, ")")
+		If(i > 0 And k > 0 And i < k)Then
+			res = Left$(res, k - 1)
+			res = Mid$(res, i + 1)
+		End If
+		cleanOdObjName = res
+
+		Exit Property
+		
+error_point:
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$		
+	End Property
+
+	
+End Class
+
+'++LotusScript Development Environment:2:2:Initialize:1:10
+Sub Initialize
+	
+End Sub
+
+
+
+'++LotusScript Development Environment:2:1:getAllResponses:2:8
+	'--------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Private Function getAllResponses(doc As NotesDocument, currentMix As Mixcollection) As mixCollection
+		On Error GoTo error_point
+
+		Dim res As Mixcollection
+		If(currentMix Is Nothing)Then
+			Set res = New Mixcollection()
+		Else
+			Set res = currentMix
+		End If
+		Set getAllResponses = res
+		
+		Dim m_view_byParentRef As NotesView
+		Set m_view_byParentRef = doc.parentDatabase.Getview("(all.byParentRef)")
+		
+		Dim rcol As NotesDocumentCollection
+		Dim rdoc As NotesDocument
+		Set rcol = m_view_byParentRef.Getalldocumentsbykey(doc.Universalid, True)
+		If(rcol.count = 0)Then Exit Function
+		Set rdoc = rcol.Getfirstdocument()
+		While Not(rdoc Is Nothing)
+			Call res.Append(rdoc)
+			Set res = getAllResponses(rdoc, res)
+			
+			Set rdoc = rcol.Getnextdocument(rdoc)
+		Wend
+		
+		Set getAllResponses = res
+
+
+		Exit Function
+		
+error_point:
+		Error Err, GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Function
+	
+
+
+
+
+
+'++LotusScript Development Environment:2:2:appendValueToField:6:8
+'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------	
+%REM
+	Sub appendValueToField
+	Description: добавляет значение к полю в документе (проверяет поле на "пусто")
+%END REM
+Private Sub appendValueToField ( doc As NotesDocument, fieldName As String, valueToAdd As Variant )
+	On Error GoTo error_point
+
+	Dim tmp As Variant
+	
+	tmp = doc.getItemValue(fieldName)
+	tmp = Arrays_AppendElement(tmp, valueToAdd)
+	Call doc.replaceItemValue(fieldName, tmp)
+	
+
+	Exit Sub
+	
+error_point:
+	Error Err, GetThreadInfo(2) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$		
+End Sub
+
+
+
+'++LotusScript Development Environment:2:1:getDbViaPM:6:8
+'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------	
+%REM
+	Function getDbViaPM
+	Description: Comments for Function
+%END REM
+Private Function getDbViaPM(pm As Variant, dbKey As String)As NotesDatabase
+	On Error GoTo error_point
+
+	Set getDbViaPM = Nothing
+
+	Dim s As New NotesSession()
+	
+	Dim dbService As Variant
+	Dim config As NotesDatabase, confView As NotesView
+	Dim confDoc As NotesDocument
+	Dim res As NotesDatabase
+	
+	
+	Set dbService = pm.sm.base.databases
+	Set config = pm.configurator
+	If (config Is Nothing)Then Set config = dbService.db
+	
+	Set confView = config.Getview("fbyte.base.databases.lookup")
+	Set confDoc = confView.getDocumentByKey(dbKey, True)
+
+	If(confDoc Is Nothing)Then Error 7000, "Не найдена бд по ключу " & dbKey & " в конфигураторе " & config.filePath
+
+	Set res = New NotesDatabase("", "")
+	If(confDoc.getItemValue("replica_id")(0) <> "")Then
+		Call res.Openbyreplicaid(s.Currentdatabase.Server, confDoc.getItemValue("replica_id")(0))
+	End If
+	If((Not res.Isopen) And confDoc.getItemValue("Path")(0) <> "")Then
+		Call res.Open(s.Currentdatabase.Server, confDoc.getItemValue("Path")(0))
+	End If
+	If Not(res.Isopen)Then Error 7000, "Не могу открыть базу по ключу " & dbkey & " по документу в конфигураторе " & config.filePath & " - " & confDoc.Universalid
+	
+	Set getDbViaPM = res
+	
+
+	Exit Function
+	
+error_point:
+	Error Err,  GetThreadInfo(2) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$		
+End Function

@@ -1,0 +1,650 @@
+'++LotusScript Development Environment:2:5:(Options):0:74
+Option Public
+Option Declare
+
+Use "fbyte"
+Use "tps.common"
+
+
+'++LotusScript Development Environment:2:5:(Forward):0:1
+Declare Public Class TPS_ConfQAprvlService As FBase_Abstract_Service
+Declare Public Class TPS_Conf_QAprvl_Cardagree As FBase_Abstract_Object_Doc
+Declare Public Class TPS_Conf_QAprvl_Link As FBase_Abstract_Object_Doc
+Declare Public Class TPS_Conf_QAprvl_CardagreeGetmaterial As FBase_Abstract_Object_Doc
+Declare Public Class TPS_Conf_QAprvl_CardagreeReplacematerial As FBase_Abstract_Object_Doc
+
+'++LotusScript Development Environment:2:5:(Declarations):0:10
+Private Const DATABASE_KEY = "tps.workflow.conferences.questions_approval"
+
+Const DOMAIN_CONF_QAPRVL_CARDAGREE = "tps.conferences.questions_approval.cardagree"
+Const DOMAIN_CONF_QAPRVL_LINK = "tps.conferences.questions_approval.link"
+Const DOMAIN_CONF_QAPRVL_CARDAGREEGETMATERIAL = "tps.conferences.questions_approval.cardagree_getmaterial"
+Const DOMAIN_CONF_QAPRVL_CARDAGREEREPLMATERIAL = "tps.conferences.questions_approval.cardagree_replacematerial"
+
+
+'======================================================================================================================================
+'	CLASS TPS_ConfQAprvlService
+'======================================================================================================================================
+Public Class TPS_ConfQAprvlService As FBase_Abstract_Service
+	Private m_db As NotesDatabase
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Private Function getId( in_key As Variant ) As String
+		On Error GoTo error_point
+		Call Me.log.enter( TypeName( Me ) & "." & GetThreadInfo(1))
+		
+		Dim key As String
+		If ( LCase( TypeName( in_key )) = "objectlink" ) Then
+			key = in_key.id 
+		ElseIf IsScalar( in_key ) Then 
+			key = in_key
+		Else
+			Error 1001, "The type of data of parameter 'in_key' is '" & TypeName( in_key ) & "'. It is not supported"
+		End If
+		
+		getId = key
+		
+		Call Me.log.trace( "result: " & getId )
+		Call Me.log.exit( TypeName( Me ) & "." & GetThreadInfo(1))
+		Exit Function
+		
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Function
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	'	PUBLIC:
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Sub New( in_ps As Variant )
+	End Sub
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Property Get db As NotesDatabase
+		On Error GoTo error_point
+		Call Me.log.enter( TypeName( Me ) & "." & GetThreadInfo(1))
+		
+		If ( m_db Is Nothing )Then
+			Set m_db = Me.sm.base.databases.get( DATABASE_KEY )
+		End If
+		Set db = m_db
+		
+		Call Me.log.traceObject( "result", db )		
+		Call Me.log.exit( TypeName( Me ) & "." & GetThreadInfo(1))
+		Exit Property
+		
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Property
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Function getObject( in_link As Variant ) As Variant
+		On Error GoTo error_point
+		Call Me.log.enter( TypeName( Me ) & "." & GetThreadInfo(1))
+		Call Me.log.parameter( "in_link", in_link )
+		
+		Select Case in_link.domain
+			Case DOMAIN_CONF_QAPRVL_CARDAGREE:
+				Set getObject = getCardAgree( in_link )
+			Case DOMAIN_CONF_QAPRVL_LINK:
+				Set getObject = getLink( in_link )
+			Case DOMAIN_CONF_QAPRVL_CARDAGREEGETMATERIAL:
+				Set getObject = getCardAgreegetmaterial( in_link )
+			Case DOMAIN_CONF_QAPRVL_CARDAGREEREPLMATERIAL:
+				Set getObject = getCardAgreereplacematerial( in_link )	
+			Case Else
+				Error 1001, "The data of type '" & in_link.domain & "' of parameter 'in_link.domain' is not supported"
+		End Select
+		
+		Call Me.log.traceObject( "result", getObject )
+		Call Me.log.exit( TypeName( Me ) & "." & GetThreadInfo(1))
+		Exit Function
+		
+error_point:
+		On Error GoTo 0
+	Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Function
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Function getDocObject( in_doc As NotesDocument ) As Variant
+		On Error GoTo error_point
+		Call Me.log.enter( TypeName( Me ) & "." & GetThreadInfo(1))
+		Call Me.log.parameter( "in_doc", in_doc )
+		
+		Select Case LCase( in_doc.form(0))
+			Case LCase("cardagree"):
+				Set getDocObject = New TPS_Conf_QAprvl_Cardagree( in_doc, Me.Me_variant )
+			Case LCase("tps.conferences.questions_approval.link"):
+				Set getDocObject = New TPS_Conf_QAprvl_Link( in_doc, Me.Me_variant )
+			Case LCase("cardagree.getmaterials"):
+				Set getDocObject = New TPS_Conf_QAprvl_CardagreeGetmaterial( in_doc, Me.Me_variant )			
+			Case LCase("cardagree.replacematerials"):
+				Set getDocObject = New TPS_Conf_QAprvl_CardagreeReplacematerial( in_doc, Me.Me_variant )	
+			Case Else:
+				Error 1001, "Форма '" & in_doc.form(0) & "' не поддерживается"
+		End Select
+		
+		Call Me.log.traceObject( "result", getDocObject )
+		Call Me.log.exit( TypeName( Me ) & "." & GetThreadInfo(1))
+		Exit Function
+		
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Function
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------	
+	Function createNewCardagree( in_initObj As Variant ) As Variant
+		On Error GoTo error_point
+		Call Me.log.enter( "<" & TypeName( Me ) & "." & GetThreadInfo(1) & ">" )
+		
+		Dim dbPC As NotesDatabase
+		Set dbPC = Me.sm.base.databases.get( "tps.core.process_center" )
+		If ( dbPC Is Nothing ) Then
+			Set dbPC = Me.sm.base.databases.get( "tps.systems.process_center" )
+			If ( dbPC Is Nothing ) Then
+				MsgBox "Не удалось получить БД 'tps.core.process_center'", 64, "Системная ошибка"
+				Call Me.log.exit( "</" & TypeName( Me ) & "." & GetThreadInfo(1) & ">" )
+				Exit Function
+			End If
+		End If
+		
+		Dim session As New NotesSession
+		Dim docMail As NotesDocument
+		
+		Set docMail = dbPC.CreateDocument
+		docMail.Form 		= "Task"
+		docMail.Action 		= "InitProcess"
+		docMail.InitServer 	= Me.db.Server
+		docMail.AppPath 	= Me.db.FilePath
+		docMail.UserName 	= session.UserName
+		docMail.ProcessID 	= in_initObj.processID
+		docMail.InitPosID 	= in_initObj.initPositionID 
+		docMail.InitObjID 	= in_initObj.initObjID
+		
+		Call docMail.Save(True, True)
+		If ( DWFAAskForAction( docMail ) <> 1 ) Then
+			
+		ElseIf ( docMail.Error(0) <> "" ) Then
+			MsgBox docMail.Error(0), 48, ERR_MSG_TITLE
+		Else
+			Dim docMain As NotesDocument
+			Set docMain = Me.db.GetDocumentByUNID( docMail.docMainUNID(0))
+			If ( docMain Is Nothing ) Then
+				MsgBox {Ошибка при инициации процесса: docMain Is Nothing}, 48, ERR_MSG_TITLE
+			Else
+				docMain.id = docMain.UniversalID
+				docMain.CustomID = docMain.UniversalID
+				
+				Set createNewCardagree = Me.getDocObject( docMain )
+			End If
+		End If
+		
+		Call Me.log.exit( "</" & TypeName( Me ) & "." & GetThreadInfo(1) & ">" )
+		Exit Function
+		
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Function
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Function getCardAgree( in_key As Variant ) As Variant
+		On Error GoTo error_point
+		Call Me.log.enter( TypeName( Me ) & "." & GetThreadInfo(1))
+		
+		Dim key As String, doc As NotesDocument
+		key = Me.getId( in_key )
+		On Error 4091 Resume Next 'bad unid
+		Set doc = Me.db.getdocumentbyunid( key )
+		If ( doc Is Nothing ) Then
+			Error 1001, "In database '" & Me.db.Title & "' ( path: " & Me.db.FilePath & " ) not found document  by key '" & in_key & "'"
+		Else
+			Set Me.getCardAgree = Me.getDocObject( doc )
+		End If
+		
+		Call Me.log.traceObject( "result", getCardAgree )
+		Call Me.log.exit( TypeName( Me ) & "." & GetThreadInfo(1))
+		Exit Function
+		
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$ 
+	End Function
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------	
+	Function dialogSelectCardagree( in_isMult As Boolean, in_key As String ) As Variant
+		On Error GoTo error_point
+		Call Me.log.enter( "<" & TypeName( Me ) & "." & GetThreadInfo(1) & ">" )
+		Call Me.log.parameter( "in_isMult", in_isMult )
+		
+		Dim mxResult As New MixCollection
+		Set dialogSelectCardagree = mxResult
+		
+		Dim ws As New NotesUIWorkspace, dc As NotesDocumentCollection, viewname As String
+dialog:
+		viewname = "(App.RequestToQuestion.InWork.ByMeasure)"
+		Set dc = ws.PickListCollection( 3, in_isMult, Me.db.Server, Me.db.FilePath, viewname,_
+		"Список документов", "Выберите документ(ы) и нажмите  OK", in_key )
+		If ( dc.Count > 0 ) Then
+			Dim doc As NotesDocument
+			Set doc = dc.GetFirstDocument
+			Do While Not ( doc Is Nothing )
+				Call mxResult.Append( doc )
+				Set doc = dc.GetNextDocument( doc )
+			Loop
+		End If
+		
+		Call Me.log.exit( "</" & TypeName( Me ) & "." & GetThreadInfo(1) & ">" )
+		Exit Function
+		
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Function
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Function getLink( in_key As Variant ) As Variant
+		On Error GoTo error_point
+		Call Me.log.enter( TypeName( Me ) & "." & GetThreadInfo(1))
+		
+		Dim key As String, doc As NotesDocument
+		key = Me.getId( in_key )
+		On Error 4091 Resume Next 'bad unid
+		Set doc = Me.db.getdocumentbyunid( key )
+		If ( doc Is Nothing ) Then
+			Error 1001, "In database '" & Me.db.Title & "' ( path: " & Me.db.FilePath & " ) not found document  by key '" & in_key & "'"
+		Else
+			Set Me.getLink = Me.getDocObject( doc )
+		End If
+		
+		Call Me.log.traceObject( "result", getLink )
+		Call Me.log.exit( TypeName( Me ) & "." & GetThreadInfo(1))
+		Exit Function
+		
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$ 
+	End Function
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Function getLinks( in_link As Variant ) As Variant
+		On Error GoTo error_point
+		Call Me.log.enter( TypeName( Me ) & "." & GetThreadInfo(1))
+		
+		If ( in_link.domain = DOMAIN_CONF_QAPRVL_CARDAGREE ) _
+		Or ( in_link.domain = DOMAIN_CONF_QAPRVL_CARDAGREEGETMATERIAL ) _
+		Or ( in_link.domain = DOMAIN_CONF_QAPRVL_CARDAGREEREPLMATERIAL ) Then
+			Dim mxResult As New MixCollection
+			Set getLinks = mxResult
+
+			Dim vw As NotesView, viewname As String, dc As NotesDocumentCollection
+			viewname = "(links.bymainref)"
+			
+			Set vw = Me.db.Getview( viewname )
+			If ( Not vw Is Nothing ) Then
+				Call vw.Refresh()
+				vw.Autoupdate = False
+				Set dc = vw.Getalldocumentsbykey( in_link.id )
+				If ( dc.Count > 0 ) Then
+					Dim doc As NotesDocument
+					Set doc = dc.Getfirstdocument()
+					While Not ( doc Is Nothing )
+						Dim obl As Variant
+						Set obl = Me.getDocObject( doc )
+						If Not ( obl Is Nothing ) Then
+							Call mxResult.Append( obl )	
+						End If
+						Set doc = dc.Getnextdocument(doc)
+					Wend
+				End If
+			Else
+				Error 1001, "View '" & viewname & "' is not exist"
+			End If
+		Else
+			Error 1001, "The data of type '" & in_link.domain & "' of parameter 'in_link.domain' is wrong"
+		End If
+		
+		Call Me.log.traceObject( "result", mxResult )
+		Call Me.log.exit( TypeName( Me ) & "." & GetThreadInfo(1))
+		Exit Function
+		
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$ 
+	End Function
+	'--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Function createLink( in_doc As NotesDocument ) As Variant
+		On Error GoTo error_point
+		
+		'-------------------------------------------
+		Set createLink = Nothing
+		'-------------------------------------------
+		If ( Not ( in_doc Is Nothing ) ) Then
+			Dim cardAgree As Variant
+			Set cardAgree = Me.getDocObject( in_doc )
+			If Not IsEmpty( cardAgree ) Then
+				If ( cardAgree.domain = DOMAIN_CONF_QAPRVL_CARDAGREE )_
+				Or ( cardAgree.domain = DOMAIN_CONF_QAPRVL_CARDAGREEGETMATERIAL ) _
+				Or ( cardAgree.domain = DOMAIN_CONF_QAPRVL_CARDAGREEREPLMATERIAL ) Then
+					
+					Dim session As New NotesSession
+					Dim docNew As NotesDocument
+					
+					Set docNew = Me.db.Createdocument()
+					Dim link As New TPS_Conf_QAprvl_Link( docNew, Me.Me_variant )
+					
+					Call link.nd.Replaceitemvalue( "Form", "tps.conferences.questions_approval.link" )
+					Call link.nd.Replaceitemvalue( "domain", DOMAIN_CONF_QAPRVL_LINK )
+					Call link.nd.Replaceitemvalue( "id", link.nd.Universalid )
+					Call link.nd.Replaceitemvalue( "CustomID", link.nd.Universalid )
+					Call link.nd.Replaceitemvalue( "docKind", "ExtraDoc" )
+					
+					Dim item As NotesItem
+					Set item = in_doc.Getfirstitem("DWF$Authors")
+					If ( Not item Is Nothing ) Then
+						Call item.Copyitemtodocument( link.nd, item.Name )
+					End If
+					Set item = in_doc.Getfirstitem("DWF$Readers")
+					If ( Not item Is Nothing ) Then
+						Call item.Copyitemtodocument( link.nd, item.Name )
+					End If
+					Set item = in_doc.Getfirstitem("DWF$Server")
+					If ( Not item Is Nothing ) Then
+						Call item.Copyitemtodocument( link.nd, item.Name )
+					End If
+					
+					Dim docTemp As New NotesDocument( Me.db ), ItemRef As NotesItem
+					Call docTemp.Makeresponse( in_doc )
+					Set ItemRef = docTemp.Getfirstitem("$Ref") 
+					If Not ( ItemRef Is Nothing ) Then
+						Call ItemRef.Copyitemtodocument( link.nd, "MainRef" )
+					Else
+						Error 4001, {Не удалось сформировать поле "$Ref"}
+					End If
+					'-------------------------------------------				
+					Set createLink = link
+					'-------------------------------------------
+				Else
+					Error 4001, {Не верный входящий параметр: Домен не равен домену 'карточки заявки'. UNID: } & in_doc.Universalid & { / domain: } & cardAgree.domain
+				End If
+			Else
+				Error 4001, {Не удалось получить объект по входящему параметру (документу). UNID: } & in_doc.Universalid
+			End If
+			
+		End If
+		
+		
+		Call Me.log.exit( "</" & TypeName( Me ) & "." & GetThreadInfo(1) & ">" )
+		Exit Function
+		
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Function
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Function getCardAgreegetmaterial( in_key As Variant ) As Variant
+		On Error GoTo error_point
+		Call Me.log.enter( TypeName( Me ) & "." & GetThreadInfo(1))
+		
+		Dim key As String, doc As NotesDocument
+		key = Me.getId( in_key )
+		On Error 4091 Resume Next 'bad unid
+		Set doc = Me.db.getdocumentbyunid( key )
+		If ( doc Is Nothing ) Then
+			Error 1001, "In database '" & Me.db.Title & "' ( path: " & Me.db.FilePath & " ) not found document  by key '" & in_key & "'"
+		Else
+			Set Me.getCardAgreegetmaterial = Me.getDocObject( doc )
+		End If
+		
+		Call Me.log.traceObject( "result", getCardAgreegetmaterial )
+		Call Me.log.exit( TypeName( Me ) & "." & GetThreadInfo(1))
+		Exit Function
+		
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$ 
+	End Function
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Function getCardAgreereplacematerial( in_key As Variant ) As Variant
+		On Error GoTo error_point
+		Call Me.log.enter( TypeName( Me ) & "." & GetThreadInfo(1))
+		
+		Dim key As String, doc As NotesDocument
+		key = Me.getId( in_key )
+		On Error 4091 Resume Next 'bad unid
+		Set doc = Me.db.getdocumentbyunid( key )
+		If ( doc Is Nothing ) Then
+			Error 1001, "In database '" & Me.db.Title & "' ( path: " & Me.db.FilePath & " ) not found document  by key '" & in_key & "'"
+		Else
+			Set Me.getCardAgreereplacematerial = Me.getDocObject( doc )
+		End If
+		
+		Call Me.log.traceObject( "result", getCardAgreereplacematerial )
+		Call Me.log.exit( TypeName( Me ) & "." & GetThreadInfo(1))
+		Exit Function
+		
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$ 
+	End Function
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------	
+	Function dialogSelectCardagreeGetmaterials( in_isMult As Boolean, in_key As String ) As Variant
+		On Error GoTo error_point
+		Call Me.log.enter( "<" & TypeName( Me ) & "." & GetThreadInfo(1) & ">" )
+		Call Me.log.parameter( "in_isMult", in_isMult )
+		
+		Dim mxResult As New MixCollection
+		Set dialogSelectCardagreeGetmaterials = mxResult
+		
+		Dim ws As New NotesUIWorkspace, dc As NotesDocumentCollection, viewname As String
+dialog:
+		viewname = "(cardagree.getmaterials.byInitQuestion_id.prepared)"
+		Set dc = ws.PickListCollection( 3, in_isMult, Me.db.Server, Me.db.FilePath, viewname,_
+		"Список документов", "Выберите документ(ы) и нажмите  OK", in_key )
+		If ( dc.Count > 0 ) Then
+			Dim doc As NotesDocument
+			Set doc = dc.GetFirstDocument
+			Do While Not ( doc Is Nothing )
+				Call mxResult.Append( doc )
+				Set doc = dc.GetNextDocument( doc )
+			Loop
+		End If
+		
+		Call Me.log.exit( "</" & TypeName( Me ) & "." & GetThreadInfo(1) & ">" )
+		Exit Function
+		
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Function
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------	
+	Function dialogSelectCardagreeReplacematerials( in_isMult As Boolean, in_key As String ) As Variant
+		On Error GoTo error_point
+		Call Me.log.enter( "<" & TypeName( Me ) & "." & GetThreadInfo(1) & ">" )
+		Call Me.log.parameter( "in_isMult", in_isMult )
+		
+		Dim mxResult As New MixCollection
+		Set dialogSelectCardagreeReplacematerials = mxResult
+		
+		Dim ws As New NotesUIWorkspace, dc As NotesDocumentCollection, viewname As String
+dialog:
+		viewname = "(cardagree.replacematerials.byInitQuestion_id.prepared)"
+		Set dc = ws.PickListCollection( 3, in_isMult, Me.db.Server, Me.db.FilePath, viewname,_
+		"Список документов", "Выберите документ(ы) и нажмите  OK", in_key )
+		If ( dc.Count > 0 ) Then
+			Dim doc As NotesDocument
+			Set doc = dc.GetFirstDocument
+			Do While Not ( doc Is Nothing )
+				Call mxResult.Append( doc )
+				Set doc = dc.GetNextDocument( doc )
+			Loop
+		End If
+		
+		Call Me.log.exit( "</" & TypeName( Me ) & "." & GetThreadInfo(1) & ">" )
+		Exit Function
+		
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Function
+	
+End Class
+'======================================================================================================================================
+'	CLASS TPS_Conf_QAprvl_Cardagree
+'======================================================================================================================================
+Public Class TPS_Conf_QAprvl_Cardagree As FBase_Abstract_Object_Doc
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	'	PUBLIC:
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Sub New( in_doc As NotesDocument, in_ps As Variant )
+	End Sub
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Property Get title As String
+		On Error GoTo error_point
+		title = m_doc.question(0)		
+		Exit Property
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Property
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Property Get id As String
+		On Error GoTo error_point
+		id = m_doc.UniversalID
+		Exit Property 
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Property
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Property Get domain As String
+		On Error GoTo error_point
+		domain = DOMAIN_CONF_QAPRVL_CARDAGREE
+		Exit Property 
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Property
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	
+End Class
+
+
+'======================================================================================================================================
+'	CLASS TPS_Conf_QAprvl_Link
+'======================================================================================================================================
+Public Class TPS_Conf_QAprvl_Link As FBase_Abstract_Object_Doc
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	'	PUBLIC:
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Sub New( in_doc As NotesDocument, in_ps As Variant )
+	End Sub
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Property Get title As String
+		On Error GoTo error_point
+		title = m_doc.title(0)
+		Exit Property
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Property
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Property Get id As String
+		On Error GoTo error_point
+		id = m_doc.UniversalID
+		Exit Property 
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Property
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Property Get domain As String
+		On Error GoTo error_point
+		domain = DOMAIN_CONF_QAPRVL_LINK
+		Exit Property 
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Property
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Property Get isEmbCopied As Boolean
+		On Error GoTo error_point
+		isEmbCopied = ( m_doc.is_EmbCopied(0) = "1" )
+		Exit Property 
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Property
+	
+End Class
+'======================================================================================================================================
+'	CLASS TPS_Conf_QAprvl_CardagreeGetmaterial
+'======================================================================================================================================
+Public Class TPS_Conf_QAprvl_CardagreeGetmaterial As FBase_Abstract_Object_Doc
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	'	PUBLIC:
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Sub New( in_doc As NotesDocument, in_ps As Variant )
+	End Sub
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Property Get title As String
+		On Error GoTo error_point
+		title = m_doc.question(0)		
+		Exit Property
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Property
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Property Get id As String
+		On Error GoTo error_point
+		id = m_doc.UniversalID
+		Exit Property 
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Property
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Property Get domain As String
+		On Error GoTo error_point
+		domain = DOMAIN_CONF_QAPRVL_CARDAGREEGETMATERIAL
+		Exit Property 
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Property
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	
+End Class
+
+'======================================================================================================================================
+'	CLASS TPS_Conf_QAprvl_CardagreeReplacematerial
+'======================================================================================================================================
+Public Class TPS_Conf_QAprvl_CardagreeReplacematerial As FBase_Abstract_Object_Doc
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	'	PUBLIC:
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Sub New( in_doc As NotesDocument, in_ps As Variant )
+	End Sub
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Property Get title As String
+		On Error GoTo error_point
+		title = m_doc.question(0)
+		Exit Property
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Property
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Property Get id As String
+		On Error GoTo error_point
+		id = m_doc.UniversalID
+		Exit Property 
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Property
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Property Get domain As String
+		On Error GoTo error_point
+		domain = DOMAIN_CONF_QAPRVL_CARDAGREEREPLMATERIAL
+		Exit Property 
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Property
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	
+End Class

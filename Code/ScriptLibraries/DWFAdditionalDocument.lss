@@ -1,0 +1,732 @@
+'++LotusScript Development Environment:2:5:(Options):0:74
+Option Public
+Option Declare
+
+Use "GlDec"
+Use "ArrayTools"
+'Use "ODLib"
+
+'++LotusScript Development Environment:2:5:(Forward):0:1
+Declare Class AdditionalDocumentStoreUI
+
+'++LotusScript Development Environment:2:5:(Declarations):0:10
+Class AdditionalDocumentStoreUI
+	Public docMain As NotesDocument
+	Public docStage As NotesDocument
+	Public docAdd As NotesDocument
+	
+	MyType_ As String
+	StageType_ As String
+	IsHideAddDoc_ As String
+	IsHideRespDoc_ As String
+	
+	Sub new(docMain As NotesDocument, addDocType As String, docStage As NotesDocument)
+		Select Case Lcase(addDocType)
+			Case Lcase("AddDoc")
+				Me.MyType = "AddDoc"
+			Case Lcase("RespDoc")
+				Me.MyType = "RespDoc"
+			Case Else
+				Msgbox {Не верно указан тип доп. документа}, 48, ERR_MSG_TITLE
+				Exit Sub
+		End Select
+		
+		
+		Set Me.docMain = docMain
+		Set Me.docStage = docStage
+		Me.StageType = docStage.StageType(0)
+		
+		If (Lcase(Me.StageType) = Lcase("Edit")) Then
+			If (Lcase(docStage.DocBasicAllow(0)) = Lcase("enable")) Then
+				Me.IsHideAddDoc = "0"
+			Else
+				Me.IsHideAddDoc = "1"
+			End If
+			If (Lcase(docStage.DocResponseAllow(0)) = Lcase("enable")) Then
+				Me.IsHideRespDoc = "0"
+			Else
+				Me.IsHideRespDoc = "1"
+			End If
+		Elseif (Lcase(Me.StageType) = Lcase("Visa")) Then
+			Me.IsHideAddDoc = "1"
+			If (Lcase(docStage.VisaResponseAllow(0)) = Lcase("enable")) Then
+				Me.IsHideRespDoc = "0"
+			Else
+				Me.IsHideRespDoc = "1"
+			End If
+		End If
+	End Sub
+	
+	Function GetAdditionalDocID(ID As String, ErrorStr As String) As Integer
+		On Error Goto errh
+		
+		Dim ws As New NotesUIWorkspace
+		Dim db As NotesDatabase
+		Dim View As NotesView
+		Dim ViewName As String
+		Dim col As NotesDocumentCollection
+		Dim doc As NotesDocument
+		Dim vSort As Variant
+		Dim v As Variant
+		Dim docTemp As NotesDocument
+		
+		Set db = Me.docStage.ParentDatabase
+		If (Me.MyType = "AddDoc") Then
+			ViewName = {($DWFAddDocBasicByStageID)}
+		Elseif (Me.MyType = "RespDoc") Then
+			ViewName = {($DWFAddDocResponseByStageID)}
+		End If
+		Set View = db.GetView(ViewName)
+		If (View Is Nothing) Then
+			ErrorStr = {Не найдено представление "} & ViewName & {"}
+			Exit Function
+		End If
+		Call View.Refresh()
+		View.AutoUpdate = False
+		
+		Set col = View.GetAllDocumentsByKey(Me.docStage.UniversalID)
+		If (col.Count = 0) Then
+			ErrorStr = {Не обнаружено доп. документов}
+			Exit Function
+		End If
+		Set doc = col.GetFirstDocument
+		
+		Select Case col.Count
+			Case 1
+				ID = doc.UniversalID
+			Case Else
+				
+				Redim vSort(0) As String
+				Redim v(0) As String
+				While (Not (doc Is Nothing))
+					If (v(0) <> "") Then
+						Redim Preserve vSort(Ubound(vSort)+1) As String
+						Redim Preserve v(Ubound(v)+1) As String
+					End If
+					vSort(Ubound(vSort)) = doc.SortNumber(0)
+					v(Ubound(v)) = doc.Name(0) & {|} & doc.UniversalID
+					Set doc = col.GetNextDocument(doc)
+				Wend
+				
+				Dim Index As Variant
+				Call Arrays_ArraySort(vSort, Index, "Text", -1)
+				Call Arrays_RebuildArray(v, Index)
+				
+				Set docTemp = db.CreateDocument
+				docTemp.Members = v
+				docTemp.Promt = "Выберите дополнительный документ"
+				
+				If Not (ws.DialogBox("DWF101", True, True, False, False, False, False, db.Title, docTemp, True, False, True)) Then
+					Exit Function
+				End If
+				If (docTemp.List(0) = "") Then
+					Exit Function
+				End If
+				ID = docTemp.List(0)
+		End Select
+		
+		Dim ViewByMainRef As NotesView
+		Dim colTest As NotesDocumentCollection
+		Dim docTest As NotesDocument
+		Dim hasMatch As Integer
+		Dim IsRemoved As Integer
+		
+		Set ViewByMainRef = db.GetView("(AddDocByMainRef)")
+		If (ViewByMainRef Is Nothing) Then
+			ErrorStr = {Не найдено представление "($AddDocByMainRef)"}
+			Exit Function
+		End If
+		Call ViewByMainRef.Refresh()
+		ViewByMainRef.AutoUpdate = False
+		
+		Set colTest = ViewByMainRef.GetAllDocumentsByKey(Me.docMain.UniversalID)
+		If (colTest.Count = 0) Then
+			GetAdditionalDocID = 1
+			Exit Function
+		End If
+		
+		Set docTest = colTest.GetFirstDocument
+		Do While (Not (docTest Is Nothing))
+			If (Not (docTest.HasItem("ADDDocVersion"))) Then
+				If (docTest.ADDDOCID(0) = ID) Then
+					If (docTest.HasItem("IsRemove")) Then
+						If (docTest.IsRemove(0) = "1") Then
+							IsRemoved = 1
+						End If
+					End If
+					hasMatch = 1
+					Exit Do
+				End If
+			End If
+			Set docTest = colTest.GetNextDocument(docTest)
+		Loop
+		If (hasMatch = 1) Then
+			ErrorStr = {Доп. документ "} & docTest.ADDDOCNAME(0) & {" уже создан.}
+			If (IsRemoved = 1) Then
+				ErrorStr = ErrorStr & Chr(13) & {Необходимо его "Вернуть"}
+			End If
+			Exit Function
+		End If
+		
+		
+		GetAdditionalDocID = 1
+		
+		Exit Function
+errh:
+		ErrorStr = Error$ & {. Error # } & Cstr(Err) & { on line # } & Cstr(Erl) & { in (GetAdditionalDocID) "AdditionalDocumentStore" class }
+		Resume endh
+endh:
+	End Function
+	
+	
+	Function GetResponseDocumentID(InitiatorObjAccess As String, IDParent As String, ID As String, ErrorStr As String) As Integer
+		On Error Goto errh
+		
+		Dim ws As New NotesUIWorkspace
+		Dim db As NotesDatabase
+		Dim View As NotesView
+		Dim ViewName As String
+		Dim col As NotesDocumentCollection
+		Dim doc As NotesDocument
+		Dim vSort As Variant
+		Dim v As Variant
+		Dim docTemp As NotesDocument
+		Dim TargetList As Variant
+		Dim hasMatch As Integer
+		
+		
+		
+		If (Me.IsHideRespDoc = "1") Then
+			ErrorStr = {Стадия не предполагает создание отзыва}
+			Exit Function
+		End If
+		
+		If (Lcase(docStage.StageType(0)) = Lcase("Edit")) Then
+			TargetList = docStage.GetFirstItem("DocResponseTarget").values	
+		Elseif (Lcase(docStage.StageType(0)) = Lcase("Visa")) Then
+			TargetList = docStage.GetFirstItem("VisaResponseTarget").values
+		End If
+		
+		If (TargetList(0) = "") Then
+			ErrorStr = {Стадия не предполагает создание отзыва}
+			Exit Function
+		End If
+		
+		
+		Set db = Me.docStage.ParentDatabase
+		
+		If (Me.MyType = "AddDoc") Then
+			ErrorStr = {Не верный параметр вызова для данного типа доп. документа - AdditionalDocumentStoreUI.GetResponseDocumentID()}
+			Exit Function
+		Elseif (Me.MyType = "RespDoc") Then
+			ViewName = {($DWFAddDocResponseByStageID)}	
+		End If
+		Set View = db.GetView(ViewName)
+		If (View Is Nothing) Then
+			ErrorStr = {Не найдено представление "} & ViewName & {"}
+			Exit Function
+		End If
+		Call View.Refresh()
+		View.AutoUpdate = False
+		
+		Set col = View.GetAllDocumentsByKey(Me.docStage.UniversalID)
+		If (col.Count = 0) Then
+			ErrorStr = {Не обнаружено доп. документов}
+			Exit Function
+		End If
+		Set doc = col.GetFirstDocument
+		
+		Redim vSort(0) As String
+		Redim v(0) As String
+		While (Not (doc Is Nothing))
+			hasMatch = 0
+			If (Lcase(docStage.StageType(0)) = Lcase("Edit")) Then
+				If (Lcase(doc.AddDocType(0)) = Lcase("basicresponse")) Then 'отзыв к основному документу
+					hasMatch = 1
+				End If
+			Elseif (Lcase(docStage.StageType(0)) = Lcase("Visa")) Then
+				If (Lcase(doc.AddDocType(0)) = Lcase("visaresponse")) Then 'отзыв к визе
+					hasMatch = 1
+				End If
+			End If
+			If (hasMatch = 1) Then
+				If (v(0) <> "") Then
+					Redim Preserve vSort(Ubound(vSort)+1) As String
+					Redim Preserve v(Ubound(v)+1) As String
+				End If
+				vSort(Ubound(vSort)) = doc.SortNumber(0)
+				v(Ubound(v)) = doc.Name(0) & {|} & doc.UniversalID	
+			End If
+			Set doc = col.GetNextDocument(doc)
+		Wend
+		If (v(0) = "") Then
+			ErrorStr = {Не обнаружено доп. документов}
+			Exit Function
+		End If
+		
+		Dim Index As Variant
+		Call Arrays_ArraySort(vSort, Index, "Text", -1)
+		Call Arrays_RebuildArray(v, Index)
+		
+		Set docTemp = db.CreateDocument
+		docTemp.Members = v
+		docTemp.Promt = "Выберите дополнительный документ"
+		
+		If Not (ws.DialogBox("DWF101", True, True, False, False, False, False, db.Title, docTemp, True, False, True)) Then
+			Exit Function
+		End If
+		If (docTemp.List(0) = "") Then
+			Exit Function
+		End If
+		ID = docTemp.List(0)
+		
+		
+		Dim ViewAddDocBasic As NotesView
+		Dim colAddDocBasic As NotesDocumentCollection
+		Dim docAddDocBasic As NotesDocument
+		
+		Dim ViewParent As NotesView
+		Dim colParent As NotesDocumentCollection
+		Dim docParent As NotesDocument
+		Dim ParentList As Variant
+		Dim colTemp As NotesDocumentCollection
+		Dim docTest As NotesDocument
+		
+		Select Case Lcase(docStage.StageType(0))
+			Case Lcase("Edit")
+				'отзыв к основному документу	
+				Set ViewAddDocBasic = db.GetView("($DWFAddDocByResponseID)")
+				If (ViewAddDocBasic Is Nothing) Then
+					ErrorStr = {Не найдено представление "($DWFAddDocByResponseID)"}
+					Exit Function
+				End If
+				Call ViewAddDocBasic.Refresh()
+				ViewAddDocBasic.AutoUpdate = False
+				
+				Set colAddDocBasic = ViewAddDocBasic.GetAllDocumentsByKey(ID)
+				If (colAddDocBasic.Count = 0) Then
+					ErrorStr = {Нет документа(ов) для формирования отзыва}
+					Exit Function
+				End If
+				Redim v(0) As String
+				Set docAddDocBasic = colAddDocBasic.GetFirstDocument
+				While (Not (docAddDocBasic Is Nothing))
+					If (v(0) <> "") Then
+						Redim Preserve v(Ubound(v)+1) As String
+					End If
+					v(Ubound(v)) = docAddDocBasic.CustomID(0)		
+					Set docAddDocBasic = colAddDocBasic.GetNextDocument(docAddDocBasic)
+				Wend
+				If (v(0) = "") Then
+					ErrorStr = {Нет документа(ов) для формирования отзыва}
+					Exit Function
+				End If
+				
+				Set ViewParent = db.GetView("(AddDocBasicByMainRef)")
+				If (ViewParent Is Nothing) Then
+					ErrorStr = {Не найдено представление "(AddDocBasicByMainRef)"}
+					Exit Function
+				End If
+				Call ViewParent.Refresh()
+				ViewParent.AutoUpdate = False
+				
+				Set colParent = ViewParent.GetAllDocumentsByKey(Me.docMain.UniversalID)
+				If (colParent.Count = 0) Then
+					ErrorStr = {Нет родительского документа(ов) для формирования отзыва}
+					Exit Function
+				End If
+				Set colTemp = ViewParent.GetAllDocumentsByKey("xxx")
+				
+				
+				Dim hasEditVersion As Integer
+				Dim ParentType As Integer
+				
+				
+				Redim ParentList(0) As String
+				Redim vSort(0) As String
+				Set docParent = colParent.GetFirstDocument
+				While (Not (docParent Is Nothing))
+					Forall sID In v
+						If (docParent.ADDDOCID(0) = sID) Then
+							Forall Target In TargetList
+								hasMatch = 0
+								Select Case Lcase(Target)
+								Case Lcase("own")
+									If (Lcase(docParent.AddDocInitiatorObjAccess(0)) = Lcase(InitiatorObjAccess)) Then
+										hasMatch = 1
+									End If
+								Case Lcase("other")
+									hasMatch = 1
+							End Select
+								
+								If (hasMatch = 1) Then
+									hasMatch = 0
+									Forall sID2 In ParentList
+										If (docParent.CustomID(0) = sID2) Then
+											hasMatch = 1
+											Exit Forall
+										End If
+									End Forall
+									If (hasMatch = 0) Then
+										If (Not (docParent.HasItem("ADDDocVersion"))) Then
+											hasEditVersion = 1
+										End If	
+										
+										Set docTest = colTemp.GetDocument(docParent)
+										If (docTest Is Nothing) Then
+											Call colTemp.AddDocument(docParent)
+										End If
+										
+										If (ParentList(0)<> "") Then
+											Redim Preserve vSort(Ubound(vSort)+1) As String
+											Redim Preserve ParentList(Ubound(ParentList)+1) As String
+										End If
+										vSort(Ubound(vSort)) = docParent.Created
+										ParentList(Ubound(ParentList)) = docParent.ADDDOCNAME(0) & { от } & Cstr(docParent.Created) & {|} & docParent.CustomID(0)	
+									End If
+								End If
+							End Forall
+						End If
+					End Forall
+					Set docParent = colParent.GetNextDocument(docParent)
+				Wend
+				If (colTemp.Count = 0) Then
+					ErrorStr = {Нет родительского документа(ов) для формирования отзыва}
+					Exit Function
+				End If
+				
+
+				' =================================================
+				' если "lastversion" или "editversion" не найдены, то выбор из полного списка ParentList, найдены - RefinedList
+				Select Case LCase(docStage.DocResponseTargetType(0))
+				Case LCase("lastversion")
+					ParentType = 6
+				Case LCase("editversion")
+					ParentType = 7
+				Case LCase("dialog")
+					ParentType = MessageBox(_
+					{Для выбора последней версии документа(ов) нажмите "Да" (Yes)} & Chr(13) &_
+					{Для выбора редактируемой версии документа(ов) нажмите "Нет" (No)} & Chr(13) &_
+					{Для отмены нажмите "Отмена" (Cancel)}, 3+32, db.Title)
+					If (ParentType = 2) Then
+						Exit Function
+					End If	
+				End Select
+				
+				Dim RefinedList
+				Dim RefinedSort
+				ReDim dummy(0) As String
+				RefinedList = dummy
+				RefinedSort = dummy
+				Set docParent = colTemp.GetFirstDocument
+				While (Not (docParent Is Nothing))
+					hasMatch = 0
+					Select Case ParentType
+					Case 6 '	"lastversion"
+						If (docParent.HasItem("ADDDocVersion")) Then
+							If (CStr(docParent.ADDDocVersion(0)) = CStr(docMain.ADDDocVersion(0))) Then
+								hasMatch = 1
+							End If
+						End If
+					Case 7 '	"editversion"
+						If (Not (docParent.HasItem("ADDDocVersion"))) Then
+							hasMatch = 1
+						End If
+				End Select
+					If (hasMatch = 1) Then
+						RefinedSort = ArrayAppend(RefinedSort, docParent.Created)
+						RefinedList = ArrayAppend(RefinedList, docParent.ADDDOCNAME(0) & { от } & CStr(docParent.Created) & {|} & docParent.CustomID(0))
+					End If
+					Set docParent = colTemp.GetNextDocument(docParent)
+				Wend
+				RefinedSort = FullTrim(RefinedSort)
+				RefinedList = FullTrim(RefinedList)
+				'If (ParentList(0) = "") Then
+				'	ErrorStr = {Нет родительского документа(ов) для формирования отзыва}
+				'	Exit Function
+				'End If
+
+
+				Set docTemp = db.CreateDocument
+				
+				If RefinedList(0) = "" Then
+					Call Arrays_ArraySort(vSort, Index, "Date", -1)
+					Call Arrays_RebuildArray(ParentList, Index)
+					docTemp.Members = ParentList
+				Else
+					Call Arrays_ArraySort(RefinedSort, Index, "Date", -1)
+					Call Arrays_RebuildArray(RefinedList, Index)
+					docTemp.Members = RefinedList
+				End If
+				
+				docTemp.Promt = "Выберите дополнительный документ"
+				
+				If Not (ws.DialogBox("DWF104", True, True, False, False, False, False, db.Title, docTemp, True, False, True)) Then
+					Exit Function
+				End If
+				If (docTemp.List(0) = "") Then
+					Exit Function
+				End If
+				IDParent = docTemp.List(0)
+				
+				
+			Case Lcase("Visa")
+				'отзыв к визе
+				Dim ViewVisa As NotesView
+				Dim colVisa As NotesDocumentCollection
+				Dim docVisa As NotesDocument
+				
+				Set ViewVisa = db.GetView("(VisaByFullID)")
+				If (ViewVisa Is Nothing) Then
+					ErrorStr = {Не найдено представление "(VisaByFullID)"}
+					Exit Function
+				End If
+				Set colVisa = ViewVisa.GetAllDocumentsByKey(Me.docMain.UniversalID & {-} & Me.docMain.StageExclusionID(0))
+				If (colVisa.Count = 0) Then
+					ErrorStr = {Нет виз(ы) для формирования отзыва}
+					Exit Function
+				End If
+				
+				
+				Redim ParentList(0) As String
+				Redim vSort(0) As String
+				Set docVisa = colVisa.GetFirstDocument
+				While (Not (docVisa Is Nothing))
+					Forall Target In TargetList
+						hasMatch = 0
+						Select Case Lcase(Target)
+						Case Lcase("own")
+							If (Lcase(docVisa.VisaInitiatorObjAccess(0)) = Lcase(InitiatorObjAccess)) Then
+								hasMatch = 1
+							End If
+						Case Lcase("other")
+							hasMatch = 1
+					End Select
+						
+						If (hasMatch = 1) Then
+							hasMatch = 0
+							Forall sID In ParentList
+								If (docVisa.CustomID(0) = sID) Then
+									hasMatch = 1
+									Exit Forall
+								End If
+							End Forall
+							If (hasMatch = 0) Then
+								If (ParentList(0)<> "") Then
+									Redim Preserve vSort(Ubound(vSort)+1) As String
+									Redim Preserve ParentList(Ubound(ParentList)+1) As String
+								End If
+								vSort(Ubound(vSort)) = docVisa.Created
+								ParentList(Ubound(ParentList)) = Cstr(docVisa.Created) & { } & docVisa.VisaInitiatorObjName(0) & {|} & docVisa.CustomID(0)	
+							End If
+						End If
+					End Forall
+					
+					Set docVisa = colVisa.GetNextDocument(docVisa)
+				Wend
+				
+				If (ParentList(0) = "") Then
+					ErrorStr = {Нет виз(ы) для формирования отзыва}
+					Exit Function
+				End If
+				Call Arrays_ArraySort(vSort, Index, "Date", -1)
+				Call Arrays_RebuildArray(ParentList, Index)
+				
+				
+				Set docTemp = db.CreateDocument
+				docTemp.Members = ParentList
+				docTemp.Promt = "Выберите визу"
+				
+				If Not (ws.DialogBox("DWF104", True, True, False, False, False, False, db.Title, docTemp, True, False, True)) Then
+					Exit Function
+				End If
+				If (docTemp.List(0) = "") Then
+					Exit Function
+				End If
+				IDParent = docTemp.List(0)
+				
+		End Select
+		
+		
+		Dim ViewRespByMainRef As NotesView
+		Dim colTest As NotesDocumentCollection
+		
+		Set ViewRespByMainRef = db.GetView("(AddDocRespByMainRef)")
+		If (ViewRespByMainRef Is Nothing) Then
+			ErrorStr = {Не найдено представление "(AddDocRespByMainRef)"}
+			Exit Function
+		End If
+		Call ViewRespByMainRef.Refresh()
+		ViewRespByMainRef.AutoUpdate = False
+		
+		Set colTest = ViewRespByMainRef.GetAllDocumentsByKey(Me.docMain.UniversalID)
+		If (colTest.Count = 0) Then
+			GetResponseDocumentID = 1
+			Exit Function
+		End If
+		
+		hasMatch = 0
+		Set docTest = colTest.GetFirstDocument
+		Do While (Not (docTest Is Nothing))
+			If (docTest.ADDDOCID(0) = ID) Then
+				If (docTest.ParentRef(0) = IDParent) Then
+					hasMatch = 1
+					Exit Do
+				End If
+			End If
+			Set docTest = colTest.GetNextDocument(docTest)
+		Loop
+		If (hasMatch = 1) Then
+			ErrorStr = {Доп. документ "} & docTest.ADDDOCNAME(0) & {" уже создан.}
+			Exit Function
+		End If
+		
+		
+		
+		GetResponseDocumentID = 1
+		
+		Exit Function
+errh:
+		ErrorStr = Error$ & {. Error # } & Cstr(Err) & { on line # } & Cstr(Erl) & { in (GetResponseDocumentID) "AdditionalDocumentStore" class }
+		Resume endh
+endh:
+	End Function
+	
+	
+	
+	Function GetAddDocID(InitiatorObjAccess As String, IsRemoved As Integer, ID As String, ErrorStr As String) As Integer
+		On Error Goto errh
+		
+		Dim ws As New NotesUIWorkspace
+		Dim db As NotesDatabase
+		Dim View As NotesView
+		Dim ViewName As String
+		Dim col As NotesDocumentCollection
+		Dim doc As NotesDocument
+		Dim vSort As Variant
+		Dim v As Variant
+		Dim docTemp As NotesDocument
+		Dim hasMatch As Integer
+		
+		
+		Set db = Me.docMain.ParentDatabase
+		If (Me.MyType = "AddDoc") Then
+			ViewName = {(AddDocBasicNoVersionByFullID)}
+		Elseif (Me.MyType = "RespDoc") Then
+			ViewName = {(AddDocRespByMainRef)}
+		End If
+		Set View = db.GetView(ViewName)
+		If (View Is Nothing) Then
+			ErrorStr = {Не найдено представление "} & ViewName & {"}
+			Exit Function
+		End If
+		Call View.Refresh()
+		View.AutoUpdate = False
+		
+		Set col = View.GetAllDocumentsByKey(Me.docMain.UniversalID)
+		If (col.Count = 0) Then
+			ErrorStr = {Не обнаружено доп. документов}
+			Exit Function
+		End If
+		Set doc = col.GetFirstDocument
+		
+		Redim vSort(0) As String
+		Redim v(0) As String
+		While (Not (doc Is Nothing))
+			hasMatch = 0
+			If (Lcase(doc.AddDocInitiatorObjAccess(0)) = Lcase(InitiatorObjAccess)) Then
+				If (IsRemoved = 0) Then
+					If (doc.HasItem("IsRemove")) Then
+						If (doc.IsRemove(0) = "0") Then
+							hasMatch = 1
+						End If	
+					Else
+						hasMatch = 1
+					End If
+				Else
+					If (doc.IsRemove(0) = "1") Then
+						hasMatch = 1
+					End If
+				End If
+				If (hasMatch = 1) Then
+					If (v(0) <> "") Then
+						Redim Preserve vSort(Ubound(vSort)+1) As String
+						Redim Preserve v(Ubound(v)+1) As String
+					End If
+					vSort(Ubound(vSort)) = doc.SortNumber(0)
+					v(Ubound(v)) = doc.Created & { - } & doc.Title(0) & {|} & doc.UniversalID	
+				End If
+			End If
+			Set doc = col.GetNextDocument(doc)
+		Wend
+		If (v(0) = "") Then
+			ErrorStr = {Не обнаружено доп. документов}
+			Exit Function
+		End If
+		
+		Dim Index As Variant
+		Call Arrays_ArraySort(vSort, Index, "Text", -1)
+		Call Arrays_RebuildArray(v, Index)
+		
+		Set docTemp = db.CreateDocument
+		docTemp.Members = v
+		docTemp.Promt = "Выберите дополнительный документ"
+		
+		If Not (ws.DialogBox("DWF101", True, True, False, False, False, False, db.Title, docTemp, True, False, True)) Then
+			Exit Function
+		End If
+		If (docTemp.List(0) = "") Then
+			Exit Function
+		End If
+		ID = docTemp.List(0)
+		
+		
+		
+		GetAddDocID = 1
+		
+		Exit Function
+errh:
+		ErrorStr = Error$ & {. Error # } & Cstr(Err) & { on line # } & Cstr(Erl) & { in (GetAddDocID) "AdditionalDocumentStore" class }
+		Resume endh
+endh:
+	End Function
+	
+	
+	
+	
+	
+	
+	Property Set MyType
+		MyType_ = MyType
+	End Property
+	Public Property Get MyType
+		MyType = MyType_
+	End Property
+	
+	Property Set StageType
+		StageType_ = StageType
+	End Property
+	Public Property Get StageType
+		StageType = StageType_
+	End Property
+	
+	Property Set IsHideAddDoc
+		IsHideAddDoc_ = IsHideAddDoc
+	End Property
+	Public Property Get IsHideAddDoc
+		IsHideAddDoc = IsHideAddDoc_
+	End Property
+	
+	Property Set IsHideRespDoc
+		IsHideRespDoc_ = IsHideRespDoc
+	End Property
+	Public Property Get IsHideRespDoc
+		IsHideRespDoc = IsHideRespDoc_
+	End Property
+	
+	
+	
+	
+	Sub delete()
+	End Sub
+End Class

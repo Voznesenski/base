@@ -1,0 +1,35 @@
+<?xml version='1.0' encoding='utf-8'?>
+<note class='view' xmlns='http://www.lotus.com/dxl' version='10.0' maintenanceversion='1.0'
+ replicaid='44257D5C002A4928'>
+<noteinfo noteid='1aee' unid='C085A3396F6B7BFE432583B4003C3062' sequence='9'>
+<created><datetime>20190305T135725,46+03</datetime></created>
+<modified><datetime>20210418T115616,43+03</datetime></modified>
+<revised><datetime>20201016T141555,72+03</datetime></revised>
+<lastaccessed><datetime>20210418T115616,42+03</datetime></lastaccessed>
+<addedtofile><datetime>20210418T115616,42+03</datetime></addedtofile></noteinfo>
+<updatedby><name>CN=Aleksey V Shcherbakov/O=SVO</name><name>CN=Igor V Tomnov/O=SVO</name></updatedby>
+<wassignedby><name>CN=Igor V Tomnov/O=SVO</name></wassignedby>
+<item name='$FormulaClass' sign='true'><text>1</text></item>
+<item name='$TITLE' sign='true'><text>Срок стадии|StageCompleteDateTime</text></item>
+<item name='$Index' sign='true'><text/></item>
+<item name='$Formula' summary='true' sign='true'><formula compiled='true'>
+PgAFADAALAADABUACQAEAFN0YWdlQ29tcGxldGVEYXRlVGltZSRDb25mbGljdCRSRUYEAAQAAAAI
+AGYAAwA=
+</formula></item>
+<item name='$Collation' summary='true'>
+<rawitemdata type='2'>
+BgAAAABE
+</rawitemdata></item>
+<item name='$ViewFormat' summary='true' sign='true'>
+<rawitemdata type='5'>
+AQABAAEACAAAAFZDAAAVABUAAAAAAGAAAgAKCQAAAAAAAAABAAICAAAAU3RhZ2VDb21wbGV0ZURh
+dGVUaW1lBdEF8AXuBeogBfEF8gXgBeQF6AXoJgABAAAAAQEACQEAAAoBAQ4KAAABAK0rAQABAAEA
+AAAAAAAAAABXQwIBAAkAAAAAAAAAAAAAAAAAAAAAAADAAAAAAAD//wAAAAAAAAAAAAAAAAAAQgAQ
+AAAAAQD///8ABQD///8AAQAAAAAAAAAAAAAAAAABAP///wABAP///wAAAAEAAAAAAAEAAAAAAAEA
+AAAAAAAACAAAAAAAAQBYQwBMgAMAAAAAAAECAgIBAQEBBwQCAAAAAAAAAAAgLi46WUMAAAAAAAAA
+AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==
+</rawitemdata></item>
+<item name='$Comment' sign='true'><text/></item>
+<item name='$Flags'><text>P^Y</text></item>
+<item name='$DesignerVersion'><text>8.5.3</text></item></note>
+

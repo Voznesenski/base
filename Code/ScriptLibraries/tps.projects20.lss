@@ -1,0 +1,1447 @@
+'++LotusScript Development Environment:2:5:(Options):0:74
+Option Declare
+
+Use "fbyte"
+
+
+
+'++LotusScript Development Environment:2:5:(Forward):0:1
+Declare Public Class TPS_Projects20Service As FBase_Abstract_Service
+Declare Public Class TPS_Projects20_Project As FBase_Abstract_Object_Doc
+Declare Public Class TPS_Projects20_SchedulePlan As FBase_Abstract_Object_Doc
+Declare Public Class TPS_Projects20_Inbound As FBase_Abstract_Object_Doc
+Declare Public Class TPS_Projects20_Currentbudget As FBase_Abstract_Object_Doc
+Declare Public Class TPS_Projects20_Model As FBase_Abstract_Object_Doc
+Declare Public Class TPS_Projects20_Estimate As FBase_Abstract_Object_Doc
+Declare Public Class TPS_Projects20_Technicaltask As FBase_Abstract_Object_Doc
+Declare Public Class TPS_Projects20_Tender As FBase_Abstract_Object_Doc
+Declare Public Class TPS_Projects20_Investmentbudget As FBase_Abstract_Object_Doc
+
+'++LotusScript Development Environment:2:5:(Declarations):0:10
+Private Const DATABASE_KEY = "tps.projects.projects"
+
+Public Const DOMAIN_TPS_PROJECTS20_PROJECT = "tps.projects.projects.project"
+Public Const DOMAIN_TPS_PROJECTS20_SCHEDULEPLAN = "tps.projects.projects.scheduleplan"
+Public Const DOMAIN_TPS_PROJECTS20_TECHNICALTASK = "tps.projects.projects.technicaltask"
+Public Const DOMAIN_TPS_PROJECTS20_INBOUND = "tps.projects.projects.inbound"
+Public Const DOMAIN_TPS_PROJECTS20_MODEL = "tps.projects.projects.model"
+Public Const DOMAIN_TPS_PROJECTS20_INVESTMENTBUDGET = "tps.projects.projects.investmentbudget"
+Public Const DOMAIN_TPS_PROJECTS20_CURRENTBUDGET = "tps.projects.projects.currentbudget"
+Public Const DOMAIN_TPS_PROJECTS20_ESTIMATE = "tps.projects.projects.estimate"
+Public Const DOMAIN_TPS_PROJECTS20_TENDER = "tps.projects.projects.tender"
+
+
+
+
+
+
+'======================================================================================================================================
+'	CLASS TPS_ProjectsService
+'======================================================================================================================================
+Public Class TPS_Projects20Service As FBase_Abstract_Service
+	Private m_db As NotesDatabase
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Private Function getElementByDefaultView( in_key As String ) As FBase_abstract_object_doc
+		On Error GoTo error_point
+		Call Me.log.enter( "<" & TypeName( Me ) & "." & GetThreadInfo(1) & ">" )
+		Call Me.log.parameter( "in_key", in_key )
+		
+		Dim mxResult As Mixcollection
+		Set mxResult = Me.getElementsByDefaultView( in_key )
+		If ( mxResult.count = 1 ) Then
+			Set getElementByDefaultView = mxResult.Element(1)
+		ElseIf ( mxResult.count > 1 ) Then
+			Dim cdb As NotesDatabase
+			Set cdb = Me.db
+			Error 1001, "In database '" & cdb.Title & "' ( " & cdb.Server & "!!" & cdb.FilePath & " ) by key '" & in_key & "' has founded more than 1 documents. Count: " & mxResult.count
+		End If
+		
+		Call Me.log.exit( TypeName( Me ) & "." & GetThreadInfo(1))
+		Exit Function
+		
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Function
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Private Function getElementsByDefaultView( in_key As String ) As Mixcollection
+		On Error GoTo error_point
+		Call Me.log.enter( "<" & TypeName( Me ) & "." & GetThreadInfo(1) & ">" )
+		Call Me.log.parameter( "in_key", in_key )
+		
+		Dim mxResult As New Mixcollection
+		Set getElementsByDefaultView = mxResult 
+		
+		'//	define services: 'fbyte.core.cache'
+		Dim fCore As FcoreService, fCoreCache As FCore_Cache
+		Set fCore = Me.sm.core
+		Set fCoreCache = fCore.cache
+		'---
+		
+		Dim vw As NotesView, dc As NotesDocumentCollection
+		Set vw = fCoreCache.GetView( "fbyte.entities.lookup", Me.db )
+		Set dc = vw.Getalldocumentsbykey( in_key, True )
+		If ( dc.Count > 0 ) Then
+			Dim docProject As NotesDocument
+			Set docProject = dc.GetFirstDocument
+			Do While Not ( docProject Is Nothing )
+				Dim fEntity As FBase_abstract_object_doc
+				Set fEntity = Me.getDocObject( docProject )
+				Call mxResult.Append( fEntity )
+				
+				Set docProject = dc.GetNextDocument( docProject )
+			Loop
+		End If
+		
+		Call Me.log.exit( TypeName( Me ) & "." & GetThreadInfo(1))
+		Exit Function
+		
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Function
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Private Function getId( in_key As Variant ) As String
+		On Error GoTo error_point
+		Call Me.log.enter( TypeName( Me ) & "." & GetThreadInfo(1))
+		
+		Dim key As String
+		If ( LCase( TypeName( in_key )) = "objectlink" ) Then
+			key = in_key.id 
+		ElseIf IsScalar( in_key ) Then 
+			key = in_key
+		Else
+			Error 1001, "The type of data of parameter 'in_key' is '" & TypeName( in_key ) & "'. It is not supported"
+		End If
+		
+		getId = key
+		
+		Call Me.log.trace( "result: " & getId )
+		Call Me.log.exit( TypeName( Me ) & "." & GetThreadInfo(1))
+		Exit Function
+		
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Function
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	'	PUBLIC:
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Public Sub New( in_ps As Variant )
+	End Sub
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Public Property Get db As NotesDatabase
+		On Error GoTo error_point
+		Call Me.log.enter( TypeName( Me ) & "." & GetThreadInfo(1))
+		
+		If ( m_db Is Nothing )Then
+			Set m_db = Me.sm.base.databases.get( DATABASE_KEY )
+			If Not(m_db Is Nothing)Then
+				If Not(m_db.Isopen)Then Set m_db = Nothing
+			End If
+		End If
+		Set db = m_db
+		
+		Call Me.log.traceObject( "result", db )		
+		Call Me.log.exit( TypeName( Me ) & "." & GetThreadInfo(1))
+		Exit Property
+		
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Property
+	
+	Public Property Set db As NotesDatabase
+		On Error GoTo error_point
+		Call Me.log.enter( TypeName( Me ) & "." & GetThreadInfo(1))
+		
+		Set me.m_db = db
+		
+		
+		Call Me.log.traceObject( "result", me.m_db )
+		Call Me.log.exit( TypeName( Me ) & "." & GetThreadInfo(1))
+		Exit Property
+		
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Property
+	
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Public Function getObject( in_link As Variant ) As Variant
+		On Error GoTo error_point
+		Call Me.log.enter( TypeName( Me ) & "." & GetThreadInfo(1))
+		Call Me.log.parameter( "in_link", in_link )
+		
+		Select Case in_link.domain
+			Case DOMAIN_TPS_PROJECTS20_PROJECT, DOMAIN_TPS_PROJECTS20_SCHEDULEPLAN:
+				Set getObject = getProject( in_link )
+			Case Else
+				Error 1001, "The data of type '" & in_link.domain & "' of parameter 'in_link.domain' is not supported"
+		End Select
+		
+		Call Me.log.traceObject( "result", getObject )
+		Call Me.log.exit( TypeName( Me ) & "." & GetThreadInfo(1))
+		Exit Function
+		
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Function
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Public Function getDocObject( in_doc As NotesDocument ) As Variant
+		On Error GoTo error_point
+		Call Me.log.enter( TypeName( Me ) & "." & GetThreadInfo(1))
+		Call Me.log.parameter( "in_doc", in_doc )
+		
+		If Not IsArray(in_doc.items) Then Error 1035, "У Вас отсутствует доступ на чтение документа." ' <TLD-3959 Скорректировать сообщение об ошибке, если к проекту нет доступа.>
+		Select Case LCase( in_doc.form(0))
+			Case DOMAIN_TPS_PROJECTS20_PROJECT:
+				Set getDocObject = New TPS_Projects20_Project( in_doc, Me.Me_variant )
+			Case DOMAIN_TPS_PROJECTS20_SCHEDULEPLAN:
+				Set getDocObject = New TPS_Projects20_SchedulePlan( in_doc, Me.Me_variant )				
+			Case Else:
+				Error 1001, "Форма '" & in_doc.form(0) & "' не поддерживается"
+		End Select
+		
+		Call Me.log.traceObject( "result", getDocObject )
+		Call Me.log.exit( TypeName( Me ) & "." & GetThreadInfo(1))
+		Exit Function
+		
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Function
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Public Function getProjectByDB( in_key As Variant, in_db As Variant ) As Variant
+		On Error GoTo error_point
+		Call Me.log.enter( TypeName( Me ) & "." & GetThreadInfo(1))
+		Call Me.log.parameter( "in_key", in_key )
+		
+		Dim id As String, doc As NotesDocument
+		id = Me.getId( in_key )
+		
+		Dim vw As NotesView
+		Set vw = in_db.GetView( "fbyte.entities.lookup" )
+		Set doc = vw.Getdocumentbykey( id, True )
+		If ( doc Is Nothing ) Then
+			Set doc = in_db.Getdocumentbyunid( id )			
+		End If
+		Set getProjectByDB = Me.getDocObject( doc )
+		
+		Call Me.log.traceObject( "result", getProjectByDB )
+		Call Me.log.exit( TypeName( Me ) & "." & GetThreadInfo(1))
+		Exit Function
+		
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$ 
+	End Function
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Public Function getProject( in_key As Variant ) As Variant
+		On Error GoTo error_point
+		Call Me.log.enter( TypeName( Me ) & "." & GetThreadInfo(1))
+		Call Me.log.parameter( "in_key", in_key )
+		
+		Dim id As String, doc As NotesDocument
+		id = Me.getId( in_key )
+		
+		Dim vw As NotesView
+		Set vw = Me.db.GetView( "fbyte.entities.lookup" )
+		Set doc = vw.Getdocumentbykey( id, True )
+		If ( doc Is Nothing ) Then
+			Set doc = Me.db.Getdocumentbyunid( id )			
+		End If
+		Set getProject = Me.getDocObject( doc )
+		
+		Call Me.log.traceObject( "result", getProject )
+		Call Me.log.exit( TypeName( Me ) & "." & GetThreadInfo(1))
+		Exit Function
+		
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$ 
+	End Function
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Public Function getProjectByUniqueId( in_key As String ) As TPS_Projects20_Project
+		On Error GoTo error_point
+		Call Me.log.enter( "<" & TypeName( Me ) & "." & GetThreadInfo(1) & ">" )
+		Call Me.log.parameter( "in_key", in_key )
+		
+		Dim fEntity As Fbase_abstract_object_doc
+		Set fEntity = Me.getElementByDefaultView( in_key )
+		If ( fEntity Is Nothing ) Then
+			Dim cdb As NotesDatabase
+			Set cdb = Me.db
+			Error 1001, "In database '" & cdb.Title & "' ( " & cdb.Server & "!!" & cdb.FilePath & " ) by key '" & in_key & "' entity has not founded"
+		Else
+			Set getProjectByUniqueId = Me.getElementByDefaultView( in_key )
+		End If
+		
+		Call Me.log.traceObject( "result", getProjectByUniqueId )
+		Call Me.log.exit( TypeName( Me ) & "." & GetThreadInfo(1))
+		Exit Function
+		
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$ 
+	End Function
+	'--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Function createInboundFromApproval ( in_project As NotesDocument, in_approval As NotesDocument ) As Variant
+		On Error GoTo error_point
+		
+		Dim session As New NotesSession
+		Dim docNew As NotesDocument 
+		
+		If ( Not ( in_project Is Nothing ) And Not ( in_approval Is Nothing )) Then
+			Set docNew = Me.db.Createdocument()
+			Dim inbound As New TPS_Projects20_Inbound (docNew, Me.Me_variant)
+			
+			Call inbound.nd.Replaceitemvalue("Form", DOMAIN_TPS_PROJECTS20_INBOUND)
+			Call inbound.nd.Replaceitemvalue("domain", DOMAIN_TPS_PROJECTS20_INBOUND)
+			Call inbound.nd.Replaceitemvalue("id", inbound.nd.Universalid)
+			
+			Dim item As NotesItem
+			Set item = in_project.Getfirstitem("authors")
+			If ( Not item Is Nothing ) Then
+				Call item.Copyitemtodocument( inbound.nd, item.Name )
+			End If
+			Set item = in_project.Getfirstitem("readers")
+			If ( Not item Is Nothing ) Then
+				Call item.Copyitemtodocument( inbound.nd, item.Name )
+			End If
+			
+			Dim db_approval As NotesDatabase
+			Set db_approval = in_approval.Parentdatabase
+			
+			Dim nv As NotesView
+			Set nv = db_approval.Getview("(AddDocEmb.Actual)")
+			Dim dc As NotesDocumentCollection
+			Set dc = nv.Getalldocumentsbykey(in_approval.customid(0))
+			If ( dc.Count > 0 ) Then
+				Dim docA As NotesDocument
+				Set docA = dc.GetFirstDocument
+				Set item = docA.Getfirstitem("Files")
+				If ( Not item Is Nothing ) Then
+					Call item.Copyitemtodocument( inbound.nd, "files" )
+				End If
+			End If
+			
+			Call inbound.nd.Replaceitemvalue("type_id", "tps.projects.projects.scheduleplan")
+			Call inbound.nd.Replaceitemvalue("type_title", "План-график")
+			Call inbound.nd.Replaceitemvalue("source_type", "tps.projects.approvals")
+			Call inbound.nd.Replaceitemvalue("approved_date", in_approval.date_stage_start(0))
+			
+			
+			Call inbound.nd.Replaceitemvalue("basis_id", in_approval.Universalid)
+			Call inbound.nd.Replaceitemvalue("basis_title", "Заявка из ПМ Cогласование ПГ: " & in_approval.subject(0))
+			Call inbound.nd.Replaceitemvalue("basis_url", "fbyte:///tps/projects/approvals/approval/" & in_approval.Universalid)
+			
+			'Call inbound.nd.Replaceitemvalue("protocol_id", in_approval.customid(0))
+			'Call inbound.nd.Replaceitemvalue("protocol_title", in_approval.subject(0))
+			'Call inbound.nd.Replaceitemvalue("protocol_url", "fbyte:///tps/projects/approval/request/" & in_approval.customid(0))
+			
+			Call inbound.nd.Replaceitemvalue("authors_groups" & "_id", in_project.getitemvalue("authors_groups" & "_id"))
+			Call inbound.nd.Replaceitemvalue("authors_groups" & "_title", in_project.getitemvalue("authors_groups" & "_title"))
+			Call inbound.nd.Replaceitemvalue("authors_groups" & "_url", in_project.getitemvalue("authors_groups" & "_url"))
+			
+			Call inbound.nd.Replaceitemvalue("authors_positions" & "_id", in_project.getitemvalue("authors_positions" & "_id"))
+			Call inbound.nd.Replaceitemvalue("authors_positions" & "_title", in_project.getitemvalue("authors_positions" & "_title"))
+			Call inbound.nd.Replaceitemvalue("authors_positions" & "_url", in_project.getitemvalue("authors_positions" & "_url"))
+			
+			Call inbound.nd.Replaceitemvalue("readers_groups" & "_id", in_project.getitemvalue("readers_groups" & "_id"))
+			Call inbound.nd.Replaceitemvalue("readers_groups" & "_title", in_project.getitemvalue("readers_groups" & "_title"))
+			Call inbound.nd.Replaceitemvalue("readers_groups" & "_url", in_project.getitemvalue("readers_groups" & "_url"))
+			
+			Call inbound.nd.Replaceitemvalue("readers_positions" & "_id", in_project.getitemvalue("readers_positions" & "_id"))
+			Call inbound.nd.Replaceitemvalue("readers_positions" & "_title", in_project.getitemvalue("readers_positions" & "_title"))
+			Call inbound.nd.Replaceitemvalue("readers_positions" & "_url", in_project.getitemvalue("readers_positions" & "_url"))
+			
+			Call inbound.nd.Replaceitemvalue("project_id", in_project.id(0))
+			Call inbound.nd.Replaceitemvalue("project_title", in_project.title(0))
+			Call inbound.nd.Replaceitemvalue("project_url", "fbyte:///tps/projects/projects/project/" & in_project.id(0))
+			
+			Call inbound.nd.Replaceitemvalue("title", in_approval.subject(0))
+
+			Set createInboundFromApproval = inbound.nd
+			
+			
+		End If
+		Call Me.log.exit( "</" & TypeName( Me ) & "." & GetThreadInfo(1) & ">" )
+		Exit Function
+		
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Function
+	'--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Function createCurrentbudget As Variant
+		On Error GoTo error_point
+		
+		Dim docNew As NotesDocument 
+		Set docNew = Me.db.Createdocument()
+		Dim currentbudget As New TPS_Projects20_Currentbudget (docNew, Me.Me_variant)
+		
+		Call currentbudget.nd.Replaceitemvalue("Form", DOMAIN_TPS_PROJECTS20_CURRENTBUDGET)
+		Call currentbudget.nd.Replaceitemvalue("domain", DOMAIN_TPS_PROJECTS20_CURRENTBUDGET)
+		Call currentbudget.nd.Replaceitemvalue("id", currentbudget.nd.Universalid)
+		
+		Set createCurrentbudget = currentbudget
+		
+		Call Me.log.exit( "</" & TypeName( Me ) & "." & GetThreadInfo(1) & ">" )
+		Exit Function
+		
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Function
+	'--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Function createInvestmentbudget As Variant
+		On Error GoTo error_point
+		
+		Dim docNew As NotesDocument 
+		Set docNew = Me.db.Createdocument()
+		Dim investmentbudget As New TPS_Projects20_Investmentbudget (docNew, Me.Me_variant)
+		
+		Call investmentbudget.nd.Replaceitemvalue("Form", DOMAIN_TPS_PROJECTS20_INVESTMENTBUDGET)
+		Call investmentbudget.nd.Replaceitemvalue("domain", DOMAIN_TPS_PROJECTS20_INVESTMENTBUDGET)
+		Call investmentbudget.nd.Replaceitemvalue("id", investmentbudget.nd.Universalid)
+		
+		Set createInvestmentbudget = investmentbudget
+		
+		Call Me.log.exit( "</" & TypeName( Me ) & "." & GetThreadInfo(1) & ">" )
+		Exit Function
+		
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Function
+	'--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Function createEstimate As Variant
+		On Error GoTo error_point
+		
+		Dim docNew As NotesDocument 
+		Set docNew = Me.db.Createdocument()
+		Dim estimate As New TPS_Projects20_Estimate (docNew, Me.Me_variant)
+		
+		Call estimate.nd.Replaceitemvalue("Form", DOMAIN_TPS_PROJECTS20_ESTIMATE)
+		Call estimate.nd.Replaceitemvalue("domain", DOMAIN_TPS_PROJECTS20_ESTIMATE)
+		Call estimate.nd.Replaceitemvalue("id", estimate.nd.Universalid)
+		
+		Set createEstimate = estimate
+		
+		Call Me.log.exit( "</" & TypeName( Me ) & "." & GetThreadInfo(1) & ">" )
+		Exit Function
+		
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Function
+	'--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Function createSchedulePlan As Variant
+		On Error GoTo error_point
+		
+		Dim docNew As NotesDocument 
+		Set docNew = Me.db.Createdocument()
+		Dim schedulePlan As New TPS_Projects20_SchedulePlan (docNew, Me.Me_variant)
+		
+		Call schedulePlan.nd.Replaceitemvalue("Form", DOMAIN_TPS_PROJECTS20_SCHEDULEPLAN)
+		Call schedulePlan.nd.Replaceitemvalue("domain", DOMAIN_TPS_PROJECTS20_SCHEDULEPLAN)
+		Call schedulePlan.nd.Replaceitemvalue("id", schedulePlan.nd.Universalid)
+		
+		Set createSchedulePlan = schedulePlan
+		
+		Call Me.log.exit( "</" & TypeName( Me ) & "." & GetThreadInfo(1) & ">" )
+		Exit Function
+		
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Function
+	'--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Function createTechnicaltask As Variant
+		On Error GoTo error_point
+		
+		Dim docNew As NotesDocument 
+		Set docNew = Me.db.Createdocument()
+		Dim technicaltask As New TPS_Projects20_Technicaltask (docNew, Me.Me_variant)
+		
+		Call technicaltask.nd.Replaceitemvalue("Form", DOMAIN_TPS_PROJECTS20_TECHNICALTASK)
+		Call technicaltask.nd.Replaceitemvalue("domain", DOMAIN_TPS_PROJECTS20_TECHNICALTASK)
+		Call technicaltask.nd.Replaceitemvalue("id", technicaltask.nd.Universalid)
+		
+		Set createTechnicaltask = technicaltask
+		
+		Call Me.log.exit( "</" & TypeName( Me ) & "." & GetThreadInfo(1) & ">" )
+		Exit Function
+		
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Function
+'--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Function createModel As Variant
+		On Error GoTo error_point
+		
+		Dim docNew As NotesDocument 
+		Set docNew = Me.db.Createdocument()
+		Dim model As New TPS_Projects20_Model (docNew, Me.Me_variant)
+		
+		Call model.nd.Replaceitemvalue("Form", DOMAIN_TPS_PROJECTS20_MODEL)
+		Call model.nd.Replaceitemvalue("domain", DOMAIN_TPS_PROJECTS20_MODEL)
+		Call model.nd.Replaceitemvalue("id", model.nd.Universalid)
+		
+		Set createModel = model
+		
+		Call Me.log.exit( "</" & TypeName( Me ) & "." & GetThreadInfo(1) & ">" )
+		Exit Function
+		
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Function
+	'--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Function createTender As Variant
+		On Error GoTo error_point
+		
+		Dim docNew As NotesDocument 
+		Set docNew = Me.db.Createdocument()
+		Dim tender As New TPS_Projects20_Tender (docNew, Me.Me_variant)
+		
+		Call tender.nd.Replaceitemvalue("Form", DOMAIN_TPS_PROJECTS20_TENDER)
+		Call tender.nd.Replaceitemvalue("domain", DOMAIN_TPS_PROJECTS20_TENDER)
+		Call tender.nd.Replaceitemvalue("id", tender.nd.Universalid)
+		
+		Set createTender = tender
+		
+		Call Me.log.exit( "</" & TypeName( Me ) & "." & GetThreadInfo(1) & ">" )
+		Exit Function
+		
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Function
+	'--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Function createInbound As Variant
+		On Error GoTo error_point
+		
+		Dim docNew As NotesDocument 
+		Set docNew = Me.db.Createdocument()
+		Dim inbound As New TPS_Projects20_Inbound (docNew, Me.Me_variant)
+		
+		Call inbound.nd.Replaceitemvalue("Form", DOMAIN_TPS_PROJECTS20_INBOUND)
+		Call inbound.nd.Replaceitemvalue("domain", DOMAIN_TPS_PROJECTS20_INBOUND)
+		Call inbound.nd.Replaceitemvalue("id", inbound.nd.Universalid)
+		
+		Set createInbound = inbound
+		
+		Call Me.log.exit( "</" & TypeName( Me ) & "." & GetThreadInfo(1) & ">" )
+		Exit Function
+		
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Function
+'--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Function createInboundFromTorsApproval ( in_project As NotesDocument, in_approval As NotesDocument ) As Variant
+		On Error GoTo error_point
+		
+		Dim session As New NotesSession
+		Dim docNew As NotesDocument 
+		
+		If ( Not ( in_project Is Nothing ) And Not ( in_approval Is Nothing )) Then
+			Set docNew = Me.db.Createdocument()
+			Dim inbound As New TPS_Projects20_Inbound (docNew, Me.Me_variant)
+			
+			Call inbound.nd.Replaceitemvalue("Form", DOMAIN_TPS_PROJECTS20_INBOUND)
+			Call inbound.nd.Replaceitemvalue("domain", DOMAIN_TPS_PROJECTS20_INBOUND)
+			Call inbound.nd.Replaceitemvalue("id", inbound.nd.Universalid)
+			
+			Dim item As NotesItem
+			Set item = in_project.Getfirstitem("authors")
+			If ( Not item Is Nothing ) Then
+				Call item.Copyitemtodocument( inbound.nd, item.Name )
+			End If
+			Set item = in_project.Getfirstitem("readers")
+			If ( Not item Is Nothing ) Then
+				Call item.Copyitemtodocument( inbound.nd, item.Name )
+			End If
+			
+			Dim db_approval As NotesDatabase
+			Set db_approval = in_approval.Parentdatabase
+			
+			Dim nv As NotesView
+			Set nv = db_approval.Getview("(AddDocEmb.Actual)")
+			Dim dc As NotesDocumentCollection
+			Set dc = nv.Getalldocumentsbykey(in_approval.customid(0))
+			If ( dc.Count > 0 ) Then
+				Dim docA As NotesDocument
+				Set docA = dc.GetFirstDocument
+				Set item = docA.Getfirstitem("Files")
+				If ( Not item Is Nothing ) Then
+					Call item.Copyitemtodocument( inbound.nd, "files" )
+				End If
+			End If
+			
+			Call inbound.nd.Replaceitemvalue("type_id", "tps.projects.projects.technicaltask")
+			Call inbound.nd.Replaceitemvalue("type_title", "Техническое задание")
+			Call inbound.nd.Replaceitemvalue("source_type", "tps.tenders.tors.approvals")
+			Call inbound.nd.Replaceitemvalue("approved_date", in_approval.date_stage_start(0))
+			
+			
+			Call inbound.nd.Replaceitemvalue("basis_id", in_approval.Universalid)
+			Call inbound.nd.Replaceitemvalue("basis_title", "Заявка из ПМ Cогласование ТЗ: " & in_approval.subject(0))
+			Call inbound.nd.Replaceitemvalue("basis_url", "fbyte:///tps/tenders/tors/approval/" & in_approval.Universalid)
+			
+			Call inbound.nd.Replaceitemvalue("authors_groups" & "_id", in_project.getitemvalue("authors_groups" & "_id"))
+			Call inbound.nd.Replaceitemvalue("authors_groups" & "_title", in_project.getitemvalue("authors_groups" & "_title"))
+			Call inbound.nd.Replaceitemvalue("authors_groups" & "_url", in_project.getitemvalue("authors_groups" & "_url"))
+			
+			Call inbound.nd.Replaceitemvalue("authors_positions" & "_id", in_project.getitemvalue("authors_positions" & "_id"))
+			Call inbound.nd.Replaceitemvalue("authors_positions" & "_title", in_project.getitemvalue("authors_positions" & "_title"))
+			Call inbound.nd.Replaceitemvalue("authors_positions" & "_url", in_project.getitemvalue("authors_positions" & "_url"))
+			
+			Call inbound.nd.Replaceitemvalue("readers_groups" & "_id", in_project.getitemvalue("readers_groups" & "_id"))
+			Call inbound.nd.Replaceitemvalue("readers_groups" & "_title", in_project.getitemvalue("readers_groups" & "_title"))
+			Call inbound.nd.Replaceitemvalue("readers_groups" & "_url", in_project.getitemvalue("readers_groups" & "_url"))
+			
+			Call inbound.nd.Replaceitemvalue("readers_positions" & "_id", in_project.getitemvalue("readers_positions" & "_id"))
+			Call inbound.nd.Replaceitemvalue("readers_positions" & "_title", in_project.getitemvalue("readers_positions" & "_title"))
+			Call inbound.nd.Replaceitemvalue("readers_positions" & "_url", in_project.getitemvalue("readers_positions" & "_url"))
+			
+			Call inbound.nd.Replaceitemvalue("project_id", in_project.id(0))
+			Call inbound.nd.Replaceitemvalue("project_title", in_project.title(0))
+			Call inbound.nd.Replaceitemvalue("project_url", "fbyte:///tps/projects/projects/project/" & in_project.id(0))
+			
+			Call inbound.nd.Replaceitemvalue("title", in_approval.subject(0))
+
+			Set createInboundFromTorsApproval = inbound.nd
+			
+			
+		End If
+		Call Me.log.exit( "</" & TypeName( Me ) & "." & GetThreadInfo(1) & ">" )
+		Exit Function
+		
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Function
+	'--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	
+	Function createInboundFromQuestion ( in_project As NotesDocument, in_question As NotesDocument ) As Variant
+		On Error GoTo error_point
+		
+		Dim session As New NotesSession
+		Dim docNew As NotesDocument 
+		
+		If ( Not ( in_project Is Nothing ) And Not ( in_question Is Nothing )) Then
+			Set docNew = Me.db.Createdocument()
+			Dim inbound As New TPS_Projects20_Inbound (docNew, Me.Me_variant)
+			
+			Call inbound.nd.Replaceitemvalue("Form", DOMAIN_TPS_PROJECTS20_INBOUND)
+			Call inbound.nd.Replaceitemvalue("domain", DOMAIN_TPS_PROJECTS20_INBOUND)
+			Call inbound.nd.Replaceitemvalue("id", inbound.nd.Universalid)
+
+			Dim item As NotesItem
+			Set item = in_project.Getfirstitem("authors")
+			If ( Not item Is Nothing ) Then
+				Call item.Copyitemtodocument( inbound.nd, item.Name )
+			End If
+			Set item = in_project.Getfirstitem("readers")
+			If ( Not item Is Nothing ) Then
+				Call item.Copyitemtodocument( inbound.nd, item.Name )
+			End If
+			
+			Set item = in_question.Getfirstitem("files")
+			If ( Not item Is Nothing ) Then
+				Call item.Copyitemtodocument( inbound.nd, "files" )
+			End If
+			Set item = in_question.Getfirstitem("files_draft")
+			If ( Not item Is Nothing ) Then
+				Call item.Copyitemtodocument( inbound.nd, "files" )
+			End If
+			
+			
+			Call inbound.nd.Replaceitemvalue("type_id", in_question.kind(0))
+			Dim type_title As Variant
+			type_title = Evaluate({
+						@Replace(
+						"} & in_question.kind(0) & {";
+						"undefined" :
+							"tps.projects.projects.inbound" :
+							"tps.projects.projects.expertiselegal" :
+							"tps.projects.projects.expertisemarketing" :
+							"tps.projects.projects.expertisebuilding" :
+							"tps.projects.projects.expertisefinance" :
+							"tps.projects.projects.technicalcondition" :
+							"tps.projects.projects.buildingownership" :
+							"tps.projects.projects.landownership" :
+							"tps.projects.projects.model" :
+							"tps.projects.projects.tender" :
+							"tps.projects.projects.designdetail" :
+							"tps.projects.projects.designschematic" :
+							"tps.projects.projects.estimate" :
+							"tps.projects.projects.buildingpermit" :
+							"tps.projects.projects.commissioningpermit" :
+							"tps.projects.projects.scheduleplan" :
+							"tps.projects.projects.marketing" :
+							"tps.projects.projects.expertise" :
+							"tps.projects.projects.conclusioncompliance" :
+							"tps.projects.projects.investmentbudget" :
+							"tps.projects.projects.designconcept" :
+							"tps.projects.projects.project" :
+							"tps.projects.projects.technicaltask";
+						"Тип не определен" :
+							"Входящий документ" :
+							"Юридическая экспертиза" :
+							"Маркетинговая экспертиза" :
+							"Строительная экспертиза" :
+							"Финансовая экспертиза" :
+							"Технические условия" :
+							"Право на здание / сооружение" :
+							"Право на земельный участок" :
+							"Финансовая модель" :
+							"Тендер" :
+							"Стадия РД" :
+							"Стадия П" :
+							"Смета" :
+							"Разрешение на строительство" :
+							"Разрешение на ввод в эксплуатацию" :
+							"План-график" :
+							"Маркетинг" :
+							"Заключение экспертизы" :
+							"Заключение о соответствии" :
+							"БИЗ" :
+							"АФК" :
+							"Проект" :
+							"Техническое задание")})
+			Call inbound.nd.Replaceitemvalue("type_title", type_title)
+			Call inbound.nd.Replaceitemvalue("source_type", "tps.workflow.conferences")
+			
+			Call inbound.nd.Replaceitemvalue("basis_id", in_question.Universalid)
+			Call inbound.nd.Replaceitemvalue("basis_title", "Вопрос: " & in_question.managmentagency(0) & ", №" &_
+			in_question.Number(0) & ", " & in_question.question(0))
+			Call inbound.nd.Replaceitemvalue("basis_url", "fbyte:///tps/workflow/conferences/question/" & in_question.Universalid)
+			
+			Call inbound.nd.Replaceitemvalue("corporatebody_approving_id", in_question.managmentagency_id(0))
+			Call inbound.nd.Replaceitemvalue("corporatebody_approving_title", in_question.managmentagency_title(0))
+			Call inbound.nd.Replaceitemvalue("corporatebody_approving_url", "fbyte:///tps/workflow/conferences/magency/" & in_question.managmentagency_id(0))
+			
+			Call inbound.nd.Replaceitemvalue("protocol_id", in_question.protocol_id(0))
+			Call inbound.nd.Replaceitemvalue("protocol_title", in_question.protocol_title(0))
+			Call inbound.nd.Replaceitemvalue("protocol_url", "fbyte:///tps/workflow/conferences/agenda/" & in_question.protocol_id(0))
+			
+			Call inbound.nd.Replaceitemvalue("authors_groups" & "_id", in_project.getitemvalue("authors_groups" & "_id"))
+			Call inbound.nd.Replaceitemvalue("authors_groups" & "_title", in_project.getitemvalue("authors_groups" & "_title"))
+			Call inbound.nd.Replaceitemvalue("authors_groups" & "_url", in_project.getitemvalue("authors_groups" & "_url"))
+			
+			Call inbound.nd.Replaceitemvalue("authors_positions" & "_id", in_project.getitemvalue("authors_positions" & "_id"))
+			Call inbound.nd.Replaceitemvalue("authors_positions" & "_title", in_project.getitemvalue("authors_positions" & "_title"))
+			Call inbound.nd.Replaceitemvalue("authors_positions" & "_url", in_project.getitemvalue("authors_positions" & "_url"))
+			
+			Call inbound.nd.Replaceitemvalue("readers_groups" & "_id", in_project.getitemvalue("readers_groups" & "_id"))
+			Call inbound.nd.Replaceitemvalue("readers_groups" & "_title", in_project.getitemvalue("readers_groups" & "_title"))
+			Call inbound.nd.Replaceitemvalue("readers_groups" & "_url", in_project.getitemvalue("readers_groups" & "_url"))
+			
+			Call inbound.nd.Replaceitemvalue("readers_positions" & "_id", in_project.getitemvalue("readers_positions" & "_id"))
+			Call inbound.nd.Replaceitemvalue("readers_positions" & "_title", in_project.getitemvalue("readers_positions" & "_title"))
+			Call inbound.nd.Replaceitemvalue("readers_positions" & "_url", in_project.getitemvalue("readers_positions" & "_url"))
+			
+			Call inbound.nd.Replaceitemvalue("project_id", in_project.id(0))
+			Call inbound.nd.Replaceitemvalue("project_title", in_project.title(0))
+			Call inbound.nd.Replaceitemvalue("project_url", "fbyte:///tps/projects/projects/project/" & in_project.id(0))
+			
+			Call inbound.nd.Replaceitemvalue("title", in_question.question(0))
+
+			Set createInboundFromQuestion = inbound.nd
+			
+			
+		End If
+		Call Me.log.exit( "</" & TypeName( Me ) & "." & GetThreadInfo(1) & ">" )
+		Exit Function
+		
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Function
+	'----------------------------------------------------------------------------------------------------------------------------------
+	Public Function getAllShedulePlansByProject( in_tProject As TPS_Projects20_Project ) As MixCollection
+		On Error GoTo error_point
+		Call Me.log.enter( "<" & TypeName( Me ) & "." & GetThreadInfo(1) & ">" )
+		Call Me.log.parameter( "in_tProject", in_tProject )
+		
+		Dim key As String
+		key = DOMAIN_TPS_PROJECTS20_SCHEDULEPLAN & "~" & in_tProject.Id
+		Set getAllShedulePlansByProject = Me.getElementsByDefaultView( key )
+		
+		Call Me.log.traceObject( "result", getAllShedulePlansByProject )
+		Call Me.log.exit( "</" & TypeName( Me ) & "." & GetThreadInfo(1) & ">" )
+		Exit Function
+		
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$ 
+	End Function
+	'----------------------------------------------------------------------------------------------------------------------------------
+	Public Function getAllTechnicalTasksByProject( in_tProject As TPS_Projects20_Project ) As MixCollection
+		On Error GoTo error_point
+		Call Me.log.enter( "<" & TypeName( Me ) & "." & GetThreadInfo(1) & ">" )
+		Call Me.log.parameter( "in_tProject", in_tProject )
+		
+		Dim key As String
+		key = DOMAIN_TPS_PROJECTS20_TECHNICALTASK & "~" & in_tProject.Id
+		Set getAllTechnicalTasksByProject = Me.getElementsByDefaultView( key )
+		
+		Call Me.log.traceObject( "result", getAllTechnicalTasksByProject )
+		Call Me.log.exit( "</" & TypeName( Me ) & "." & GetThreadInfo(1) & ">" )
+		Exit Function
+		
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$ 
+	End Function
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------	
+	Public Function dialogSelectProject( in_isMult As Boolean ) As MixCollection
+		On Error GoTo error_point
+		Call Me.log.enter( "<" & TypeName( Me ) & "." & GetThreadInfo(1) & ">" )
+		Call Me.log.parameter( "in_isMult", in_isMult )
+		
+		Dim mxResult As New MixCollection
+		Set dialogSelectProject = mxResult
+		
+		Dim vw As NotesView, viewname As String
+		viewname = "tps.projects.projects.pl"
+		
+		If(me.db Is Nothing)Then Error 1001, "Нет доступа к ПМ Проекты 2.0"
+		Set vw = Me.db.getView( viewname )
+		If ( vw Is Nothing ) Then Error 1001, "View '" & viewname & "' is not exist"
+			
+		Dim ws As New NotesUIWorkspace, dc As NotesDocumentCollection
+		Set dc = ws.PickListCollection( 3, in_isMult, Me.db.Server, Me.db.FilePath, vw.Name, "Список проектов", "Выберите документ(ы) и нажмите  OK" )
+		If ( dc.Count > 0 ) Then
+			Dim doc As NotesDocument
+			Set doc = dc.GetFirstDocument
+			Do While Not ( doc Is Nothing )
+				Dim c As Variant
+				Set c = Me.getDocObject(doc)
+				Call mxResult.Append( c )
+				Set doc = dc.GetNextDocument( doc )
+			Loop
+		End If
+		
+		Call Me.log.exit( "</" & TypeName( Me ) & "." & GetThreadInfo(1) & ">" )
+		Exit Function
+		
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Function
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------	
+	Public Function dialogSelectProjectDB( in_isMult As Boolean, in_db As Variant ) As MixCollection
+		On Error GoTo error_point
+		Call Me.log.enter( "<" & TypeName( Me ) & "." & GetThreadInfo(1) & ">" )
+		Call Me.log.parameter( "in_isMult", in_isMult )
+		
+		Dim mxResult As New MixCollection
+		Set dialogSelectProjectDB = mxResult
+		
+		Dim vw As NotesView, viewname As String
+		viewname = "tps.projects.projects.pl"
+		
+		If(in_db Is Nothing)Then Error 1001, "Нет доступа к ПМ Проекты 2.0"
+		Set vw = in_db.getView( viewname )
+		If ( vw Is Nothing ) Then Error 1001, "View '" & viewname & "' is not exist"
+		
+		Dim ws As New NotesUIWorkspace, dc As NotesDocumentCollection
+		Set dc = ws.PickListCollection( 3, in_isMult, in_db.Server, in_db.FilePath, vw.Name, "Список проектов", "Выберите документ(ы) и нажмите  OK" )
+		If ( dc.Count > 0 ) Then
+			Dim doc As NotesDocument
+			Set doc = dc.GetFirstDocument
+			Do While Not ( doc Is Nothing )
+				Dim c As Variant
+				Set c = Me.getDocObject(doc)
+				Call mxResult.Append( c )
+				Set doc = dc.GetNextDocument( doc )
+			Loop
+		End If
+		
+		Call Me.log.exit( "</" & TypeName( Me ) & "." & GetThreadInfo(1) & ">" )
+		Exit Function
+		
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Function
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------	
+	Public Function setProjectInDoc( in_doc As NotesDocument, in_isMult As Boolean ) As Integer
+		On Error GoTo error_point
+		Call Me.log.enter( "<" & TypeName( Me ) & "." & GetThreadInfo(1) & ">" )
+		Call Me.log.parameter( "in_doc", in_doc )
+		Call Me.log.parameter( "in_isMult", in_isMult )
+		
+		setProjectInDoc = setProjectInDocItemPrefix(in_doc, in_isMult, "project")
+
+		
+		Call Me.log.exit( "</" & TypeName( Me ) & "." & GetThreadInfo(1) & ">" )
+		Exit Function
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Function
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------	
+	Public Function setProjectInDocItemPrefix( in_doc As NotesDocument, in_isMult As Boolean, itemPrefix As String ) As Integer
+		On Error GoTo error_point
+		Call Me.log.enter( "<" & TypeName( Me ) & "." & GetThreadInfo(1) & ">" )
+		Call Me.log.parameter( "in_doc", in_doc )
+		Call Me.log.parameter( "in_isMult", in_isMult )
+		Call Me.log.parameter( "in_itemPrefix", itemPrefix )
+		
+		Dim mxProjects As Variant
+		Set mxProjects = Me.dialogSelectProject( in_isMult )
+		If ( mxProjects.Count > 0 ) Then
+			
+			Dim mxKey As New Mixcollection, mxID As New Mixcollection, mxTitle As New Mixcollection, mxDomain As New Mixcollection
+			
+			ForAll elem In mxProjects.Array
+				If ( elem.uniqueKey <> "" ) Then
+					
+					Call mxKey.Append( elem.uniqueKey )
+					Call mxID.Append( elem.id )
+					Call mxTitle.Append( elem.title )
+					Call mxDomain.Append( elem.domain )
+				End If
+			End ForAll
+			
+			If ( mxKey.Count > 0 ) Then
+				Call in_doc.Replaceitemvalue( itemPrefix & "UniqueKey", mxKey.Array )	
+				Call in_doc.Replaceitemvalue( itemPrefix & "_id", mxID.Array )
+				Call in_doc.Replaceitemvalue( itemPrefix & "_title", mxTitle.Array )
+				Call in_doc.Replaceitemvalue( itemPrefix & "_domain", mxDomain.Array )
+				setProjectInDocItemPrefix = 1
+			End If
+			
+		End If
+		
+		Call Me.log.exit( "</" & TypeName( Me ) & "." & GetThreadInfo(1) & ">" )
+		Exit Function
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Function
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------	
+	Public Function clearProjectInDoc( in_doc As NotesDocument ) As Integer
+		On Error GoTo error_point
+		Call Me.log.enter( "<" & TypeName( Me ) & "." & GetThreadInfo(1) & ">" )
+		Call Me.log.parameter( "in_doc", in_doc )
+		
+		Dim itemnames( 1 To 4 ) As String
+		itemnames(1) = "projectUniqueKey"
+		itemnames(2) = "project_id"
+		itemnames(3) = "project_title"
+		itemnames(4) = "project_domain"
+		
+		ForAll itemname In itemnames
+			If ( itemname <> "" ) Then
+				Call in_doc.Removeitem( itemname )
+			End If
+		End ForAll
+
+		clearProjectInDoc = 1
+		
+		Call Me.log.exit( "</" & TypeName( Me ) & "." & GetThreadInfo(1) & ">" )
+		Exit Function
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Function
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------	
+	%REM
+		Function getProjectByMspid
+		Description: Comments for Function
+	%END REM
+	Public Function getProjectByMspId(ByVal mspId As String)As Variant
+		On Error GoTo error_point
+		Call Me.log.enter( "<" & TypeName( Me ) & "." & GetThreadInfo(1) & ">" )
+		Call Me.log.parameter( "mspId", mspId )
+		
+		Set getProjectByMspId = Nothing
+		
+		Dim setting As Variant
+		Set setting = me.sm.core.settings( me.db ).get( "app.integration.msp.projectsMapping" )
+		If(setting Is Nothing)Then Exit Function
+		
+		Dim unid As String
+		mspId = LCase(mspId)
+		ForAll v In setting.values.array
+			If(LCase$( StrLeft$( v, "~") ) = mspId)Then
+				unid = StrRight$(v, "~")
+				Exit ForAll
+			End If
+		End ForAll
+		
+		If(unid = "")Then Exit Function
+		
+		Set getProjectByMspId = me.getProjectByUniqueId(unid)
+		
+		
+		Call Me.log.exit( "</" & TypeName( Me ) & "." & GetThreadInfo(1) & ">" )
+		Exit Function
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+		
+	End Function
+	
+	
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------	
+	%REM
+		Property Get gbKey
+		Description: Comments for Property Get
+	%END REM
+	Public Property Get dbKey As String
+		dbKey = DATABASE_KEY
+	End Property
+	
+End Class
+
+Public Class TPS_Projects20_Project As FBase_Abstract_Object_Doc
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	'	PUBLIC:
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Public Sub New( in_doc As NotesDocument, in_ps As Variant )
+	End Sub
+	'-----------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Public Property Get domain As String
+		On Error GoTo error_point
+		
+		domain = DOMAIN_TPS_PROJECTS20_PROJECT
+		
+		Exit Property 
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Property
+	'-----------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Public Property Get id As String
+		On Error GoTo error_point
+		
+		If (me.nd.getItemValue( "id" )(0) <> "") Then
+			id = me.nd.getItemValue("id")(0)
+		Else
+			id = me.nd.UniversalID
+		End If
+		
+		Exit Property 
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Property
+	'-----------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Public Property Get title As String
+		On Error GoTo error_point
+		
+		title = me.nd.getItemValue("title")(0)
+		
+		Exit Property 
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Property
+	'-----------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Public Property Get uniqueKey As String
+		On Error GoTo error_point
+		
+		uniqueKey = me.nd.getItemValue("projectUniqueKey")(0)
+			
+		Exit Property 
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Property
+	'-----------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Public Property Get manager_id As String
+		On Error GoTo error_point
+		
+		manager_id = me.nd.getItemValue("manager_id")(0)
+		
+		Exit Property 
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Property
+	'-----------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Public Property Get scheduleplans_experts_ids As Variant
+		On Error GoTo error_point
+		
+		scheduleplans_experts_ids = me.nd.getItemValue("scheduleplans_experts_id")
+		
+		Exit Property 
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Property
+End Class
+
+Public Class TPS_Projects20_SchedulePlan As FBase_Abstract_Object_Doc
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	'	PUBLIC:
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Public Sub New( in_doc As NotesDocument, in_ps As Variant )
+	End Sub
+	'-----------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Public Property Get domain As String
+		On Error GoTo error_point
+		
+		domain = DOMAIN_TPS_PROJECTS20_SCHEDULEPLAN
+		
+		Exit Property 
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Property
+	'-----------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Public Property Get id As String
+		On Error GoTo error_point
+		
+		If (me.nd.getItemValue( "id" )(0) <> "") Then
+			id = me.nd.getItemValue("id")(0)
+		Else
+			id = me.nd.UniversalID
+		End If
+		
+		Exit Property 
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Property
+	'-----------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Public Property Get title As String
+		On Error GoTo error_point
+		
+		title = me.nd.getItemValue("title")(0)
+		
+		Exit Property 
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Property
+
+End Class
+
+Public Class TPS_Projects20_Inbound As FBase_Abstract_Object_Doc
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	'	PUBLIC:
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Public Sub New( in_doc As NotesDocument, in_ps As Variant )
+	End Sub
+	'-----------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Public Property Get domain As String
+		On Error GoTo error_point
+		
+		domain = DOMAIN_TPS_PROJECTS20_INBOUND
+		
+		Exit Property 
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Property
+	'-----------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Public Property Get id As String
+		On Error GoTo error_point
+		
+		If (me.nd.getItemValue( "id" )(0) <> "") Then
+			id = me.nd.getItemValue("id")(0)
+		Else
+			id = me.nd.UniversalID
+		End If
+		
+		Exit Property 
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Property
+	'-----------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Public Property Get title As String
+		On Error GoTo error_point
+		
+		title = me.nd.getItemValue("title")(0)
+		
+		Exit Property 
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Property
+
+End Class
+
+Public Class TPS_Projects20_Currentbudget As FBase_Abstract_Object_Doc
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	'	PUBLIC:
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Public Sub New( in_doc As NotesDocument, in_ps As Variant )
+	End Sub
+	'-----------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Public Property Get domain As String
+		On Error GoTo error_point
+		
+		domain = DOMAIN_TPS_PROJECTS20_CURRENTBUDGET
+		
+		Exit Property 
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Property
+	'-----------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Public Property Get id As String
+		On Error GoTo error_point
+		
+		If (me.nd.getItemValue( "id" )(0) <> "") Then
+			id = me.nd.getItemValue("id")(0)
+		Else
+			id = me.nd.UniversalID
+		End If
+		
+		Exit Property 
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Property
+	'-----------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Public Property Get title As String
+		On Error GoTo error_point
+		
+		title = me.nd.getItemValue("title")(0)
+		
+		Exit Property 
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Property
+
+End Class
+Public Class TPS_Projects20_Model As FBase_Abstract_Object_Doc
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	'	PUBLIC:
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Public Sub New( in_doc As NotesDocument, in_ps As Variant )
+	End Sub
+	'-----------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Public Property Get domain As String
+		On Error GoTo error_point
+		
+		domain = DOMAIN_TPS_PROJECTS20_MODEL
+		
+		Exit Property 
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Property
+	'-----------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Public Property Get id As String
+		On Error GoTo error_point
+		
+		If (me.nd.getItemValue( "id" )(0) <> "") Then
+			id = me.nd.getItemValue("id")(0)
+		Else
+			id = me.nd.UniversalID
+		End If
+		
+		Exit Property 
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Property
+	'-----------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Public Property Get title As String
+		On Error GoTo error_point
+		
+		title = me.nd.getItemValue("title")(0)
+		
+		Exit Property 
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Property
+
+End Class
+Public Class TPS_Projects20_Estimate As FBase_Abstract_Object_Doc
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	'	PUBLIC:
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Public Sub New( in_doc As NotesDocument, in_ps As Variant )
+	End Sub
+	'-----------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Public Property Get domain As String
+		On Error GoTo error_point
+		
+		domain = DOMAIN_TPS_PROJECTS20_ESTIMATE
+		
+		Exit Property 
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Property
+	'-----------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Public Property Get id As String
+		On Error GoTo error_point
+		
+		If (me.nd.getItemValue( "id" )(0) <> "") Then
+			id = me.nd.getItemValue("id")(0)
+		Else
+			id = me.nd.UniversalID
+		End If
+		
+		Exit Property 
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Property
+	'-----------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Public Property Get title As String
+		On Error GoTo error_point
+		
+		title = me.nd.getItemValue("title")(0)
+		
+		Exit Property 
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Property
+
+End Class
+
+Public Class TPS_Projects20_Technicaltask As FBase_Abstract_Object_Doc
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	'	PUBLIC:
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Public Sub New( in_doc As NotesDocument, in_ps As Variant )
+	End Sub
+	'-----------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Public Property Get domain As String
+		On Error GoTo error_point
+		
+		domain = DOMAIN_TPS_PROJECTS20_TECHNICALTASK
+		
+		Exit Property 
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Property
+	'-----------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Public Property Get id As String
+		On Error GoTo error_point
+		
+		If (me.nd.getItemValue( "id" )(0) <> "") Then
+			id = me.nd.getItemValue("id")(0)
+		Else
+			id = me.nd.UniversalID
+		End If
+		
+		Exit Property 
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Property
+	'-----------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Public Property Get title As String
+		On Error GoTo error_point
+		
+		title = me.nd.getItemValue("title")(0)
+		
+		Exit Property 
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Property
+
+End Class
+Public Class TPS_Projects20_Tender As FBase_Abstract_Object_Doc
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	'	PUBLIC:
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Public Sub New( in_doc As NotesDocument, in_ps As Variant )
+	End Sub
+	'-----------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Public Property Get domain As String
+		On Error GoTo error_point
+		
+		domain = DOMAIN_TPS_PROJECTS20_TENDER
+		
+		Exit Property 
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Property
+	'-----------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Public Property Get id As String
+		On Error GoTo error_point
+		
+		If (me.nd.getItemValue( "id" )(0) <> "") Then
+			id = me.nd.getItemValue("id")(0)
+		Else
+			id = me.nd.UniversalID
+		End If
+		
+		Exit Property 
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Property
+	'-----------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Public Property Get title As String
+		On Error GoTo error_point
+		
+		title = me.nd.getItemValue("title")(0)
+		
+		Exit Property 
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Property
+
+End Class
+Public Class TPS_Projects20_Investmentbudget As FBase_Abstract_Object_Doc
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	'	PUBLIC:
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Public Sub New( in_doc As NotesDocument, in_ps As Variant )
+	End Sub
+	'-----------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Public Property Get domain As String
+		On Error GoTo error_point
+		
+		domain = DOMAIN_TPS_PROJECTS20_INVESTMENTBUDGET
+		
+		Exit Property 
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Property
+	'-----------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Public Property Get id As String
+		On Error GoTo error_point
+		
+		If (me.nd.getItemValue( "id" )(0) <> "") Then
+			id = me.nd.getItemValue("id")(0)
+		Else
+			id = me.nd.UniversalID
+		End If
+		
+		Exit Property 
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Property
+	'-----------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Public Property Get title As String
+		On Error GoTo error_point
+		
+		title = me.nd.getItemValue("title")(0)
+		
+		Exit Property 
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Property
+
+End Class

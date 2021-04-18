@@ -1,0 +1,77 @@
+<?xml version='1.0' encoding='utf-8'?>
+<note class='view' xmlns='http://www.lotus.com/dxl' version='10.0' maintenanceversion='1.0'
+ replicaid='44257D5C002A4928'>
+<noteinfo noteid='2ba' unid='D8408C12646CDFC0C325776700260D6F' sequence='112'>
+<created><datetime dst='true'>20100721T105538,07+04</datetime></created>
+<modified><datetime>20210418T115554,73+03</datetime></modified>
+<revised><datetime>20201118T171321,36+03</datetime></revised>
+<lastaccessed><datetime>20210418T115554,72+03</datetime></lastaccessed>
+<addedtofile><datetime>20210418T115554,72+03</datetime></addedtofile></noteinfo>
+<updatedby><name>CN=Tambiev/O=tps</name><name>CN=zeos/O=tps</name><name>CN=Tambiev/O=tps</name><name
+>CN=zeos/O=tps</name><name>CN=Tambiev/O=tps</name><name>CN=zeos/O=tps</name><name
+>CN=Salpagarov/O=tps</name><name>CN=zeos/O=tps</name><name>CN=Tambiev/O=tps</name><name
+>CN=zeos/O=tps</name><name>CN=Tambiev/O=tps</name><name>CN=zeos/O=tps</name><name
+>CN=Tambiev/O=tps</name><name>CN=zeos/O=tps</name><name>CN=Tambiev/O=tps</name><name
+>CN=zeos/O=tps</name><name>CN=Tambiev/O=tps</name><name>CN=zeos/O=tps</name><name
+>CN=Tambiev/O=tps</name><name>CN=zeos/O=tps</name><name>CN=Tambiev/O=tps</name><name
+>CN=zeos/O=tps</name><name>CN=Tambiev/O=tps</name><name>CN=zeos/O=tps</name><name
+>CN=develop/O=tps</name><name>CN=Tambiev/O=tps</name><name>CN=Salpagarov/O=tps</name><name
+>CN=Tambiev/O=tps</name><name>CN=Salpagarov/O=tps</name><name>CN=Tambiev/O=tps</name><name
+>CN=Salpagarov/O=tps</name><name>CN=Tambiev/O=tps</name><name>CN=Salpagarov/O=tps</name></updatedby>
+<wassignedby><name>CN=Salpagarov/O=tps</name></wassignedby>
+<item name='$FormatNote' summary='true' sign='true'>
+<rawitemdata type='4'>
+AQDNiX2QycSf6khRPQALdyXD
+</rawitemdata></item>
+<item name='$FormulaClass' sign='true'><text>1</text></item>
+<item name='$TITLE' sign='true'><text>(AddDocByMainRef)|AddDocByMainRef</text></item>
+<item name='$Index' sign='true'><text/></item>
+<item name='$Formula' summary='true' sign='true'><formula compiled='true'>
+UgECABoAAwAkMTAABQAHAE1haW5SZWYAVgEDAAEAigAKAGEAWEQmAGd3JQAFAA0AQURERG9jVmVy
+c2lvbgBWAQEAAAALAq8AXAAkAAEAAwAFuSAABQANAEFERERvY1ZlcnNpb24AVgEiAq4AOAABACsA
+BfIF5QXqBfMF+QXgBf8gKAXwBeUF5AXgBeoF8gXoBfAF8wXlBewF4AX/KQCuAAQAtQMDAAIAVgAD
+ACQxMwABAA4ABcIF5QXwBfEF6AX/OiAFAAoAYQBYRCYAZ3clACICAQADACAtIAAiAgUABQBUaXRs
+ZQAiAgEABgAgBe4F8iAiAmkAVgEiAgMABQAkAB8ABAADAAMACQAEACQxMCQxMyRDb25mbGljdCRS
+RUYABAAEAAAAIAAFAAcAZG9jS2luZAABAAYAQWRkRG9jCgIEAAMABwAOAAgACUwxUzNTNFM=
+</formula></item>
+<item name='$Collation' summary='true'>
+<rawitemdata type='2'>
+GgACAABEiGYHAAADAJhmAAMAAwAkMTAkMTM=
+</rawitemdata></item>
+<item name='$ViewFormat' summary='true' sign='true'>
+<rawitemdata type='5'>
+AQACAA4ACEgAAFZDAwQDAAcAKAAAADAAAQAACAABAAAAAAAAAAICAAAAVkMABAMADAAcAQAAOAIC
+AAAJAAEAAAAAAAAAAgIAAAAkMTBNYWluUmVmKAACABoAAwAkMTAABQAHAE1haW5SZWYAVgEDAAcA
+DAAFAAkwUzBFACQxMwXCBeUF8AXxBegF/xwBAQCKAAoAYQBYRCYAZ3clAAUADQBBREREb2NWZXJz
+aW9uAFYBAQAAAAsCrwBcACQAAQADAAW5IAAFAA0AQURERG9jVmVyc2lvbgBWASICrgA4AAEAKwAF
+8gXlBeoF8wX5BeAF/yAoBfAF5QXkBeAF6gXyBegF8AXzBeUF7AXgBf8pAK4ABAC1AwMABwAcABUA
+CTFTMlM0UzhTMTFTMTJTMTNTMThTAAIAVgADACQxMwABAA4ABcIF5QXwBfEF6AX/OiAFAAoAYQBY
+RCYAZ3clACICAQADACAtIAAiAgUABQBUaXRsZQAiAgEABgAgBe4F8iAiAmkAVgEiAgMABwAeABgA
+CTBSMVMyUzNTNFM1UzZTN1M4UzlTMTBTJgABAAAAAQEACQEAAAoBAQ4KAAABAK0rAwABAAEAAAAA
+AAAAAABXQwIBAAkAAAAAAAAAAAAAAAAAAAAAAQAEAAAAAAD//wAAAAAAAAAAAAAAAAAAV0MCAQAJ
+AAAAAAAAAAAAAAAAAAAAAAAABAAAAAAA//8AAAAAAAAAAAAAAAAAAEIAEAAAAAEA////AAUA////
+AAEAAAAAAAAAAAAAAAAAAQD///8AAQD///8AAAABAAAAAAABAAAAAAAAAAAAAAAAAAgAAAAAAAEA
+</rawitemdata></item>
+<item name='$Comment' sign='true'><text/></item>
+<item name='$DesignerVersion' sign='true'><text>6.5</text></item>
+<item name='$V5ACTIONS' sign='true'>
+<rawitemdata type='1'>
+vRwRAAAAAQABAAAAAQAAAAAAAAAAAAAACAACAHn/bAABAOzp2AABAAAAAAAJAAAAAAABAOzp2AAA
+AB8AAAAAAAAAAAADAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+AAAAAAAAAAAAAAAAAAAAAAAAAAAAAPz/OgAAAAAAAQAAAAAAAQAAAAAAAAAAAAAAAAAAAAAAAAAA
+AAAAAAAAAAEAAAAAAAAAAAAAAAAAAAC+/yYAAAAFAAAAnQEAAAsAAAAAAAAAQ2F0ZWdvcmlfemWq
+AQBOfL7/KAAAAAUAAACdAQAADgAAAAAAAABfRWRpdCBEb2N1bWVudAIAAgq+/ygAAAAFAAAAnQEA
+AA4AAAAAAAAAX1NlbmQgRG9jdW1lbnQDAAMKvv8iAAAABQAAAJ0BAAAIAAAAAAAAAF9Gb3J3YXJk
+BAAECr7/LAAAAAUAAACdAQAAEgAAAAAAAABfTW92ZSBUbyBGb2xkZXIuLi4FAD18vv8uAAAABQAA
+AJ0BAAATAAAAAAAAAF9SZW1vdmUgRnJvbSBGb2xkZXIABgA+fA==
+</rawitemdata></item>
+<item name='$ACTIONS' sign='true'>
+<rawitemdata type='1'>
+vRwRAAAAAQABAAAAAQAAAAAAAAAAAAAACAACAL7/JgAAAAUAAACdAQAACwAAAAAAAABDYXRlZ29y
+aV96ZWwBAE58vv8oAAAABQAAAJ0BAAAOAAAAAAAAAF9FZGl0IERvY3VtZW50AgACCr7/KAAAAAUA
+AACdAQAADgAAAAAAAABfU2VuZCBEb2N1bWVudAMAAwq+/yIAAAAFAAAAnQEAAAgAAAAAAAAAX0Zv
+cndhcmQEAAQKvv8sAAAABQAAAJ0BAAASAAAAAAAAAF9Nb3ZlIFRvIEZvbGRlci4uLgUAPXy+/y4A
+AAAFAAAAnQEAABMAAAAAAAAAX1JlbW92ZSBGcm9tIEZvbGRlcgAGAD58
+</rawitemdata></item>
+<item name='$Flags'><text>Y</text></item></note>
+

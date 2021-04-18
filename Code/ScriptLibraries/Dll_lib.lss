@@ -1,0 +1,983 @@
+'++LotusScript Development Environment:2:5:(Options):0:74
+Option Public
+Use "WindowLib"
+'++LotusScript Development Environment:2:5:(Forward):0:1
+Declare Private Type BrowseInfo
+Declare Type BlockID
+Declare Type APIItem
+Declare Type NoteLink
+Declare Function Dll_DirOpenDialog As String
+Declare Function Dll_CanEditDocument(cdoc As NotesDocument) As Integer
+Declare Function Dll_FileSaveDialog (fileName As String) As String
+Declare Function Dll_PressShiftF9
+Declare Function Dll_PressF9
+Declare Private Function SendKey(Byval s As String) As Integer
+Declare Function Dll_GetLayout (Byval s As String) As String
+Declare Sub Initialize
+Declare Private Function PositionInArray (array As Variant, element As Variant) As Integer
+Declare Function Dll_PressPrintScreen
+Declare Function InitDll_Lib
+Declare Function Dll_LNAPILen (v As String) As Integer
+Declare Function Dll_LNAPIError (V As Variant) As String
+Declare Function Dll_CheckLNAPIResult (result As Variant) As Variant
+Declare Function Dll_ChangeSelectionFormula (viewNote As Variant, viewDoc1 As Variant, SelectionFormula As String) As Variant
+Declare Function Dll_PressEsc
+Declare Function DLL_MarkRead(dc As Variant, UserName As Variant) As Variant
+Declare Function DLL_MarkUnread(dc As Variant, UserName As Variant) As Variant
+Declare Function DLL_CreateHTMLItem(doc As Variant, itemName As Variant, itemValue As Variant) As NotesItem
+
+'++LotusScript Development Environment:2:5:(Declarations):0:10
+Private Const LibName="Dll_lib"
+
+Private Const BIF_RETURNONLYFSDIRS = 1
+Private Const BIF_DONTGOBELOWDOMAIN = 2
+Private Const MAX_PATH = 260
+Private LibInit As Integer
+
+Private Type BrowseInfo
+	hWndOwner As Long
+	pIDLRoot As Long
+	pszDisplayName As Long
+	lpszTitle As Long
+	ulFlags As Long
+	lpfnCallback As Long
+	lParam As Long
+	iImage As Long
+End Type
+
+Declare Sub W32_NSFNoteGetInfo Lib "nnotes.dll" Alias "NSFNoteGetInfo" ( Byval hNote As Long, _ 
+Byval Note_Member As Integer, Value_ptr As Integer )
+Const NOTE_FLAGS% = 7 
+Const NOTE_FLAG_READONLY% = &H0001
+
+Declare Function SHBrowseForFolder Lib "shell32" (lpbi As BrowseInfo) As Long
+Declare Function SHGetPathFromIDList Lib "shell32" (Byval pidList As Long, Byval lpBuffer As String) As Long
+Declare Function lstrcat Lib "kernel32" Alias "lstrcatA" (Byval lpString1 As String, Byval lpString2 As String) As Long
+'Declare Function keybd_event Lib "user32.dll" Alias "keybd_event" (Byval bVk As Integer, Byval bScan As Integer, Byval dwFlags As Integer,Byval dwExtraInfo As Integer) As Long
+Declare Function NEMPutFile Lib "nnotesws" ( wHandle As Integer, Byval szFileName As Lmbcs String, Byval szFilter As Lmbcs String, Byval szTitle As Lmbcs String ) As Integer
+
+
+Dim CapsLock%
+
+Declare Sub keybd_event Lib "user32.dll" (Byval bVk As Integer, Byval bScan As Integer, _
+Byval dwflags As Long, Byval dwextrainfo As Long)
+Declare Sub mouse_event Lib "user32.dll" (Byval dwflags As Long, Byval dx As Long, Byval dy As Long, _
+Byval cbuttons As Long, Byval dwextrainfo As Long)
+Declare Function OemKeyScan Lib "user32.dll" (Byval wOemchar As Integer) As Long
+Declare Function CharToOem Lib "user32.dll" Alias "CharToOemA" (Byval lpszSrc As String, Byval lpszDst As String) As Long
+Declare Function VkKeyScan Lib "user32.dll" Alias "VkKeyScanA" (Byval cChar As Integer) As Integer
+Declare Function VkKeyScanEx Lib "user32.dll" Alias "VkKeyScanExA" (Byval cChar As Integer, Byval layoutHDL As Long) As Integer
+Declare Function MapVirtualKey& Lib "user32.dll" Alias "MapVirtualKeyA" (Byval wCode As Long, Byval wMapType As Long)
+Declare Function MapVirtualKeyEx& Lib "user32.dll" Alias "MapVirtualKeyExA" (Byval wCode As Long, Byval wMapType As Long, Byval layoutHDL As Long)
+Declare Function GetKeyState% Lib "user32.dll" (Byval virtkey&)
+Declare Function LoadKeyboardLayout Lib "user32.dll" Alias "LoadKeyboardLayoutA" (Byval layoutID As String, Byval loadFlag As Long) As Long
+Declare Function GetKeyboardLayoutName Lib "user32.dll" Alias "GetKeyboardLayoutNameA"(Byval pwszKLID As String) As Long
+Declare Function ActivateKeyboardLayout Lib "user32.dll" (Byval layoutHDL As Long, Byval direction As Long) As Long
+Declare Function GetKeyboardLayout Lib "user32.dll" (Byval threadHDL As Long) As Long
+Declare Sub GetKeyboardState Lib "user32.dll" (LpKeyState As Any)
+Declare Sub SetKeyboardState Lib "user32.dll" (lpKeyState As Any)
+'Declare Function SendMessage Lib "user32.dll" Alias "SendMessageA" (Byval hwnd As Long, Byval uMsg As Long, Byval wParam As Long, Byval vPoint As Long) As Long
+
+Const VK_SHIFT = &H10
+Const KEYEVENTF_KEYUP = &H2 ' the code to release a key
+Dim KeyWordsArray (0 To 31) As String
+Dim ScanCodesArray (0 To 31) As Long
+Dim IsSysKey (0 To 31) As Integer
+
+
+Declare Function NSFFormulaCompile Lib "nnotes.dll" _
+(Byval FormulaName As Lmbcs String, _
+Byval FormulaNameLength As Integer, _
+Byval FormulaText As Lmbcs String, _
+Byval FormulaTextLength As Integer, _
+rethFormula As Long, _
+retFormulaLength As Integer, _
+etCompileError As Integer, _
+retCompileErrorLine As Integer, _
+retCompileErrorColumn As Integer, _
+retCompileErrorOffset As Integer, _
+retCompileErrorLength As Integer) As Integer
+
+Declare Function NSFSelectionFormulaCompile Lib "nnotes.dll" Alias "NSFFormulaCompile" (_
+Byval fName As Long, _
+Byval FormulaNameLength As Integer, _
+Byval FormulaText As Lmbcs String, _
+Byval FormulaTextLength As Integer, _
+rethFormula As Long, _
+retFormulaLength As Integer, _
+etCompileError As Integer, _
+retCompileErrorLine As Integer, _
+retCompileErrorColumn As Integer, _
+retCompileErrorOffset As Integer, _
+retCompileErrorLength As Integer) As Integer
+
+Declare Function NSFFormulaSummaryItem Lib "nnotes.dll"_
+(Byval fHandle As Long, _
+Byval iName As Lmbcs String, _
+Byval iNameLength As Integer) As Integer
+
+Declare Function NSFFormulaMerge Lib "nnotes.dll"_
+(Byval fSource As Long, _
+Byval fDestination As Long) As Integer
+
+Declare Function OSMemFree Lib "nnotes.dll" _
+(Byval hHandle As Long) As Integer
+
+Declare Function NSFDbOpen Lib "nnotes.dll" _
+(Byval PathName As Lmbcs String, _
+rethDB As Long ) As Integer
+
+Declare Function NSFDbClose Lib "nnotes.dll" _
+(Byval DBHandle As Long) As Integer
+
+Declare Function OSPathNetConstruct Lib "nnotes.dll" _
+(Byval PortName As Lmbcs String,_
+Byval ServerName As Lmbcs String,_
+Byval FileName As Lmbcs String,_
+Byval retPathName As Lmbcs String) As Integer
+
+Declare Function NIFFindView Lib "nnotes.dll" _
+(Byval dbHandle As Long,_
+Byval vName As Lmbcs String,_
+NoteID As Long) As Integer
+
+Const NOTE_CLASS_VIEW% = &h0008
+Declare Function NIFFindDesignNoteExt Lib "nnotes.dll"_
+(Byval dbHandle As Long,_
+Byval nName As String,_
+Byval nClass As Integer,_
+Byval nPattern As String,_
+retNoteID As Long,_
+Byval nOptions As Long) As Integer
+
+Declare Function NIFFindDesignNote Lib "nnotes.dll" _
+(Byval dbHabdle As Long,_
+Byval nName As String,_
+Byval nClass As Integer,_
+retNoteID As Long) As Integer
+
+Declare Function OSLoadString Lib "nnotes.dll" (Byval hmodule As Long, Byval status As Integer, Byval s As String, Byval slen As Integer) As Integer
+
+Declare Function NSFNoteOpen Lib "nnotes.dll" (Byval dbHandle As Long, Byval nID As Long, Byval oFlags As Integer, rethNote As Long) As Integer
+
+Declare Function NSFItemDelete Lib "nnotes.dll" _
+(Byval nHandle As Long,_
+Byval iName As Lmbcs String,_
+Byval iNameLenght As Integer) As Integer
+
+Const UPDATE_FORCE% = 1
+Declare Function NSFNoteUpdate Lib "nnotes.dll" _
+(Byval nHandle As Long,_
+Byval uFlags As Integer) As Integer
+
+Declare Function NSFNoteClose Lib "nnotes.dll" _
+(Byval nHandle As Long) As Integer
+
+Declare Function NSFNoteCopyAndEncrypt Lib "nnotes.dll"_
+(Byval noteHandle As Long, _
+Byval EncryptFlags As Integer, _
+destNoteHandle As Long) As Integer
+
+Type BlockID
+	hPool As Long
+	Block As Integer
+End Type
+Type APIItem
+	Item As BlockID
+	Filler As Integer
+	Value As BlockID
+	Size As Long
+End Type
+Type NoteLink
+	File(1) As Long
+	View(3) As Long
+	Note(3) As Long
+End Type
+
+Declare Function NSFItemInfo Lib "nnotes.dll" _
+(Byval hNote As Long, Byval N As String, Byval nN As Integer, iB As BlockID, D As Integer, vB As BlockID, nV As Long) As Integer
+
+Declare Function OSLockObject Lib "nnotes.dll" (Byval handle As Long) As Long
+Declare Function OSUnlockObject Lib "nnotes.dll" (Byval handle As Long) As Integer
+
+Const ITEM_SUMMARY% = 4 
+Const TYPE_FORMULA% = 1536
+Declare Function NSFItemAppend Lib "nnotes.dll" _
+(Byval nHandle As Long, _
+Byval iFlags As Integer,_
+Byval iName As Lmbcs String,_
+Byval iNameLength As Integer,_
+Byval iType As Integer,_
+Byval iValuePointer As Long,_
+Byval iValueLength As Long) As Integer
+
+Declare Function NSFItemAppend2 Lib "nnotes.dll" Alias "NSFItemAppend" _
+(Byval nHandle As Long, _
+Byval iFlags As Integer,_
+Byval iName As Lmbcs String, _
+Byval iNameLength As Integer, _
+Byval iType As Integer, _
+Byval iValuePointer As Lmbcs String, _
+Byval iValueLength As Long) As Integer
+
+Declare Function NSFFormulaGetSize Lib "nnotes.dll" _
+(Byval fHandle As Long, fSize As Integer) As Integer 
+
+Declare Function OSTranslate Lib "nnotes.dll" (Byval TranslateMode As Integer, Byval InS As String, Byval InLength As Integer,_
+Byval OutS As String, Byval OutLength As Integer) As Integer
+
+
+'Declare Function SECKFMGetUserName Lib "nnotes.dll" Alias "SECKFMGetUserName" ( Byval UserName As String) As Integer
+'Declare Function NSFDbOpen Lib "nnotes.dll" Alias "NSFDbOpen" ( Byval dbName As String, hDb As Long) As Integer
+Declare Function IDScan Lib "nnotes.dll" Alias "IDScan" ( Byval hUnreadTable As Long, Byval First As Integer, NoteID As Long) As Integer
+Declare Function NSFDbGetUnreadNoteTable Lib "nnotes.dll" Alias "NSFDbGetUnreadNoteTable" (Byval hDb As Long, Byval UserName As String, Byval NameLength As Integer, Byval Create As Integer, hUnreadTable As Long) As Integer
+Declare Function NSFDbUpdateUnread Lib "nnotes.dll" Alias "NSFDbUpdateUnread" ( Byval hDb As Long, Byval hTable As Long) As Integer
+'Declare Function NSFDbClose Lib "nnotes.dll" Alias "NSFDbClose" ( Byval hDb As Long) As Integer
+Declare Function IDDestroyTable Lib "nnotes.dll" Alias "IDDestroyTable" ( Byval hTable As Long) As Integer
+Declare Function IDInsert Lib "nnotes.dll" Alias "IDInsert" ( Byval hTable As Long, Byval NoteID As Long, retInserted As Long) As Integer
+Declare Function IDDelete Lib "nnotes.dll" Alias "IDDelete" ( Byval hTable As Long, Byval NoteID As Long, retDeleted As Integer) As Integer
+Declare Function IDIsPresent Lib "nnotes.dll" Alias "IDIsPresent" (Byval hTable As Long, Byval NoteID As Long) As Integer
+Declare Function IDTableCopy Lib "nnotes.dll" Alias "IDTableCopy" ( Byval hOriginalTable As Long, hNewCopy As Long) As Integer
+Declare Function NSFDbSetUnreadNoteTable Lib "nnotes.dll" Alias "NSFDbSetUnreadNoteTable" ( Byval hDb As Long, Byval UserName As String, Byval NameLength As Integer, Byval Flush As Integer, Byval hOriginalTable As Long, Byval hUnreadTable As Long) As Integer
+'Declare Function NSFItemAppendS Lib "nnotes.dll" Alias "NSFItemAppend" (Byval nHandle As Long, Byval iFlags As Integer, Byval iName As Lmbcs String, Byval iNameLength As Integer, Byval iType As Integer, Byval iValuePointer As Lmbcs String, Byval iValueLength As Long) As Integer
+'++LotusScript Development Environment:2:1:Dll_DirOpenDialog:1:8
+Function Dll_DirOpenDialog As String
+'Opens a Browse Folders Dialog Box that displays the
+'directories in your computer
+	Dim lpIDList As Long ' Declare Varibles
+	Dim sBuffer As String
+	Dim szTitle As String
+	Dim tBrowseInfo As BrowseInfo
+	
+	szTitle = "Выберите директорию                                                         "
+' Text to appear in the gray area under the title bar
+' telling you what to do
+	
+	tBrowseInfo.hWndOwner = 0
+	tBrowseInfo.lpszTitle = lstrcat(szTitle, "")
+	tBrowseInfo.ulFlags = BIF_RETURNONLYFSDIRS + BIF_DONTGOBELOWDOMAIN
+	
+	
+	lpIDList = SHBrowseForFolder(tBrowseInfo)
+	
+	If (lpIDList) Then
+		sBuffer = Space(MAX_PATH)
+		SHGetPathFromIDList lpIDList, sBuffer
+		sBuffer = Left(sBuffer, Instr(sBuffer, Chr(0)) - 1)
+		Dll_DirOpenDialog=sBuffer
+	End If
+End Function
+'++LotusScript Development Environment:2:1:Dll_CanEditDocument:1:8
+Function Dll_CanEditDocument(cdoc As NotesDocument) As Integer
+	' проверка документа на чтение/запись
+	' возврат : 0 - чтение, 1 - запись
+	Dim NoteFlags As Integer
+	
+	hNote& = cdoc.HANDLE
+	If hNote& <> 0 Then 
+		Call W32_NSFNoteGetInfo(hNote&, NOTE_FLAGS%, NoteFlags)
+		If NoteFlags And NOTE_FLAG_READONLY% Then
+			Dll_CanEditDocument = 0
+		Else
+			Dll_CanEditDocument = 1
+		End If
+	End If
+End Function
+'++LotusScript Development Environment:2:1:Dll_FileSaveDialog:1:8
+Function Dll_FileSaveDialog (fileName As String) As String
+	Dim szFileName As String*256
+	Dim szTitle As String
+	Dim szFilter As String
+	
+	Dim szSaveFile As String
+	
+	
+	szFilename = fileName
+	szTitle = "Сохранение файла"
+	szFilter = "All Files |*.*"
+	If NEMPutFile( 0, szFileName, szFilter, szTitle) <> 0 Then
+		szSaveFile = szFileName
+	End If
+	Dll_FileSaveDialog=szSaveFile
+End Function
+'++LotusScript Development Environment:2:1:Dll_PressShiftF9:1:8
+Function Dll_PressShiftF9
+	keybd_event 16,0,0,0     
+	keybd_event 120,0,0,0   
+	keybd_event 120,0,2,0   
+	keybd_event 16,0,2,0     
+End Function
+
+'++LotusScript Development Environment:2:1:Dll_PressF9:1:8
+Function Dll_PressF9
+	keybd_event 120,0,0,0   
+	keybd_event 120,0,2,0   
+End Function
+'++LotusScript Development Environment:2:1:SendKey:1:8
+Private Function SendKey(Byval s As String) As Integer
+	Dim c As String
+	Dim i As Long
+	Dim dl As Long
+	Dim code As Long
+	Dim scan As Long
+	Dim flags As Long
+	Dim CurKBDHDL As Long
+	l=Len(s)	
+	If l<1 Then Exit Function
+	
+	ub=Ubound(KeyWordsArray)
+	
+	hWnd=GetFocus
+	Dim layoutName As String*9
+	Call GetKeyboardLayoutName(layoutName)
+	curLayout=layoutName
+	
+	For i=1 To l
+		c=Mid(s,i,1)
+		word=""
+		If c="{" Then
+			i=i+1
+			c=Mid(s,i,1)
+			While c<>"}" And i<=l
+				word=word+c
+				i=i+1
+				c=Mid(s,i,1)
+			Wend
+			Stop
+			p=positionInArray(KeyWordsArray,Ucase(word))
+			If p<=ub Then 'в скобках - зарезервированное слово
+				Stop
+				code=ScanCodesArray(p)
+'				scan=MapVirtualKey(code,0)*32768+1
+				
+'				Call SendMessage (hWnd, 256, code,  scan)
+'				Call SendMessage (hWnd, 258, code,  scan)
+'				Call SendMessage (hWnd, 257, code,  scan)
+				
+				If IsSysKey(p)=0 Then
+					Call SendMessage (hWnd, 258, code, 1)
+				Else
+					Call SendMessage (hWnd, 256, code,  1)
+				End If
+				
+'				256 - WM_KEYDOWN
+'				257 - WM_KEYUP
+'				258 - WM_CHAR
+'				260 - WM_SYSKEYDOWN
+'				261 - WM_SYSKEYUP
+'				262 - WM_SYSCHAR
+				
+'				Call SendMessage (hWnd, 257, scan, scan+1) '- WM_KEYUP
+			Else
+				For k=1 To Len(word)
+					NextLayout=Dll_GetLayout(c)
+					If NextLayout <> CurLayout Then
+						CurLayOut=NextLayout
+						Call LoadKeyboardLayout(CurLayout,129)
+					End If
+					k=Asc(Mid(word,k,1))
+					Call SendMessage (hWnd, 258, k, 1) '- WM_CHAR
+				Next k
+			End If
+			
+	'		Shift,Ctrl,Alt - H10, H11, H12
+		Elseif c="+" Then 'Shift
+			code=&H10&
+			scan=MapVirtualKey(code,0)*32768+1
+			Call SendMessage (hWnd, 256, code,  1)
+			Call SendMessage (hWnd, 256, Asc("g"),  scan)
+			Call SendMessage (hWnd, 258, Asc("g"),  scan)
+			Call SendMessage (hWnd, 257, Asc("g"),  scan)
+			Call SendMessage (hWnd, 257, code,  1)
+			
+		Elseif c="^" Then 'Ctrl
+			code=&H11&
+			Call SendMessage (hWnd, 256, scan,  1)
+		Elseif c="%" Then 'Alt
+			code=&H12&
+			Call SendMessage (hWnd, 256, scan,  1)
+		Else
+			
+			NextLayout=Dll_GetLayout(c)
+			If NextLayout <> CurLayout Then
+				CurLayOut=NextLayout
+				Call LoadKeyboardLayout(CurLayout,129)
+			End If
+			
+%REM
+		Stop
+		Do
+			vk = VkKeyScanEx(Asc(c$), CurKBDHDL) And &HFF
+			If vk=255 Then
+				ggg = True
+				Call ActivateKeyboardLayout(1, 0)
+				CurKBDHDL = GetKeyboardLayout(0)
+			End If
+		Loop While vk=255
+		
+		oemchar = c ' Pre-initialize string to required length
+		CharToOem c, oemchar
+		Do
+			dl = OEMKeyScan(Asc(oemchar))
+			scan = dl And &H0000FFFF&
+			If scan = 65535 Then
+				Stop
+				ggg = True
+				Call ActivateKeyboardLayout(1, 0)
+				CurKBDHDL = GetKeyboardLayout(0)
+			End If
+		Loop While scan = 65535
+'
+		flags=(dl And &HFFFF0000&) / 65536
+		shift=flags And &H0001&
+		ctrl=(flags And &H0002&)/2
+		Alt=(flags And &H0004&)/4
+		
+		Stop
+		If CurLocation=1 Then		
+			If (c$ >= "a" And c$ <= "z") Or (c$ >= "A" And c$ <= "Z") Then
+				shift = ((c = Ucase(c)) Xor CapsLock)
+			Else
+				shift = (dl And &H00030000&) > 0
+			End If
+		Elseif CurLocation=2 Then
+			If (c$ >= "А" And c$ <= "я") Or (c$ = "Ё" Or c$ = "ё")  Then
+				shift = ((c = Ucase(c)) Xor CapsLock)
+			Else
+				shift = (dl And &H00030000&) > 0
+			End If
+		End If
+		If shift=True Then shift=1
+		
+		If shift=1 Then
+			keybd_event 16, 0, 0, 0
+		End If
+		If ctrl=1 Then
+			keybd_event 18, 0, 0, 0
+		End If
+		If alt=1 Then
+			keybd_event 17, 0, 0, 0
+		End If
+		
+'
+'		If shifted Then
+'			scanshift = MapVirtualKeyEx(VK_SHIFT, 1, CurKBDHDL)
+'			keybd_event VK_SHIFT, scanshift, 0, 0
+'		End If
+'
+		
+'		keybd_event vk, scan, 0, 0
+'		keybd_event vk, scan, 2, 0
+%END REM		
+			k=Asc(c)
+'			r=SendMessage (hWnd, 256, k, 1) '- WM_KEYDOWN
+			Call SendMessage (hWnd, 258, k, 1) '- WM_CHAR
+'		r=SendMessage (hWnd, 257, k, 1) '- WM_KEYUP
+			
+%REM
+		
+		If shift=1 Then
+			keybd_event 16, 0, 2, 0
+		End If
+		If ctrl=1 Then
+			keybd_event 18, 0, 2, 0
+		End If
+		If alt=1 Then
+			keybd_event 17, 0, 2, 0
+		End If
+%END REM			
+		End If
+	Next i
+	Call LoadKeyboardLayout(layoutName,1)
+End Function
+'++LotusScript Development Environment:2:1:Dll_GetLayout:1:8
+Function Dll_GetLayout (Byval s As String) As String
+	If Len(s)<1 Then Exit Function
+	c=Mid(s,1,1)
+	a=Asc(c)
+	If (a>=192 And a<=255) Or a=168 Or a=184 Then
+		Dll_GetLayout="00000419" 'RUS
+	Else
+		Dll_GetLayout="00000409" 'Eng
+	End If
+End Function
+'++LotusScript Development Environment:2:2:Initialize:1:10
+Sub Initialize
+	InitDll_Lib
+End Sub
+
+'++LotusScript Development Environment:2:1:PositionInArray:1:8
+Private Function PositionInArray (array As Variant, element As Variant) As Integer
+	On Error Goto handler
+	FuncName="PositionInArray"
+	
+	If Not Isarray(array) Then
+		Redim array(0) As Variant
+		PositionInArray=1
+		Exit Function	
+	End If
+	lb=Lbound(array)
+	ub=Ubound(array)
+	PositionInArray=ub+1
+	For i=lb To ub
+		If array(i)=element Then 
+			PositionInArray=i
+			Exit Function
+		End If
+	Next i
+	Goto endh
+handler:
+	ErrorString="("+LibName+") "+FuncName+", стр. "+Cstr(Erl)+Chr(10)+Error$
+	Error Err, ErrorString
+endh:
+End Function
+'++LotusScript Development Environment:2:1:Dll_PressPrintScreen:1:8
+Function Dll_PressPrintScreen
+	keybd_event 44,0,0,0
+	keybd_event 44,0,2,0
+End Function
+'++LotusScript Development Environment:2:1:InitDll_Lib:1:8
+Function InitDll_Lib
+	If LibInit=1 Then Exit Function
+	KeyWordsArray(0)={BS}
+	ScanCodesArray(0)=&H08&
+	IsSysKey(0)=0
+	
+	KeyWordsArray(1)={BREAK}
+	ScanCodesArray(1)=&H03&
+	IsSysKey(1)=1
+	
+	KeyWordsArray(2)={CAPSLOCK}
+	ScanCodesArray(2)=&H14&
+	IsSysKey(2)=0
+	
+	KeyWordsArray(3)={CLEAR}
+	ScanCodesArray(3)=&H0C&
+	IsSysKey(3)=0
+	
+	KeyWordsArray(4)={DEL}
+	ScanCodesArray(4)=&H2E&
+	IsSysKey(4)=0
+	
+	KeyWordsArray(5)={DOWN}
+	ScanCodesArray(5)=&H28&
+	IsSysKey(5)=1
+	
+	KeyWordsArray(6)={END}
+	ScanCodesArray(6)=&H23&
+	IsSysKey(6)=1
+	
+	KeyWordsArray(7)={ENTER}
+	ScanCodesArray(7)=&H0D&
+	IsSysKey(7)=0
+	
+	KeyWordsArray(8)={ESC}
+	ScanCodesArray(8)=&H1B&
+	IsSysKey(8)=0
+	
+	KeyWordsArray(9)={HELP}
+	ScanCodesArray(9)=&H2F&
+	IsSysKey(9)=1
+	
+	KeyWordsArray(10)={HOME}
+	ScanCodesArray(10)=&H24&
+	IsSysKey(10)=1
+	
+	KeyWordsArray(11)={INS}
+	ScanCodesArray(11)=&H2D&
+	IsSysKey(11)=1
+	
+	KeyWordsArray(12)={LEFT}
+	ScanCodesArray(12)=&H25&
+	IsSysKey(12)=1
+	
+	KeyWordsArray(13)={NUMLOCK}
+	ScanCodesArray(13)=&H90&
+	IsSysKey(13)=1
+	
+	KeyWordsArray(14)={PGDN}
+	ScanCodesArray(14)=&H22&
+	IsSysKey(14)=1
+	
+	KeyWordsArray(15)={PGUP}
+	ScanCodesArray(15)=&H21&
+	IsSysKey(15)=1
+	
+	KeyWordsArray(16)={RIGHT}
+	ScanCodesArray(16)=&H27&
+	IsSysKey(16)=1
+	
+	KeyWordsArray(17)={SCROLLLOCK}
+	ScanCodesArray(17)=&H91&
+	IsSysKey(17)=1
+	
+	KeyWordsArray(18)={TAB}
+	ScanCodesArray(18)=&H09&
+	IsSysKey(18)=0
+	
+	KeyWordsArray(19)={UP}
+	ScanCodesArray(19)=&H26&
+	IsSysKey(19)=1
+	
+	KeyWordsArray(20)={F1}
+	ScanCodesArray(20)=&H70&
+	IsSysKey(20)=1
+	
+	KeyWordsArray(21)={F2}
+	ScanCodesArray(21)=&H71&
+	IsSysKey(21)=1
+	
+	KeyWordsArray(22)={F3}
+	ScanCodesArray(22)=&H72&
+	IsSysKey(22)=1
+	
+	KeyWordsArray(23)={F4}
+	ScanCodesArray(23)=&H73&
+	IsSysKey(23)=1
+	
+	KeyWordsArray(24)={F5}
+	ScanCodesArray(24)=&H74&
+	IsSysKey(24)=1
+	
+	KeyWordsArray(25)={F6}
+	ScanCodesArray(25)=&H75&
+	IsSysKey(25)=1
+	
+	KeyWordsArray(26)={F7}
+	ScanCodesArray(26)=&H76&
+	IsSysKey(26)=1
+	
+	KeyWordsArray(27)={F8}
+	ScanCodesArray(27)=&H77&
+	IsSysKey(27)=1
+	
+	KeyWordsArray(28)={F9}
+	ScanCodesArray(28)=&H78&
+	IsSysKey(28)=1
+	
+	KeyWordsArray(29)={F10}
+	ScanCodesArray(29)=&H79&
+	IsSysKey(29)=1
+	
+	KeyWordsArray(30)={F11}
+	ScanCodesArray(30)=&H7A&
+	IsSysKey(30)=1
+	
+	KeyWordsArray(31)={F12}
+	ScanCodesArray(31)=&H7B&
+	IsSysKey(31)=1
+	
+	LibInit=1
+End Function
+
+'++LotusScript Development Environment:2:1:Dll_LNAPILen:1:8
+Function Dll_LNAPILen (v As String) As Integer
+	Dim retBuf As String *10000
+	
+	Dll_LNAPILen=OSTranslate (0, v, Len(v), retBuf, 10000)
+End Function
+'++LotusScript Development Environment:2:1:Dll_LNAPIError:1:8
+Function Dll_LNAPIError (V As Variant) As String
+	m$ = String$(1024, " ")
+	OSLoadString 0, V And &H3FFF, m$, 1024
+	p% = Instr(m$, Chr$(0))
+	If Not p% = 0 Then m$ = Left$(m$, p% - 1)
+	If m$ = "" Or m$ = "No error" Then m$ = "Unknown error (&H" & Hex$(Cint(v)) & ")"
+	Dll_LNApiError=m$
+End Function
+'++LotusScript Development Environment:2:1:Dll_CheckLNAPIResult:1:8
+Function Dll_CheckLNAPIResult (result As Variant) As Variant
+	Dll_CheckLNAPIResult=False
+	If result<>0 Then
+		Error 5000, Dll_LNApiError(result)
+	Else
+		Dll_CheckLNAPIResult=True
+	End If
+End Function
+'++LotusScript Development Environment:2:1:Dll_ChangeSelectionFormula:1:8
+Function Dll_ChangeSelectionFormula (viewNote As Variant, viewDoc1 As Variant, SelectionFormula As String) As Variant
+	On Error Goto handler
+	FuncName="Dll_ChangeSelectionFormula"
+	
+	Dim hNote As Long
+	Dim retFormulaLength As Integer
+	Dim retCompileError As Integer
+	Dim retCompileErrorLine As Integer
+	Dim retCompileErrorColumn As Integer
+	Dim retCompileErrorOffset As Integer
+	Dim retCompileErrorLength As Integer
+	Dim hSelection As Long
+	Dim f As String
+	Dim  ResponseFlag As Integer
+	Dim rethCFormula As Long
+	Dim retCFormulaLength As Integer
+	Dim fLength As Integer
+	Dim fLength2 As Long
+	
+	Dll_ChangeSelectionFormula=False
+	If Not viewDoc1 Is Nothing Then
+		Set viewDoc=viewDoc1
+	Else
+		Set db=viewNote.Parent
+		Set viewDoc=db.GetDocumentByUNID(viewNote.UniversalId)
+	End If
+	hNote=viewDoc.Handle
+	Call OSLockObject(hNote)
+	Dll_CheckLNAPIResult NSFSelectionFormulaCompile(0&, 0, SelectionFormula, Dll_LNAPILen(SelectionFormula), hSelection, retFormulaLength, retCompileError, retCompileErrorLine, retCompileErrorColumn, retCompileErrorOffset, retCompileErrorLength)
+	ResponseFlag=0
+	Forall c In viewNote.Columns
+		f=Cstr(c.Formula)
+		If f="" Then f=Cstr(c.ItemName)
+		If c.IsResponse Then ResponseFlag=1
+		Dll_CheckLNAPIResult NSFFormulaCompile(c.ItemName, Dll_LNAPILen(c.ItemName), f, Dll_LNAPILen(f), rethCFormula, retCFormulaLength, retCompileError, retCompileErrorLine, retCompileErrorColumn, retCompileErrorOffset, retCompileErrorLength)
+		Dll_CheckLNAPIResult NSFFormulaSummaryItem(hSelection, c.ItemName, Dll_LNAPILen(c.ItemName))
+		Dll_CheckLNAPIResult NSFFormulaMerge(rethCFormula, hSelection)
+		Dll_CheckLNAPIResult OSMemFree(rethCFormula)
+	End Forall
+	If ResponseFlag=1 Then
+		Dll_CheckLNAPIResult NSFFormulaSummaryItem(hSelection, "$Conflict", Dll_LNAPILen("$Conflict"))
+		Dll_CheckLNAPIResult NSFFormulaSummaryItem(hSelection, "$REF", Dll_LNAPILen("$REF"))
+	End If
+	
+	Dll_CheckLNAPIResult NSFFormulaGetSize(hSelection, fLength)
+	fLength2 = fLength
+	
+	fLength=Dll_LNAPILen("$Formula")
+	Dll_CheckLNAPIResult NSFItemDelete (hNote, "$Formula", fLength)
+	Dll_CheckLNAPIResult NSFItemAppend(hNote, ITEM_SUMMARY, "$Formula", fLength, TYPE_FORMULA, OSLockObject(hSelection), fLength2)
+	Call OSUnlockObject(hSelection)
+	Dll_CheckLNAPIResult OSMemFree(hSelection)
+	
+	Dll_CheckLNAPIResult NSFNoteUpdate(hNote, UPDATE_FORCE)
+	OSUnlockObject(hNote)
+	Dll_ChangeSelectionFormula=True
+	Goto endh
+handler:
+	If hSelection<>0 Then
+		OSUnlockObject(hSelection)
+		OSMemFree(hSelection)
+	End If
+	If hNote<>0 Then  OSUnlockObject(hNote)
+	ErrorString="("+LibName+") "+FuncName+", стр. "+Cstr(Erl)+Chr(10)+Error$
+	Error Err, ErrorString
+endh:
+End Function
+
+'++LotusScript Development Environment:2:1:Dll_PressEsc:1:8
+Function Dll_PressEsc
+	keybd_event 27,0,0,0   
+	keybd_event 27,0,2,0   
+End Function
+
+'++LotusScript Development Environment:2:1:DLL_MarkRead:1:8
+Function DLL_MarkRead(dc As Variant, UserName As Variant) As Variant
+	On Error Goto handler
+	FuncName="DLL_MarkRead"
+	DLL_MarkRead=False
+	
+	Dim hDb As Long, hUT As Long, hOT As Long
+	Dim ln As Integer
+	ln=DLL_LNAPILen(Cstr(UserName))
+	Dim doc As NotesDocument
+	
+	If dc Isa "NotesDocument" Then
+		Set doc=dc
+		If doc.NoteId="0" Then Exit Function
+		
+		Set db=doc.ParentDatabase
+		If db.Server="" Then path=db.FilePath Else path=db.Server+"!!"+db.FilePath
+		DLL_CheckLNAPIResult NSFDbOpen(path, hDb)
+		DLL_CheckLNAPIResult NSFDbGetUnreadNoteTable(hDb, UserName, ln, True, hUT)
+		DLL_CheckLNAPIResult NSFDbUpdateUnread(hDb, hUT)
+		DLL_CheckLNAPIResult IDTableCopy(hUT, hOT)
+		NoteId=Clng("&H" + doc.NoteID)
+		
+		If IDIsPresent (hUT, NoteID) Then
+			DLL_CheckLNAPIResult IDDelete (hUT, NoteID, 0)
+			DLL_CheckLNAPIResult NSFDbSetUnreadNoteTable(hDb, UserName, ln, True, hOT, hUT)
+			DLL_CheckLNAPIResult NSFDbUpdateUnread(hDb, hUT)
+		End If               
+		DLL_CheckLNAPIResult IDDestroyTable(hOT)
+		DLL_CheckLNAPIResult IDDestroyTable(hUT)
+		DLL_CheckLNAPIResult NSFDbClose(hDb)		
+	Elseif dc Isa "NotesDocumentCollection" Then
+		If dc.Count<1 Then Exit Function
+		Set doc=dc.GetFirstDocument
+		Set db=doc.ParentDatabase
+		
+		If db.Server="" Then path=db.FilePath Else path=db.Server+"!!"+db.FilePath
+		DLL_CheckLNAPIResult NSFDbOpen(path, hDb)
+		DLL_CheckLNAPIResult NSFDbGetUnreadNoteTable(hDb, UserName, ln, True, hUT)
+		DLL_CheckLNAPIResult NSFDbUpdateUnread(hDb, hUT)
+		DLL_CheckLNAPIResult IDTableCopy(hUT, hOT)
+		While Not doc Is Nothing
+			NoteId=Clng("&H" + doc.NoteID)
+			If IDIsPresent (hUT, NoteID) Then
+				DLL_CheckLNAPIResult IDDelete (hUT, NoteID, 0)
+'				DLL_CheckLNAPIResult NSFDbSetUnreadNoteTable(hDb, UserName, ln, True, hOT, hUT)
+'				DLL_CheckLNAPIResult NSFDbUpdateUnread(hDb, hUT)
+			End If
+			Set doc=dc.GetNextDocument(doc)
+		Wend
+		DLL_CheckLNAPIResult NSFDbSetUnreadNoteTable(hDb, UserName, ln, True, hOT, hUT)
+		DLL_CheckLNAPIResult NSFDbUpdateUnread(hDb, hUT)
+		DLL_CheckLNAPIResult IDDestroyTable(hOT)
+		DLL_CheckLNAPIResult IDDestroyTable(hUT)
+		DLL_CheckLNAPIResult NSFDbClose(hDb)
+	Elseif dc Isa "DocumentCollection" Then
+		If dc.Count<1 Then Exit Function
+		Set doc=dc.GetFirstDocument
+		Set tempDb=Nothing
+		While Not doc Is Nothing
+			Set db=doc.ParentDatabase
+			If Not db Is tempDb Then
+				If Not tempDb Is Nothing Then
+					DLL_CheckLNAPIResult NSFDbSetUnreadNoteTable(hDb, UserName, ln, True, hOT, hUT)
+					DLL_CheckLNAPIResult NSFDbUpdateUnread(hDb, hUT)
+					DLL_CheckLNAPIResult IDDestroyTable(hOT)
+					DLL_CheckLNAPIResult IDDestroyTable(hUT)
+					DLL_CheckLNAPIResult NSFDbClose(hDb)
+				End If
+				If db.Server="" Then path=db.FilePath Else path=db.Server+"!!"+db.FilePath
+				DLL_CheckLNAPIResult NSFDbOpen(path, hDb)
+				DLL_CheckLNAPIResult NSFDbGetUnreadNoteTable(hDb, UserName, ln, True, hUT)
+				DLL_CheckLNAPIResult NSFDbUpdateUnread(hDb, hUT)
+				DLL_CheckLNAPIResult IDTableCopy(hUT, hOT)
+				Set tempDb=db
+			End If
+			NoteId=Clng("&H" + doc.NoteID)
+			If IDIsPresent (hUT, NoteID) Then
+				DLL_CheckLNAPIResult IDDelete (hUT, NoteID, 0)
+'				DLL_CheckLNAPIResult NSFDbSetUnreadNoteTable(hDb, UserName, ln, True, hOT, hUT)
+'				DLL_CheckLNAPIResult NSFDbUpdateUnread(hDb, hUT)
+			End If
+			Set doc=dc.GetNextDocument
+		Wend
+		If Not tempDb Is Nothing Then
+			DLL_CheckLNAPIResult NSFDbSetUnreadNoteTable(hDb, UserName, ln, True, hOT, hUT)
+			DLL_CheckLNAPIResult NSFDbUpdateUnread(hDb, hUT)
+			DLL_CheckLNAPIResult IDDestroyTable(hOT)
+			DLL_CheckLNAPIResult IDDestroyTable(hUT)
+			DLL_CheckLNAPIResult NSFDbClose(hDb)
+		End If
+	End If
+	
+	DLL_MarkRead=True
+	
+	Goto endh
+handler:
+	ErrorString="("+LibName+") "+FuncName+", стр. "+Cstr(Erl)+Chr(10)+Error$
+	Error Err, ErrorString
+endh:
+End Function
+
+'++LotusScript Development Environment:2:1:DLL_MarkUnread:1:8
+Function DLL_MarkUnread(dc As Variant, UserName As Variant) As Variant
+	On Error Goto handler
+	FuncName="DLL_MarkUnread"
+	DLL_MarkUnread=False
+	
+	Dim hDb As Long, hUT As Long, hOT As Long
+	Dim ln As Integer
+	ln=DLL_LNAPILen(Cstr(UserName))
+	Dim doc As NotesDocument
+	
+	If dc Isa "NotesDocument" Then
+		Set doc=dc
+		If doc.NoteId="0" Then Exit Function
+		
+		Set db=doc.ParentDatabase
+		If db.Server="" Then path=db.FilePath Else path=db.Server+"!!"+db.FilePath
+		DLL_CheckLNAPIResult NSFDbOpen(path, hDb)
+		DLL_CheckLNAPIResult NSFDbGetUnreadNoteTable(hDb, UserName, ln, True, hUT)
+		DLL_CheckLNAPIResult NSFDbUpdateUnread(hDb, hUT)
+		DLL_CheckLNAPIResult IDTableCopy(hUT, hOT)
+		NoteId=Clng("&H" + doc.NoteID)
+		
+		DLL_CheckLNAPIResult IDInsert (hUT, NoteID, 0)
+		DLL_CheckLNAPIResult NSFDbSetUnreadNoteTable(hDb, UserName, ln, True, hOT, hUT)
+		DLL_CheckLNAPIResult NSFDbUpdateUnread(hDb, hUT)
+		
+		DLL_CheckLNAPIResult IDDestroyTable(hOT)
+		DLL_CheckLNAPIResult IDDestroyTable(hUT)
+		DLL_CheckLNAPIResult NSFDbClose(hDb)
+	Elseif dc Isa "NotesDocumentCollection" Then
+		If dc.Count<1 Then Exit Function
+		Set doc=dc.GetFirstDocument
+		Set db=doc.ParentDatabase
+		If db.Server="" Then path=db.FilePath Else path=db.Server+"!!"+db.FilePath
+		DLL_CheckLNAPIResult NSFDbOpen(path, hDb)
+		DLL_CheckLNAPIResult NSFDbGetUnreadNoteTable(hDb, UserName, ln, True, hUT)
+		DLL_CheckLNAPIResult NSFDbUpdateUnread(hDb, hUT)
+		DLL_CheckLNAPIResult IDTableCopy(hUT, hOT)
+		While Not doc Is Nothing
+			NoteId=Clng("&H" + doc.NoteID)
+			DLL_CheckLNAPIResult IDInsert (hUT, NoteID, 0)
+			Set doc=dc.GetNextDocument(doc)
+		Wend
+		DLL_CheckLNAPIResult NSFDbSetUnreadNoteTable(hDb, UserName, ln, True, hOT, hUT)
+		DLL_CheckLNAPIResult NSFDbUpdateUnread(hDb, hUT)
+		DLL_CheckLNAPIResult IDDestroyTable(hOT)
+		DLL_CheckLNAPIResult IDDestroyTable(hUT)
+		DLL_CheckLNAPIResult NSFDbClose(hDb)
+	Elseif dc Isa "DocumentCollection" Then
+		If dc.Count<1 Then Exit Function
+		Set doc=dc.GetFirstDocument
+		Set tempDb=Nothing
+		While Not doc Is Nothing
+			Set db=doc.ParentDatabase
+			If Not db Is tempDb Then
+				If Not tempDb Is Nothing Then
+					DLL_CheckLNAPIResult NSFDbSetUnreadNoteTable(hDb, UserName, ln, True, hOT, hUT)
+					DLL_CheckLNAPIResult NSFDbUpdateUnread(hDb, hUT)
+					DLL_CheckLNAPIResult IDDestroyTable(hOT)
+					DLL_CheckLNAPIResult IDDestroyTable(hUT)
+					DLL_CheckLNAPIResult NSFDbClose(hDb)
+				End If
+				If db.Server="" Then path=db.FilePath Else path=db.Server+"!!"+db.FilePath
+				DLL_CheckLNAPIResult NSFDbOpen(path, hDb)
+				DLL_CheckLNAPIResult NSFDbGetUnreadNoteTable(hDb, UserName, ln, True, hUT)
+				DLL_CheckLNAPIResult NSFDbUpdateUnread(hDb, hUT)
+				DLL_CheckLNAPIResult IDTableCopy(hUT, hOT)
+				Set tempDb=db
+			End If
+			NoteId=Clng("&H" + doc.NoteID)
+			DLL_CheckLNAPIResult IDInsert (hUT, NoteID, 0)
+			Set doc=dc.GetNextDocument
+		Wend
+		If Not tempDb Is Nothing Then
+			DLL_CheckLNAPIResult NSFDbSetUnreadNoteTable(hDb, UserName, ln, True, hOT, hUT)
+			DLL_CheckLNAPIResult NSFDbUpdateUnread(hDb, hUT)
+			DLL_CheckLNAPIResult IDDestroyTable(hOT)
+			DLL_CheckLNAPIResult IDDestroyTable(hUT)
+			DLL_CheckLNAPIResult NSFDbClose(hDb)
+		End If
+	End If
+	
+	DLL_MarkUnread=True
+	
+	Goto endh
+handler:
+	ErrorString="("+LibName+") "+FuncName+", стр. "+Cstr(Erl)+Chr(10)+Error$
+	Error Err, ErrorString
+endh:
+End Function
+
+'++LotusScript Development Environment:2:1:DLL_CreateHTMLItem:1:8
+Function DLL_CreateHTMLItem(doc As Variant, itemName As Variant, itemValue As Variant) As NotesItem
+	On Error Goto handler
+	FuncName="DLL_CreateHTMLItem"
+	
+	Dim iName As String, iValue As String
+	iName=Cstr(itemName)
+	iValue=Cstr(itemValue)
+	If doc.HasItem(iName) Then Call doc.RemoveItem(iName)
+	DLL_CheckLNAPIResult NSFItemAppend2(doc.Handle, 0, iName, Dll_LNAPILen(iName), 21, iValue, Dll_LNAPILen(iValue))
+	Set DLL_CreateHTMLItem=doc.GetFirstItem(itemName)
+	
+	Goto endh
+handler:
+	ErrorString="("+LibName+") "+FuncName+", стр. "+Cstr(Erl)+Chr(10)+Error$
+	Error Err, ErrorString
+endh:
+End Function

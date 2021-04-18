@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="UTF-8"?><note class="form" maintenanceversion="1.0" replicaid="44257D5C002A4928" version="10.0" xmlns="http://www.lotus.com/dxl">
+<noteinfo noteid="6ca" sequence="22" unid="C32578780020BA2E44257BA60026FC4C">
+<created><datetime>20130712T110549,56+04</datetime></created>
+<modified><datetime>20210418T115559,53+03</datetime></modified>
+<revised><datetime>20200506T082919,05+03</datetime></revised>
+<lastaccessed><datetime>20210418T115559,52+03</datetime></lastaccessed>
+<addedtofile><datetime>20210418T115559,52+03</datetime></addedtofile></noteinfo>
+<updatedby><name>CN=Salpagarov/O=tps</name><name>CN=dev/O=fbyte</name><name>CN=Salpagarov/O=tps</name><name>CN=dev/O=fbyte</name><name>CN=zeos/O=tps</name><name>CN=develop/O=tps</name><name>CN=Salpagarov/O=tps</name><name>CN=Igor V Tomnov/O=SVO</name></updatedby>
+<wassignedby><name>CN=Igor V Tomnov/O=SVO</name></wassignedby>
+<item name="$FlagsExt" sign="true"><text>D</text></item>
+<item name="$ImagesWide" sign="true"><number>1</number></item>
+<item name="$ImagesHigh" sign="true"><number>1</number></item>
+<item name="$ImagesColorize" sign="true"><number>0</number></item>
+
+
+<item name="$MimeType" sign="true"><text>image/gif</text></item>
+<item name="$FileModDT" sign="true"><datetime dst="true">20070626T054410,00+04</datetime></item>
+<item name="$ImageNames" sign="true"><text>vwicn082.gif</text></item>
+<item name="elm_cat" sign="true"><text>fbyte\Картинки</text></item>
+<item name="$TITLE" sign="true"><textlist><text>активная</text><text>active</text></textlist></item>
+<item name="$DesignerVersion" sign="true"><text>8.5.3</text></item>
+<item name="$Flags"><text>34CiQ$</text></item>
+<item name="$EditFilePath"><text>C:\Users\IG1934~1.TOM\AppData\Local\Temp\notes95E17C\~vwicn0822.gif</text></item></note>

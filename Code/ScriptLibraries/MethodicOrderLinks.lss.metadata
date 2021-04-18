@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?><note class="filter" maintenanceversion="1.0" replicaid="44257D5C002A4928" version="10.0" xmlns="http://www.lotus.com/dxl">
+<noteinfo noteid="7b6" sequence="22" unid="3650ED33DE09E74D4325805000494563">
+<created><datetime>20161018T162018,91+03</datetime></created>
+<modified><datetime>20210418T115609,63+03</datetime></modified>
+<revised><datetime>20210114T113929,43+03</datetime></revised>
+<lastaccessed><datetime>20210418T115609,62+03</datetime></lastaccessed>
+<addedtofile><datetime>20210418T115609,62+03</datetime></addedtofile></noteinfo>
+<updatedby><name>CN=Aleksandr Galko/O=tps</name><name>CN=Aleksei Petrov/O=tps</name></updatedby>
+<wassignedby><name>CN=Aleksei Petrov/O=tps</name></wassignedby>
+<item name="$TITLE" sign="true"><text>MethodicOrderLinks</text></item>
+<item name="$PublicAccess" sign="true"><text>1</text></item>
+<item name="$DesignerVersion"><text>8.5.3</text></item>
+
+
+<item name="$Class"><text>dev.tps.workflow.orders.re</text></item>
+<item name="$Flags"><text>s34Q</text></item></note>

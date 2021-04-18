@@ -1,0 +1,376 @@
+'++LotusScript Development Environment:2:5:(Options):0:74
+Option Public
+Option Declare
+
+Use "fbyte"
+Use "tps.common"
+
+
+'++LotusScript Development Environment:2:5:(Forward):0:1
+Declare Public Class TPS_ProjectsService As FBase_Abstract_Service
+Declare Public Class TPS_Projects_Project As FBase_Abstract_Object_Doc
+
+'++LotusScript Development Environment:2:5:(Declarations):0:10
+Private Const DATABASE_KEY = "tps.projects"
+
+Const DOMAIN_TPS_PROJECTS_PROJECT = "tps.projects.project"
+
+'======================================================================================================================================
+'	CLASS TPS_ProjectsService
+'======================================================================================================================================
+Public Class TPS_ProjectsService As FBase_Abstract_Service
+	Private m_db As NotesDatabase
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Private Function getId( in_key As Variant ) As String
+		On Error GoTo error_point
+		Call Me.log.enter( TypeName( Me ) & "." & GetThreadInfo(1))
+		
+		Dim key As String
+		If ( LCase( TypeName( in_key )) = "objectlink" ) Then
+			key = in_key.id 
+		ElseIf IsScalar( in_key ) Then 
+			key = in_key
+		Else
+			Error 1001, "The type of data of parameter 'in_key' is '" & TypeName( in_key ) & "'. It is not supported"
+		End If
+		
+		getId = key
+		
+		Call Me.log.trace( "result: " & getId )
+		Call Me.log.exit( TypeName( Me ) & "." & GetThreadInfo(1))
+		Exit Function
+		
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Function
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	'	PUBLIC:
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Sub New( in_ps As Variant )
+	End Sub
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Property Get db As NotesDatabase
+		On Error GoTo error_point
+		Call Me.log.enter( TypeName( Me ) & "." & GetThreadInfo(1))
+		
+		If ( m_db Is Nothing )Then
+			Set m_db = Me.sm.base.databases.get( DATABASE_KEY )
+		End If
+		Set db = m_db
+		
+		Call Me.log.traceObject( "result", db )		
+		Call Me.log.exit( TypeName( Me ) & "." & GetThreadInfo(1))
+		Exit Property
+		
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Property
+	
+	
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Function getObject( in_link As Variant ) As Variant
+		On Error GoTo error_point
+		Call Me.log.enter( TypeName( Me ) & "." & GetThreadInfo(1))
+		Call Me.log.parameter( "in_link", in_link )
+		
+		Select Case in_link.domain
+			Case DOMAIN_TPS_PROJECTS_PROJECT:
+				Set getObject = getProject( in_link )
+			Case Else
+				Error 1001, "The data of type '" & in_link.domain & "' of parameter 'in_link.domain' is not supported"
+		End Select
+		
+		Call Me.log.traceObject( "result", getObject )
+		Call Me.log.exit( TypeName( Me ) & "." & GetThreadInfo(1))
+		Exit Function
+		
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Function
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Function getDocObject( in_doc As NotesDocument ) As Variant
+		On Error GoTo error_point
+		Call Me.log.enter( TypeName( Me ) & "." & GetThreadInfo(1))
+		Call Me.log.parameter( "in_doc", in_doc )
+		
+		Select Case LCase( in_doc.form(0))
+			Case "f01", "tps.projects.project", "tps.projects.project_business":
+				Set getDocObject = New TPS_Projects_Project( in_doc, Me.Me_variant )
+			Case Else:
+				Error 1001, "Форма '" & in_doc.form(0) & "' не поддерживается"
+		End Select
+		
+		Call Me.log.traceObject( "result", getDocObject )
+		Call Me.log.exit( TypeName( Me ) & "." & GetThreadInfo(1))
+		Exit Function
+		
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Function
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Function getProject( in_key As Variant ) As Variant
+		On Error GoTo error_point
+		Call Me.log.enter( TypeName( Me ) & "." & GetThreadInfo(1))
+		Call Me.log.parameter( "in_key", in_key )
+		
+		Dim id As String, doc As NotesDocument
+		id = Me.getId( in_key )
+		Set doc = Me.db.Getdocumentbyunid( id )
+		Set getProject = Me.getDocObject( doc )
+		
+		Call Me.log.traceObject( "result", getProject )
+		Call Me.log.exit( TypeName( Me ) & "." & GetThreadInfo(1))
+		Exit Function
+		
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$ 
+	End Function
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------	
+	Function dialogSelectProject( in_isMult As Boolean ) As MixCollection
+		On Error GoTo error_point
+		Call Me.log.enter( "<" & TypeName( Me ) & "." & GetThreadInfo(1) & ">" )
+		Call Me.log.parameter( "in_isMult", in_isMult )
+		
+		Dim mxResult As New MixCollection
+		Set dialogSelectProject = mxResult
+		
+		Dim vw As NotesView, viewname As String
+		viewname = "(tps.projects.bycategorystagename)"
+		Set vw = Me.db.getView( viewname )
+		If ( vw Is Nothing ) Then
+			viewname = "(tps.projects.bycategorystagename)"
+			Set vw = Me.db.getView( viewname )
+			If ( vw Is Nothing ) Then
+				Error 1001, "View '" & viewname & "' is not exist"
+			End If
+		End If
+				
+		Dim ws As New NotesUIWorkspace, dc As NotesDocumentCollection
+		Set dc = ws.PickListCollection( 3, in_isMult, Me.db.Server, Me.db.FilePath, vw.Name, "Список проектов", "Выберите документ(ы) и нажмите  OK" )
+		If ( dc.Count > 0 ) Then
+			Dim doc As NotesDocument
+			Set doc = dc.GetFirstDocument
+			Do While Not ( doc Is Nothing )
+				Dim c As Variant
+				Set c = Me.getDocObject(doc)
+				Call mxResult.Append( c )
+				Set doc = dc.GetNextDocument( doc )
+			Loop
+		End If
+		
+		Call Me.log.exit( "</" & TypeName( Me ) & "." & GetThreadInfo(1) & ">" )
+		Exit Function
+		
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Function
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------	
+	Function setProjectInDoc( in_doc As NotesDocument, in_isMult As Boolean ) As Integer
+		On Error GoTo error_point
+		Call Me.log.enter( "<" & TypeName( Me ) & "." & GetThreadInfo(1) & ">" )
+		Call Me.log.parameter( "in_doc", in_doc )
+		Call Me.log.parameter( "in_isMult", in_isMult )
+		
+		setProjectInDoc = setProjectInDocItemPrefix(in_doc, in_isMult, "project")
+	
+		
+		Call Me.log.exit( "</" & TypeName( Me ) & "." & GetThreadInfo(1) & ">" )
+		Exit Function
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Function
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------	
+	Function setProjectInDocItemPrefix( in_doc As NotesDocument, in_isMult As Boolean, itemPrefix As String ) As Integer
+		On Error GoTo error_point
+		Call Me.log.enter( "<" & TypeName( Me ) & "." & GetThreadInfo(1) & ">" )
+		Call Me.log.parameter( "in_doc", in_doc )
+		Call Me.log.parameter( "in_isMult", in_isMult )
+		Call Me.log.parameter( "in_itemPrefix", itemPrefix )
+		
+		Dim mxProjects As Variant
+		Set mxProjects = Me.dialogSelectProject( in_isMult )
+		If ( mxProjects.Count > 0 ) Then
+			
+			Dim mxKey As New Mixcollection, mxID As New Mixcollection, mxTitle As New Mixcollection, mxDomain As New Mixcollection
+			Dim mxODObjAccess As New Mixcollection, mxODObjID As New Mixcollection, mxODObjName As New Mixcollection, mxODObjPath As New Mixcollection
+			
+			ForAll elem In mxProjects.Array
+				If ( elem.uniqueKey <> "" ) Then
+					
+					Call mxKey.Append( elem.uniqueKey )
+					Call mxID.Append( elem.id )
+					Call mxTitle.Append( elem.title )
+					Call mxDomain.Append( elem.domain )
+					If ( elem.ODFieldsAccess.Count > 0 ) Then
+						ForAll odfields In elem.ODFieldsAccess.Array
+							Call mxODObjAccess.Append( odfields.access )
+							Call mxODObjID.Append( odfields.id )
+							Call mxODObjName.Append( odfields.name )
+							Call mxODObjPath.Append( odfields.path )
+						End ForAll
+					End If
+				End If
+			End ForAll
+			
+			If ( mxKey.Count > 0 ) Then
+				Call in_doc.Replaceitemvalue( itemPrefix & "UniqueKey", mxKey.Array )	
+				Call in_doc.Replaceitemvalue( itemPrefix & "_id", mxID.Array )
+				Call in_doc.Replaceitemvalue( itemPrefix & "_title", mxTitle.Array )
+				Call in_doc.Replaceitemvalue( itemPrefix & "_domain", mxDomain.Array )
+				If ( mxODObjAccess.Count > 0 ) Then
+					Call in_doc.Replaceitemvalue( itemPrefix & "AccessObjAccess", mxODObjAccess.Array )
+					Call in_doc.Replaceitemvalue( itemPrefix & "AccessObjID", mxODObjID.Array )
+					Call in_doc.Replaceitemvalue( itemPrefix & "AccessObjName", mxODObjName.Array )
+					Call in_doc.Replaceitemvalue( itemPrefix & "AccessObjPath", mxODObjPath.Array )
+				Else
+					Call in_doc.Replaceitemvalue( itemPrefix & "AccessObjAccess", "" )
+					Call in_doc.Replaceitemvalue( itemPrefix & "AccessObjID", "" )
+					Call in_doc.Replaceitemvalue( itemPrefix & "AccessObjName", "" )
+					Call in_doc.Replaceitemvalue( itemPrefix & "AccessObjPath", "" )
+				End If
+				setProjectInDocItemPrefix = 1
+			End If
+			
+		End If
+		
+		Call Me.log.exit( "</" & TypeName( Me ) & "." & GetThreadInfo(1) & ">" )
+		Exit Function
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Function
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------	
+	Function clearProjectInDoc( in_doc As NotesDocument ) As Integer
+		On Error GoTo error_point
+		Call Me.log.enter( "<" & TypeName( Me ) & "." & GetThreadInfo(1) & ">" )
+		Call Me.log.parameter( "in_doc", in_doc )
+		
+		Dim itemnames( 1 To 8 ) As String
+		itemnames(1) = "projectUniqueKey"
+		itemnames(2) = "project_id"
+		itemnames(3) = "project_title"
+		itemnames(4) = "project_domain"
+		itemnames(5) = "projectAccessObjAccess"
+		itemnames(6) = "projectAccessObjID"
+		itemnames(7) = "projectAccessObjName"
+		itemnames(8) = "projectAccessObjPath"
+		
+		ForAll itemname In itemnames
+			If ( itemname <> "" ) Then
+				Call in_doc.Removeitem( itemname )
+			End If
+		End ForAll
+		
+		clearProjectInDoc = 1
+		
+		Call Me.log.exit( "</" & TypeName( Me ) & "." & GetThreadInfo(1) & ">" )
+		Exit Function
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Function
+	
+	
+End Class
+'======================================================================================================================================
+'	CLASS TPS_Projects_Project
+'======================================================================================================================================
+Public Class TPS_Projects_Project As FBase_Abstract_Object_Doc
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	'	PUBLIC:
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Sub New( in_doc As NotesDocument, in_ps As Variant )
+	End Sub
+	'-----------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Property Get domain As String
+		On Error GoTo error_point
+		domain = DOMAIN_TPS_PROJECTS_PROJECT
+		Exit Property 
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Property
+	'-----------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Property Get id As String
+		On Error GoTo error_point
+		If (m_doc.HasItem( "id" )) Then
+			id = m_doc.id(0)
+		Else
+			id = m_doc.UniversalID
+		End If
+		Exit Property 
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Property
+	'-----------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Property Get title As String
+		On Error GoTo error_point
+		If (m_doc.HasItem( "ProjectName" )) Then
+			title = m_doc.ProjectName(0)
+		End If
+		Exit Property 
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Property
+	'-----------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Property Get number As Integer
+		On Error GoTo error_point
+		If (m_doc.HasItem( "ProjectNumber" )) Then
+			number = m_doc.ProjectNumber(0)
+		End If
+		Exit Property 
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Property
+	'-----------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Property Get uniqueKey As String
+		On Error GoTo error_point
+		If ( m_doc.HasItem( "ProjectUniqueKey" ) ) Then
+			uniqueKey = m_doc.ProjectUniqueKey(0)
+		End If
+		Exit Property 
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Property
+	'-----------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Property Get ODFieldsAccess As Variant
+		On Error GoTo error_point
+		
+		Dim result As New Mixcollection
+		Set ODFieldsAccess = result
+		
+		Dim itemprefix As String
+		itemprefix = "ProjectAccess"
+		If m_doc.Hasitem( itemprefix & "ObjID" ) Then
+			Dim v As Variant, i As Integer
+			Dim ODFields As Variant
+			
+			v = m_doc.Getfirstitem( itemprefix & "ObjID" ).Values
+			If ( v(0) <> "" ) Then
+				For i=LBound(v) To UBound(v)
+					Set ODFields = New ODFields( i, itemprefix, m_doc )
+					Call result.Append( ODFields )
+				Next
+			End If
+		End If
+		
+		Exit Property 
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Property
+	
+	Sub Delete()
+	End Sub
+End Class

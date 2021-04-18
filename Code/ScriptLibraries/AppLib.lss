@@ -1,0 +1,2746 @@
+'++LotusScript Development Environment:2:5:(Options):0:74
+Option Public
+Option Declare
+
+Use "DWFAppAction"
+Use "DWFODLib.UI"
+Use "ArrayTools"
+Use "fbyte"
+Use "App"
+
+
+'++LotusScript Development Environment:2:5:(Forward):0:1
+Declare Class AppManualActionStore
+Declare Class AppDirStore
+Declare Class Reminder
+Declare Class PrintService
+Declare Private Class Unwinder
+Declare Public Class MiniOdObj
+Declare Sub Terminate
+Declare Private Sub changeField(dbPC As NotesDatabase, tdoc As NotesDocument, fieldName As String, v As Variant)
+Declare Private Sub ReloadDocumentFromDisk(in_doc As NotesDocument)
+
+'++LotusScript Development Environment:2:5:(Declarations):0:10
+Dim session As NotesSession
+Dim db As NotesDatabase
+
+Private Const xlCenter = &HFFFFEFF4
+Private Const xlBottom = &HFFFFEFF5
+Private Const xlContext = &HFFFFEC76
+Private Const xlAutomatic = &HFFFFEFF7
+Private Const xlContinuous = 1
+Private Const xlThin = 2
+Private Const xlEdgeLeft = 7
+Private Const xlEdgeTop = 8
+Private Const xlEdgeBottom = 9
+Private Const xlEdgeRight = 10
+Private Const xlInsideVertical = 11
+Private Const xlInsideHorizontal = 12
+
+
+
+
+
+Class AppManualActionStore
+
+	' ---------------------------------------------------------------------------------------------------------------------------------
+	Sub new()
+	End Sub	
+	' ---------------------------------------------------------------------------------------------------------------------------------
+	Function Stage04Approved(ReturnResult As Variant)
+		On Error Goto errh
+		
+		Dim UIAppStore As New UIAppStore
+		Dim db As NotesDatabase
+		Dim ApprovedBy As String
+		Dim ParentMethodID As String
+		Dim docParent As NotesDocument
+		Dim docTemp As NotesDocument
+		Dim ItemRef As NotesItem
+		
+		Set db = UIAppStore.doc.ParentDatabase
+		If (UIAppStore.doc.HasItem("ParentMethodRef")) Then
+			ParentMethodID = UIAppStore.doc.ParentMethodRef(0) '
+		End If
+		If (ParentMethodID <> "") Then
+			On Error 4091 Resume Next 'bad unid
+			Set docParent = db.GetDocumentByUNID(ParentMethodID)
+			If (docParent Is Nothing) Then
+				Msgbox {Не найден родительский документ (docParent Is Nothing)}, 16, ERR_MSG_TITLE
+				ReturnResult = -1
+				Exit Function
+			End If
+			
+			'If (docParent.Status(0) <> "approved") Then
+			If ((docParent.Status(0) <> "approved") And (docParent.Status(0) <> "archive")) Then
+				Msgbox {Для выполнения этого действия необходимо, чтобы родительский документ был в статусе 'Действующая', или в статусе 'Архив'}, 48, ERR_MSG_TITLE
+				ReturnResult = -1
+				Exit Function
+			End If
+'			If docParent.HasItem("NewVerRef") Then
+'				Msgbox {Родительский документ уже переведен в архив}, 48, ERR_MSG_TITLE
+'				ReturnResult = -1
+'				Exit Function
+'			End If
+		End If
+		
+		
+		ApprovedBy = UIAppStore.doc.ApprovedBy(0)
+		Select Case ApprovedBy
+		Case "BoardDecision"
+			UIAppStore.doc.SolutionValue = "1"
+		Case "Order"
+			UIAppStore.doc.SolutionValue = "2"
+		'20151130 Gorbunov
+		Case "directors"
+			UIAppStore.doc.SolutionValue = "3"
+		Case "shareholder"
+			UIAppStore.doc.SolutionValue = "4"
+		End Select
+		'-->
+		
+		Call UIAppStore.doc.Save(True, True)
+		
+		If (DWFACompleteStage(UIAppStore.doc) <> 1) Then
+			ReturnResult = -1
+			Exit Function
+		End If
+		
+		If (ParentMethodID <> "") Then
+			
+			Set docTemp = db.CreateDocument
+			Call docTemp.MakeResponse(UIAppStore.doc)
+			Set ItemRef = docTemp.GetFirstItem("$Ref")
+			If (ItemRef Is Nothing) Then
+				Msgbox {Не удалось сформировать поле "$Ref"}, 16, ERR_MSG_TITLE
+				ReturnResult = -1
+				Exit Function
+			End If
+			Call ItemRef.CopyItemToDocument(docParent, "NewVerRef")
+			docParent.SolutionValue = "2"
+			docParent.SolutionComment = {Дата протокола: } & Cstr(UIAppStore.doc.ActDate(0)) & {; Номер протокола: } & Cstr(UIAppStore.doc.ActDocNumber(0))
+			Call docParent.Save(True, True)
+
+			If (DWFACompleteStage(docParent) <> 1) Then
+				ReturnResult = -1
+				Exit Function
+			End If
+		End If
+		
+		Call UIAppStore.docUI.Close(True)
+		
+		
+		Exit Function
+errh:
+		Msgbox Error$ & {. Error # } & Cstr(Err) & { on line # } & Cstr(Erl) & { in (Stage04Approved) "AppManualActionStore" class}
+		Resume endh
+endh:
+	End Function
+	' ---------------------------------------------------------------------------------------------------------------------------------	
+	Function Stage04Canceled(ReturnResult As Variant)
+		On Error Goto errh
+		
+		Dim UIAppStore As New UIAppStore
+		
+		UIAppStore.doc.SolutionValue = "-1"
+		
+		If (DWFACompleteStage(UIAppStore.doc) <> 1) Then
+			ReturnResult = -1
+			Exit Function
+		End If
+		
+		Call UIAppStore.docUI.Close(True)
+		
+		Exit Function
+errh:
+		Msgbox Error$ & {. Error # } & Cstr(Err) & { on line # } & Cstr(Erl) & { in (Stage04Canceled) "AppManualActionStore" class}
+		Resume endh
+endh:
+	End Function
+	' ---------------------------------------------------------------------------------------------------------------------------------
+	%REM
+	Sub LaunchWordDocument
+	Description: Comments for Sub
+	%END REM
+	function LaunchWordDocument(sm As Variant, in_doc As NotesDocument) As Variant
+		On Error GoTo ErrHandler
+		On Error 4091 Resume Next ' Invalid UNID
+
+		Dim cdb As NotesDatabase
+		Set cdb = in_doc.Parentdatabase
+
+		Dim wObj As Variant, wordDoc As Variant
+		Set wObj = Nothing
+		Set LaunchWordDocument = Nothing
+
+		Dim setting As Variant, key$
+		Key = "tps.workflow.orders.template"		
+		Set setting = sm.core.settings( cdb ).get( KEY )
+		If ( setting Is Nothing ) Then
+			Print "Не найдена настройка '" & Key & "'"
+			Exit Function 'Error 1000, "Не найдена настройка '" & Key & "'"
+		End If
+		
+		Dim embObj As NotesEmbeddedObject
+		Set embObj = setting.value.EmbeddedObjects(0)
+
+		Dim temp_directory$, rnd_fname, filepath$
+		temp_directory = Arrays_ReplaceSubstring( Environ( "TEMP" ), "/", "\") + "\"
+		rnd_fname = Evaluate( {@Unique} )		
+		filepath = temp_directory & rnd_fname(0) & "." & StrRightBack( embObj.Name, "." )
+		
+		Call embObj.ExtractFile( filepath )
+		
+		Set wObj = CreateObject ("Word.Application")
+		wObj.Visible = False
+		Set wordDoc = wObj.Documents.Open (filePath)
+
+		Dim Descriptors List As String
+		Descriptors("%DOCTITLE%") 		= in_doc.Name(0)
+		Descriptors("%DOCID%") 			= in_doc.RegNumber(0)
+		Descriptors("%PROTOCOL_DATE%") 	= CStr(in_doc.ActDate(0))
+		Descriptors("%PROTOCOL_NO%") 	= in_doc.ActDocNumber(0)
+		
+		Dim type_doc As NotesDocument
+		Set type_doc = cdb.Getdocumentbyunid(in_doc.ContractTypeRef(0))
+		If Not(type_doc Is Nothing) Then
+			Descriptors("%SIGNER_POST%") 	= type_doc.SignerPost(0)
+			Descriptors("%SIGNER_NAME%") 	= type_doc.SignerName(0)			
+		End If
+		
+		Select Case in_doc.ApprovedBy(0)
+		Case "shareholder"
+			Descriptors("%AUTHORIZED_BY%") 	= "решением ОСА/ОСУ/ЕУ"
+		Case "directors"
+			Descriptors("%AUTHORIZED_BY%") 	= "решением Совета директоров"
+		Case "BoardDecision"
+			Descriptors("%AUTHORIZED_BY%") 	= "решением Правления"
+		Case "committee"
+			Descriptors("%AUTHORIZED_BY%") 	= "решением Комитета Правления"
+		Case "Order"
+			Descriptors("%AUTHORIZED_BY%") 	= "приказом"
+		End Select
+		
+		Dim strLen%, executedText$, descRange
+		strLen = 255
+		ForAll docDescr In Descriptors
+			Do While wordDoc.Content.Find.Execute (ListTag (docDescr))
+				Set descRange = wordDoc.Content
+				Call descRange.Find.Execute (ListTag (docDescr), True)
+				descRange.Text = Left (docDescr, strLen) ' если в дескрипторе есть несколько строк, то find.execute некорректно заменяет - вместо новой строки два символа отображаются 
+				
+				If Len (docDescr) > strLen Then
+					executedText = Right(docDescr, Len(docDescr) - strLen)
+					Do While Len(executedText) > strLen
+						Call descRange.InsertAfter (Left (executedText, strLen))
+						executedText = Right(executedText, Len(executedText) - strLen)
+					Loop	
+					Call descRange.InsertAfter (executedText)
+				End If				
+			Loop
+		End ForAll				
+		
+
+		wObj.Visible = True
+		Set LaunchWordDocument = wordDoc
+		Exit function
+ErrHandler:
+		On Error GoTo 0
+		If not(wObj Is Nothing) Then wObj.Visible = True 
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End function
+	' ---------------------------------------------------------------------------------------------------------------------------------
+	%REM
+		Sub CreateLinkedOrder
+		Description: Создать карточки ОРД в ПМ "Приказы и распоряжения"
+	%END REM
+	Sub CreateLinkedOrder
+		On Error GoTo ErrHandler
+		On Error 4091 Resume Next ' Invalid UNID
+		
+		
+		Dim ws As New NotesUIWorkspace, cdoc As NotesDocument, uidoc As NotesUIDocument
+		Dim session As New NotesSession
+		Dim cdb As NotesDatabase
+		Set cdb = session.Currentdatabase
+		Set uidoc = ws.Currentdocument
+		Set cdoc = uidoc.Document
+		If cdoc.linkToOrder(0) <> "" Then Error 1002, "Разрешено создание только одного ОРД из Методики."
+		
+		Dim sm As Variant
+		Set sm = getServicesManager()
+		
+		Dim dbPC As NotesDatabase, Key$
+		Key = "tps.core.processcenter"
+		Set dbPC = sm.base.databases.get( Key ) 
+		If dbPC Is Nothing Then Error 1003, "Ошибка получения Центра обработки по ключу - " & Key
+		
+		Dim setting As Variant
+		Key = "tps.workflow.orders.process_id"		
+		Set setting = sm.core.settings( cdb ).get( KEY )
+		If ( setting Is Nothing ) Then Error 1000, "Не найдена настройка '" & Key & "'"
+		
+		Dim app As Variant
+		Set app = getApplicationService(sm)
+		
+		Dim ordersDB As Variant
+		Set ordersDB = app.tps.workflow.orders.db
+		
+		Dim docProcess As NotesDocument
+		Set docProcess = ordersDB.getdocumentbyUNID(setting.value)
+		If docProcess Is Nothing Then Error 1001, "Ошибка получения процесса в ПМ Приказы и распоряжения, UNID=" & setting.value
+
+		Dim docOrder As NotesDocument
+		Print "Инициализация процесса - " & docProcess.Name(0)
+		If (DWFAInitProcess(docProcess, docOrder) = 1) Then
+			If (DWFAClaim(docOrder) = 1) Then
+				Call ReloadDocumentFromDisk(docOrder)
+				
+				Dim wObj As Variant
+				Set wObj = LaunchWordDocument(sm, cdoc) ' MS Word Object
+				With docOrder
+					Call .Replaceitemvalue("LinkToMethods", cdoc.CustomID(0))
+					Call .Replaceitemvalue("LinkToMethodsStage", cdoc.StageID(0))
+					.Title = cdoc.Name(0)
+					.domain = DOMAIN_TPS_WORKFLOW_ORDERS_ORDER
+					.id = .Universalid
+					
+					Dim type_doc As NotesDocument
+					Set type_doc = cdb.Getdocumentbyunid(cdoc.ContractTypeRef(0))
+					If Not(type_doc Is Nothing) Then
+						.SignaturePost = type_doc.SignerPost(0)
+						.SignatureName = type_doc.SignerName(0)			
+					End If
+					
+					Call .Save(True, False)
+					
+					Call changeField(dbPC, cdoc, "LinkToOrder", docOrder.ID(0)) ' изменить поле через ЦО					
+				End With							
+				
+				' Создание связки
+				Dim f_link, link As TPS_Links_Link, linksview As NotesView				
+				Set f_link = app.tps.links				
+				Set link = f_link.addLink				
+				Set Link.To = f_link.getLinkDocumentByNotesDocument(docOrder)				
+				Set Link.From = f_link.getLinkDocumentByNotesDocument(cdoc)				
+				Call f_link.saveObject(link)
+
+				Dim ID$
+				ID = cdoc.Universalid
+				Call uidoc.Close(True)
+				Set cdoc = cdb.Getdocumentbyunid(ID)
+				Call ws.EditDocument(False, cdoc)
+							
+				Set uidoc = ws.EditDocument(True, docOrder)
+				Const BOOKMARK = "MainText"
+				If Not (wObj Is Nothing) Then
+					If wObj.Bookmarks.Exists(BOOKMARK) Then
+						call wObj.Bookmarks.Item(BOOKMARK).Range.Copy
+						uidoc.Gotofield("Text")
+						Call uidoc.FieldClear 
+						uidoc.Paste
+					Else
+						Print "В шаблоне MS Word приказа нет вкладки - '" & BOOKMARK & "'"
+					End If
+				End If
+			End If
+		End If
+		
+		Exit Sub
+ErrHandler:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Sub
+	' ---------------------------------------------------------------------------------------------------------------------------------
+	Sub delete()
+	End Sub
+	' ---------------------------------------------------------------------------------------------------------------------------------		
+	Sub CreateReferenceReport
+		On Error GoTo errh
+		
+		Dim ws As New NotesUIWorkspace
+		Dim DocMain As NotesDocument
+		Dim rdoc As notesdocument
+		Dim db As NotesDatabase
+		Dim v As Variant
+		Dim ErrorStr As String
+		Dim ODStoreUI As ODStoreUI
+		Dim ODObj As ODObj
+		Dim Person As New Person 
+		
+		Set session = New NotesSession 
+		Set DocMain = ws.Currentdocument.Document
+		Set db = DocMain.Parentdatabase
+		v = DocMain.dbODPath(0)
+		If (v = "") Then
+			MsgBox {В документе не задана Орг. директория}, 48, ERR_MSG_TITLE
+			Exit sub
+		End If
+		
+		Set ODStoreUI = New ODStoreUI(CStr(v), ErrorStr)
+		If (ErrorStr = "") Then
+			Set ODObj = ODStoreUI.GetObjByValue(CStr(session.UserName), ErrorStr)
+			If (ErrorStr = "") Then
+				If (Person.Init(ODObj.doc, ErrorStr) = 1) Then
+					Set ODObj = Person.GetUserPosition(ErrorStr)
+					If (ErrorStr = "") Then
+						Set rdoc = db.Createdocument()
+						rdoc.MainRef = DocMain.CustomID(0)
+						rdoc.Form = "F03"
+						rdoc.DocKind = "ExtraDoc"
+						Dim item As NotesItem
+						Set item = DocMain.Getfirstitem("DWF$Readers")
+						Call item.Copyitemtodocument(rdoc, "DWF$Readers")
+						If ODObj.SetAsAuthor(rdoc, ErrorStr) = 1 Then
+							If ODObj.WriteInReplace(rdoc, "Initiator", ErrorStr) = 1 Then
+								If ODObj.WriteInReplace(rdoc, "InitAs", ErrorStr) = 1 Then
+									Set ODObj = ODStoreUI.GetObjByValue(ODobj.doc.ParentRef(0), ErrorStr)
+									If ErrorStr = "" Then Call ODObj.WriteInReplace(rdoc, "Section", ErrorStr)
+									Call ws.Editdocument(True, rdoc, False)
+									Exit Sub	' success								
+								End If
+							End If
+						End If
+					End If			
+				End If
+			End If
+		End If
+		MsgBox ErrorStr, 48, ERR_MSG_TITLE
+		
+		
+		Exit sub
+errh:
+		MsgBox Error$ & {. Error # } & CStr(Err) & { on line # } & CStr(Erl) & { in (CreateReferenceReport) "AppManualActionStore" class}
+		Resume endh
+endh:
+	End Sub
+	
+End Class
+
+
+
+
+
+'%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+Class AppDirStore
+	Sub New()
+	End Sub
+	
+	
+	Function SetCompanyAsParent() As Integer
+		On Error GoTo errh
+		
+		Dim UIAppStore As New UIAppStore
+		Dim colC As NotesDocumentCollection
+		Dim docC As NotesDocument
+		Dim docTemp As NotesDocument
+		Dim ItemRef As NotesItem
+		Dim Viewname As String
+		
+		
+		If (session Is Nothing) Then
+			Set session = New NotesSession
+		End If
+		If (db Is Nothing) Then
+			Set db = session.CurrentDatabase
+		End If
+		
+		Viewname = "(App.Company.Active)"
+		
+		Set colC = UIAppStore.ws.PickListCollection(_
+		3, False, db.Server, db.FilePath, Viewname,_
+		"Список компаний", "Выберите компанию")
+		If (colC.Count = 0) Then Exit Function
+		
+		Set docC = colC.GetFirstDocument
+		Set docTemp = db.CreateDocument
+		Call docTemp.MakeResponse(docC)
+		Set ItemRef = docTemp.GetFirstItem("$Ref")
+		If (ItemRef Is Nothing) Then
+			MsgBox {Не удалось сформировать "$Ref" поле}, 16, ERR_MSG_TITLE
+			Exit Function
+		End If
+		Call ItemRef.CopyItemToDocument(UIAppStore.doc, "companyRef")
+		UIAppStore.doc.Company = docC.Title(0)
+		UIAppStore.doc.CompanyObjAccess	= docC.GetItemValue("CompanyObjAccess")
+		UIAppStore.doc.CompanyObjID 		= docC.GetItemValue("CompanyObjID")
+		UIAppStore.doc.CompanyObjName 	= docC.GetItemValue("CompanyObjName")
+		UIAppStore.doc.CompanyObjPath 	= docC.GetItemValue("CompanyObjPath")
+		
+		Call UIAppStore.docUI.Refresh()
+		
+		SetCompanyAsParent = 1
+		
+		Exit Function
+errh:
+		MsgBox Error$ & {. Error # } & CStr(Err) & { on line # } & CStr(Erl) & { in (SetCompanyAsParent) "AppDirStore" class}
+		Resume endh
+endh:
+	End Function
+	
+	
+	Function SetCompany() As Integer
+		On Error GoTo errh
+		
+		Dim UIAppStore As New UIAppStore
+		Dim colC As NotesDocumentCollection
+		Dim docC As NotesDocument
+		Dim docTemp As NotesDocument
+		Dim ItemRef As NotesItem
+		Dim Viewname As String
+		
+		
+		If (session Is Nothing) Then
+			Set session = New NotesSession
+		End If
+		If (db Is Nothing) Then
+			Set db = session.CurrentDatabase
+		End If
+		
+		Viewname = "(App.Company.Active)"
+		Set colC = UIAppStore.ws.PickListCollection(_
+		3, False, db.Server, db.FilePath, Viewname,_
+		"Список компаний", "Выберите компанию")
+		If (colC.Count = 0) Then Exit Function
+		
+		Set docC = colC.GetFirstDocument
+		Set docTemp = db.CreateDocument
+		Call docTemp.MakeResponse(docC)
+		Set ItemRef = docTemp.GetFirstItem("$Ref")
+		If (ItemRef Is Nothing) Then
+			MsgBox {Не удалось сформировать "$Ref" поле}, 16, ERR_MSG_TITLE
+			Exit Function
+		End If
+		Call ItemRef.CopyItemToDocument(UIAppStore.doc, "CompanyRef")
+		UIAppStore.doc.Company = docC.Title(0)
+		UIAppStore.doc.CompanyObjAccess	= docC.GetItemValue("CompanyObjAccess")
+		UIAppStore.doc.CompanyObjID 	= docC.GetItemValue("CompanyObjID")
+		UIAppStore.doc.CompanyObjName 	= docC.GetItemValue("CompanyObjName")
+		UIAppStore.doc.CompanyObjPath 	= docC.GetItemValue("CompanyObjPath")
+		
+		UIAppStore.doc.CompanyODObjAccess	= docC.GetItemValue("CompanyODObjAccess")
+		UIAppStore.doc.CompanyODObjID 		= docC.GetItemValue("CompanyODObjID")
+		UIAppStore.doc.CompanyODObjName 	= docC.GetItemValue("CompanyODObjName")
+		UIAppStore.doc.CompanyODObjPath 	= docC.GetItemValue("CompanyODObjPath")
+		
+		Call UIAppStore.docUI.Refresh()
+		
+		Exit Function
+errh:
+		MsgBox Error$ & {. Error # } & CStr(Err) & { on line # } & CStr(Erl) & { in (SetCompany) "AppDirStore" class}
+		Resume endh
+endh:
+	End Function
+	
+	
+	Function CreateSubContractType() As Integer
+		On Error GoTo errh
+		
+		Dim UIAppStore As New UIAppStore
+		Dim docNew As NotesDocument
+		Dim docTemp As NotesDocument
+		Dim ItemRef As NotesItem
+		
+		If (session Is Nothing) Then
+			Set session = New NotesSession
+		End If
+		If (db Is Nothing) Then
+			Set db = session.CurrentDatabase
+		End If
+		
+		If (UIAppStore.docUI.IsNewDoc = True) Then
+			MsgBox {Необходимо сохранить документ}, 48, {Операция остановлена}
+			Exit Function
+		End If
+		
+		Set docNew = db.CreateDocument
+		docNew.Form = "ContractType"
+		docNew.CustomID = docNew.UniversalID
+		docNew.dbPCPath = UIAppStore.doc.dbPCPath(0)
+		docNew.dbODPath = UIAppStore.doc.dbODPath(0)
+		docNew.dbDirPath = UIAppStore.doc.dbDirPath(0)
+		
+		Set docTemp = db.CreateDocument
+		Call docTemp.MakeResponse(UIAppStore.doc)
+		Set ItemRef = docTemp.GetFirstItem("$Ref")
+		If (ItemRef Is Nothing) Then
+			MsgBox {Не удалось сформировать "$Ref" поле}, 16, ERR_MSG_TITLE
+			Exit Function
+		End If
+		Call ItemRef.CopyItemToDocument(docNew, "ParentRef")
+		
+		Call UIAppStore.ws.EditDocument(True, docNew)
+		
+		CreateSubContractType = 1
+		
+		Exit Function
+errh:
+		MsgBox Error$ & {. Error # } & CStr(Err) & { on line # } & CStr(Erl) & { in (CreateSubContractType) "AppDirStore" class}
+		Resume endh
+endh:
+	End Function
+	
+	
+	Function SetContractType() As Integer
+		On Error GoTo errh
+		
+		Dim UIAppStore As New UIAppStore
+		Dim col As NotesDocumentCollection
+		Dim docCType As NotesDocument
+		Dim docCTypeSub As NotesDocument
+		
+		
+		If (UIAppStore.doc.Company(0) = "") Then
+			Msgbox {Необходимо заполнить поле "Общество"}, 48, ERR_MSG_TITLE
+			Exit Function
+		End If
+		
+		If (session Is Nothing) Then Set session = New NotesSession
+		If (db Is Nothing) Then	Set db = session.CurrentDatabase
+		
+		Set col = UIAppStore.ws.PickListCollection(4, False, db.Server, db.FilePath, "(App.AgreementByCompany.AllByCompanyRef)",_
+		"Список видов документов", "Выберите вид", UIAppStore.doc.companyRef(0))
+		
+		If (col.Count = 0) Then	Exit Function
+		
+		Set docCType = col.GetFirstDocument
+		Select Case docCType.MarkIsDirectory(0)
+		Case "1"
+			If (SetContractTypeData(UIAppStore, docCType) <> 1) Then Exit Function
+		Case ""
+dlg:			
+		'	Viewname = "(App.ContractType.SubByParentRef)"
+		'	Set col = UIAppStore.ws.PickListCollection(3, False,_
+		'	db.Server, db.FilePath, Viewname,_
+		'	"Список подвидов договоров", "Выберите подвид договора",_
+		'	docCType.UniversalID)
+			
+		'	If (col.Count = 0) Then
+		'		Exit Function
+		'	End If
+			
+		'	Set docCTypeSub = col.GetFirstDocument
+		'	If (docCTypeSub.MarkIsDirectory(0) <> "1") Then
+		'		Msgbox {Invalid selection (Неверный выбор)}, 48, {Lotus Notes}
+		'		Goto dlg
+		'	End If
+			
+		' не понимаю, кем и для чего был закомментирован верхний кусок кода, но без него нижний кусок тоже не работает, потому я его тоже закомментил
+		' agalko, 23.08.2019
+			
+		'	If (SetContractTypeData(UIAppStore, docCType) <> 1) Then
+		'		Exit Function
+		'	End If
+		'	If (SetContractTypeData(UIAppStore, docCTypeSub) <> 1) Then
+		'		Exit Function
+		'	End If
+		End Select
+		
+		Call UIAppStore.docUI.Refresh()
+		
+		SetContractType = 1
+		Exit Function
+errh:
+		MsgBox Error$ & {. Error # } & CStr(Err) & { on line # } & CStr(Erl) & { in (SetContractType) "AppDirStore" class}
+		Resume endh
+endh:
+	End Function
+	
+	
+	Function SetContractTypeData(UIAppStore As UIAppStore, docCType As NotesDocument) As Integer
+		On Error GoTo errh
+		
+		Dim ItemRefname As String
+		Dim ItemCTypename As String
+		Dim docTemp As NotesDocument
+		Dim ItemRef As NotesItem
+		
+		
+		If docCType.HasItem("ParentRef") Then
+			ItemCTypename = "ContractTypeSub"
+		Else
+			ItemCTypename = "ContractType"
+		End If
+		ItemRefname = ItemCTypename & "Ref"
+		
+		'Call UIAppStore.doc.ReplaceItemValue(ItemCTypename, docCType.Title(0))
+		
+		If (docCType.MarkIsDirectory(0) = "1") Then
+			Call UIAppStore.doc.ReplaceItemValue("ContractType", docCType.GetItemValue("Title"))
+			
+			Dim Pairs
+			pairs = Split(_
+			"Executor,Executor," 			&_
+			"Agreement,Experts," 			&_
+			"AgreementMain,AgreementMain," 	&_
+			"Approval,Confirmer," 			&_
+			"ContractType,ContractType," 	&_
+			"ExpertDKIS1st,ExpertDKIS1st," 	&_
+			"ExpertDKIS2st,ExpertDKIS2st," 	&_
+			"AgreementDKIS,AgreementDKIS," 	&_
+			"ExpertDPV1st,ExpertDPV1st," 	&_
+			"ExpertDPV2st,ExpertDPV2st," 	&_
+			"AgreementDPV,AgreementDPV," 	&_
+			"ExpertDOD1st,ExpertDOD1st," 	&_
+			"ExpertDOD2st,ExpertDOD2st," 	&_
+			"AgreementDOD,AgreementDOD",	",")
+			
+			Dim i%
+			For i = 0 To UBound(pairs)
+				Call dwfReplaceItem(docCType, pairs(i+1), UIAppStore.doc, pairs(i))
+				i = i + 1
+			Next
+			
+			%REM
+			'0. записать исполнителей 
+			Call UIAppStore.doc.ReplaceItemValue("ExecutorObjAccess",	docCType.GetItemValue("ExecutorObjAccess"))
+			Call UIAppStore.doc.ReplaceItemValue("ExecutorObjID", 		docCType.GetItemValue("ExecutorObjID"))
+			Call UIAppStore.doc.ReplaceItemValue("ExecutorObjName", 	docCType.GetItemValue("ExecutorObjName"))
+			Call UIAppStore.doc.ReplaceItemValue("ExecutorObjPath", 	docCType.GetItemValue("ExecutorObjPath"))
+			
+			'1. записать обязательных экспертов
+			Call UIAppStore.doc.ReplaceItemValue("Agreement" & "ObjAccess",	docCType.GetItemValue("Experts" & "ObjAccess"))
+			Call UIAppStore.doc.ReplaceItemValue("Agreement" & "ObjID", 	docCType.GetItemValue("Experts" & "ObjID"))
+			Call UIAppStore.doc.ReplaceItemValue("Agreement" & "ObjName", 	docCType.GetItemValue("Experts" & "ObjName"))
+			Call UIAppStore.doc.ReplaceItemValue("Agreement" & "ObjPath", 	docCType.GetItemValue("Experts" & "ObjPath"))
+						
+			'2. записать обязательный визирующих
+			Call UIAppStore.doc.ReplaceItemValue("AgreementMain" & "ObjAccess",	docCType.GetItemValue("AgreementMain" & "ObjAccess"))
+			Call UIAppStore.doc.ReplaceItemValue("AgreementMain" & "ObjID", 	docCType.GetItemValue("AgreementMain" & "ObjID"))
+			Call UIAppStore.doc.ReplaceItemValue("AgreementMain" & "ObjName", 	docCType.GetItemValue("AgreementMain" & "ObjName"))
+			Call UIAppStore.doc.ReplaceItemValue("AgreementMain" & "ObjPath", 	docCType.GetItemValue("AgreementMain" & "ObjPath"))
+			
+			'3. записать утверждающего
+			Call UIAppStore.doc.ReplaceItemValue("Approval" & "ObjAccess",	docCType.GetItemValue("Confirmer" & "ObjAccess"))
+			Call UIAppStore.doc.ReplaceItemValue("Approval" & "ObjID", 		docCType.GetItemValue("Confirmer" & "ObjID"))
+			Call UIAppStore.doc.ReplaceItemValue("Approval" & "ObjName", 	docCType.GetItemValue("Confirmer" & "ObjName"))
+			Call UIAppStore.doc.ReplaceItemValue("Approval" & "ObjPath", 	docCType.GetItemValue("Confirmer" & "ObjPath"))
+			
+			'4. доступ по чтению по типу документа 
+			Call UIAppStore.doc.ReplaceItemValue("ContractTypeObjAccess",	docCType.GetItemValue("ContractTypeObjAccess"))
+			Call UIAppStore.doc.ReplaceItemValue("ContractTypeObjID", 		docCType.GetItemValue("ContractTypeObjID"))
+			Call UIAppStore.doc.ReplaceItemValue("ContractTypeObjName", 	docCType.GetItemValue("ContractTypeObjName"))
+			Call UIAppStore.doc.ReplaceItemValue("ContractTypeObjPath", 	docCType.GetItemValue("ContractTypeObjPath"))
+			
+			'5. согласующие эксперты и директора ДКиС, ДПВ, ДОД
+			Call UIAppStore.doc.ReplaceItemValue("ExpertDKIS1stObjAccess",	docCType.GetItemValue("ExpertDKIS1stObjAccess"))
+			Call UIAppStore.doc.ReplaceItemValue("ExpertDKIS1stObjID", 		docCType.GetItemValue("ExpertDKIS1stObjID"))
+			Call UIAppStore.doc.ReplaceItemValue("ExpertDKIS1stObjName", 	docCType.GetItemValue("ExpertDKIS1stObjName"))
+			Call UIAppStore.doc.ReplaceItemValue("ExpertDKIS1stObjPath", 	docCType.GetItemValue("ExpertDKIS1stObjPath"))
+			
+			Call UIAppStore.doc.ReplaceItemValue("ExpertDKIS2stObjAccess",	docCType.GetItemValue("ExpertDKIS2stObjAccess"))
+			Call UIAppStore.doc.ReplaceItemValue("ExpertDKIS2stObjID", 		docCType.GetItemValue("ExpertDKIS2stObjID"))
+			Call UIAppStore.doc.ReplaceItemValue("ExpertDKIS2stObjName", 	docCType.GetItemValue("ExpertDKIS2stObjName"))
+			Call UIAppStore.doc.ReplaceItemValue("ExpertDKIS2stObjPath", 	docCType.GetItemValue("ExpertDKIS2stObjPath"))
+			
+			Call UIAppStore.doc.ReplaceItemValue("AgreementDKISObjAccess",	docCType.GetItemValue("AgreementDKISObjAccess"))
+			Call UIAppStore.doc.ReplaceItemValue("AgreementDKISObjID", 		docCType.GetItemValue("AgreementDKISObjID"))
+			Call UIAppStore.doc.ReplaceItemValue("AgreementDKISObjName", 	docCType.GetItemValue("AgreementDKISObjName"))
+			Call UIAppStore.doc.ReplaceItemValue("AgreementDKISObjPath", 	docCType.GetItemValue("AgreementDKISObjPath"))
+			
+			Call UIAppStore.doc.ReplaceItemValue("ExpertDPV1stObjAccess",	docCType.GetItemValue("ExpertDPV1stObjAccess"))
+			Call UIAppStore.doc.ReplaceItemValue("ExpertDPV1stObjID", 		docCType.GetItemValue("ExpertDPV1stObjID"))
+			Call UIAppStore.doc.ReplaceItemValue("ExpertDPV1stObjName", 	docCType.GetItemValue("ExpertDPV1stObjName"))
+			Call UIAppStore.doc.ReplaceItemValue("ExpertDPV1stObjPath", 	docCType.GetItemValue("ExpertDPV1stObjPath"))
+			
+			Call UIAppStore.doc.ReplaceItemValue("ExpertDPV2stObjAccess",	docCType.GetItemValue("ExpertDPV2stObjAccess"))
+			Call UIAppStore.doc.ReplaceItemValue("ExpertDPV2stObjID", 		docCType.GetItemValue("ExpertDPV2stObjID"))
+			Call UIAppStore.doc.ReplaceItemValue("ExpertDPV2stObjName", 	docCType.GetItemValue("ExpertDPV2stObjName"))
+			Call UIAppStore.doc.ReplaceItemValue("ExpertDPV2stObjPath", 	docCType.GetItemValue("ExpertDPV2stObjPath"))
+			
+			Call UIAppStore.doc.ReplaceItemValue("AgreementDPVObjAccess",	docCType.GetItemValue("AgreementDPVObjAccess"))
+			Call UIAppStore.doc.ReplaceItemValue("AgreementDPVObjID", 		docCType.GetItemValue("AgreementDPVObjID"))
+			Call UIAppStore.doc.ReplaceItemValue("AgreementDPVObjName", 	docCType.GetItemValue("AgreementDPVObjName"))
+			Call UIAppStore.doc.ReplaceItemValue("AgreementDPVObjPath", 	docCType.GetItemValue("AgreementDPVObjPath"))
+			
+			Call UIAppStore.doc.ReplaceItemValue("ExpertDOD1stObjAccess",	docCType.GetItemValue("ExpertDOD1stObjAccess"))
+			Call UIAppStore.doc.ReplaceItemValue("ExpertDOD1stObjID", 		docCType.GetItemValue("ExpertDOD1stObjID"))
+			Call UIAppStore.doc.ReplaceItemValue("ExpertDOD1stObjName", 	docCType.GetItemValue("ExpertDOD1stObjName"))
+			Call UIAppStore.doc.ReplaceItemValue("ExpertDOD1stObjPath", 	docCType.GetItemValue("ExpertDOD1stObjPath"))
+			
+			Call UIAppStore.doc.ReplaceItemValue("ExpertDOD2stObjAccess",	docCType.GetItemValue("ExpertDOD2stObjAccess"))
+			Call UIAppStore.doc.ReplaceItemValue("ExpertDOD2stObjID", 		docCType.GetItemValue("ExpertDOD2stObjID"))
+			Call UIAppStore.doc.ReplaceItemValue("ExpertDOD2stObjName", 	docCType.GetItemValue("ExpertDOD2stObjName"))
+			Call UIAppStore.doc.ReplaceItemValue("ExpertDOD2stObjPath", 	docCType.GetItemValue("ExpertDOD2stObjPath"))
+			
+			Call UIAppStore.doc.ReplaceItemValue("AgreementDODObjAccess",	docCType.GetItemValue("AgreementDODObjAccess"))
+			Call UIAppStore.doc.ReplaceItemValue("AgreementDODObjID", 		docCType.GetItemValue("AgreementDODObjID"))
+			Call UIAppStore.doc.ReplaceItemValue("AgreementDODObjName", 	docCType.GetItemValue("AgreementDODObjName"))
+			Call UIAppStore.doc.ReplaceItemValue("AgreementDODObjPath", 	docCType.GetItemValue("AgreementDODObjPath"))
+
+		Set docTemp = db.CreateDocument
+		Call docTemp.MakeResponse(docCType)
+		Set ItemRef = docTemp.GetFirstItem("$Ref")
+		If (ItemRef Is Nothing) Then
+			MsgBox {Не удалось сформировать "$Ref" поле}, 16, ERR_MSG_TITLE
+			Exit Function
+		End If
+		Call ItemRef.CopyItemToDocument(UIAppStore.doc, ItemRefname)
+		%ENDREM
+		
+			Dim ErrorStr$
+			Call DWFSSetRefItem( docCType, UIAppStore.doc, ItemRefname, ErrorStr)
+		End If
+
+
+		SetContractTypeData = 1
+		Exit Function
+errh:
+		MsgBox Error$ & {. Error # } & CStr(Err) & { on line # } & CStr(Erl) & { in (SetContractTypeData) "AppDirStore" class}
+		Resume endh
+endh:
+	End Function
+	
+	
+	Function setParentMethodic() As Integer
+		On Error GoTo errh
+		
+		Dim UIAppStore As New UIAppStore
+		Dim col As NotesDocumentCollection, docParent As NotesDocument, docTemp As NotesDocument, ItemRef As NotesItem
+		Dim dbTarget As NotesDatabase
+		Set dbTarget = UIAppStore.doc.parentDatabase
+		
+		Set col = UIAppStore.ws.PickListCollection(3, False, dbTarget.server , dbTarget.FilePath,_
+		 "tps.workflow.methodics.all.byexecutor.approved", "Список действующих документов", "Выберите документ")
+		
+		If (col.Count = 0) Then
+			Exit Function
+		End If
+		
+		Set docParent = col.GetFirstDocument
+		
+		Set docTemp = dbTarget.CreateDocument
+		Call docTemp.MakeResponse(docParent)
+		Set ItemRef = docTemp.GetFirstItem("$Ref")
+		If (ItemRef Is Nothing) Then
+			MsgBox {Не удалось сформировать "$Ref" поле}, 16, ERR_MSG_TITLE
+			Exit Function
+		End If
+		Call ItemRef.CopyItemToDocument(UIAppStore.doc, "ParentMethodRef")
+		Call UIAppStore.doc.ReplaceItemValue("ParentMethodicID", docParent.Universalid)
+		Call UIAppStore.doc.ReplaceItemValue("ParentMethodicDbPath", dbTarget.FilePath)
+		Call UIAppStore.doc.ReplaceItemValue("ParentMethodicDbReplicaID", dbTarget.ReplicaID)
+		Call UIAppStore.doc.ReplaceItemValue("ParentMethodicRegNumber", docParent.RegNumber)
+		
+		Call UIAppStore.docUI.Refresh()
+		
+		setParentMethodic = 1
+		Exit Function
+errh:
+		MsgBox Error$ & {. Error # } & CStr(Err) & { on line # } & CStr(Erl) & { in (setParentMethodic) "AppDirStore" class}
+		Resume endh
+endh:
+	End Function
+	
+	
+	Function delParentMethodic() As Integer
+		On Error GoTo errh
+		
+		Dim UIAppStore As New UIAppStore
+		
+		If UIAppStore.doc.HasItem("ParentMethodicID") Then
+			Call UIAppStore.doc.RemoveItem("ParentMethodicID")
+		End If
+		If UIAppStore.doc.HasItem("ParentMethodicDbPath") Then
+			Call UIAppStore.doc.RemoveItem("ParentMethodicDbPath")
+		End If
+		If UIAppStore.doc.HasItem("ParentMethodicDbReplicaID") Then
+			Call UIAppStore.doc.RemoveItem("ParentMethodicDbReplicaID")
+		End If
+		If UIAppStore.doc.HasItem("ParentMethodRef") Then
+			Call UIAppStore.doc.RemoveItem("ParentMethodRef")
+		End If
+		If UIAppStore.doc.HasItem("ParentMethodicRegNumber") Then
+			Call UIAppStore.doc.RemoveItem("ParentMethodicRegNumber")
+		End If
+		
+		
+		Call UIAppStore.docUI.Refresh()
+		
+		delParentMethodic = 1
+		Exit Function
+errh:
+		MsgBox Error$ & {. Error # } & CStr(Err) & { on line # } & CStr(Erl) & { in (delParentMethodic) "AppDirStore" class}
+		Resume endh
+endh:
+	End Function
+	
+
+	Function openParentMethodic() As Integer
+		On Error GoTo errh
+		On Error 4091 Resume Next
+		
+		Dim UIAppStore As New UIAppStore, docParent As NotesDocument, dbTarget As NotesDatabase
+		
+		Set dbTarget = UIAppStore.doc.parentDatabase
+
+		Set docParent = dbTarget.GetDocumentByUNID(UIAppStore.doc.ParentMethodRef(0))
+		If (docParent Is Nothing) Then
+			MsgBox {Ошибка: не удается найти основной документ}, 16, ERR_MSG_TITLE
+			Exit Function		
+		End If
+		
+		Call UIAppStore.ws.EditDocument(False, docParent)
+		
+		openParentMethodic = 1
+		
+		Exit Function
+errh:
+		MsgBox Error$ & {. Error # } & CStr(Err) & { on line # } & CStr(Erl) & { in (OpenParentMethodic) "AppDirStore" class}
+		Resume endh
+endh:	
+	End Function
+	
+	
+	Function DelContractType() As Integer
+		On Error GoTo errh
+		
+		Dim UIAppStore As New UIAppStore
+		
+		Dim itemnames
+		itemnames = Split(_
+		"Executor," &_
+		"Agreement," &_
+		"AgreementMain," &_
+		"Approval," &_
+		"ContractType," &_
+		"ExpertDKIS1st," &_
+		"ExpertDKIS2st," &_
+		"AgreementDKIS," &_
+		"ExpertDPV1st," &_
+		"ExpertDPV2st," &_
+		"AgreementDPV," &_
+		"ExpertDOD1st," &_
+		"ExpertDOD2st," &_
+		"AgreementDOD",",")
+		
+		ForAll itemname In itemnames
+			Call dwfRemoveItem(UIAppStore.doc, CStr(itemname), False)
+		End ForAll
+		
+		Call UIAppStore.doc.ReplaceItemValue("ContractType", "")
+		Call UIAppStore.doc.RemoveItem("ContractTypeRef")
+		Call UIAppStore.doc.RemoveItem("ContractTypeSubRef")
+		Call UIAppStore.doc.RemoveItem("ContractTypeSub")
+		
+		%REM
+		Dim ClearItemList(1 To 15) As String
+		Dim RemoveItemList(1 To 53) As String
+		
+		ClearItemList(1) = "ContractType"
+		ClearItemList(2) = "Executor"		& "ObjName"
+		ClearItemList(3) = "Experts"		& "ObjName"
+		ClearItemList(4) = "Agreement" 		& "ObjName"
+		ClearItemList(5) = "AgreementMain" 	& "ObjName"
+		ClearItemList(6) = "Confirmer" 		& "ObjName"
+		
+		ClearItemList(7) = "ExpertDKIS1st" 	& "ObjName"
+		ClearItemList(8) = "ExpertDKIS2st" 	& "ObjName"
+		ClearItemList(9) = "AgreementDKIS" 	& "ObjName"
+		ClearItemList(10) = "ExpertDPV1st" 	& "ObjName"
+		ClearItemList(11) = "ExpertDPV2st" 	& "ObjName"
+		ClearItemList(12) = "AgreementDPV" 	& "ObjName"
+		ClearItemList(13) = "ExpertDOD1st" 	& "ObjName"
+		ClearItemList(14) = "ExpertDOD2st" 	& "ObjName"
+		ClearItemList(15) = "AgreementDOD" 	& "ObjName"
+		
+				
+		RemoveItemList(1) = "ContractTypeRef"
+		RemoveItemList(2) = "ContractType" & "ObjAccess"
+		RemoveItemList(3) = "ContractType" & "ObjID"
+		RemoveItemList(4) = "ContractType" & "ObjName"
+		RemoveItemList(5) = "ContractType" & "ObjPath"
+		
+		RemoveItemList(6) = "ContractTypeSubRef"
+		RemoveItemList(7) = "ContractTypeSub"
+		RemoveItemList(8) = "ContractTypeSub" & "ObjAccess"
+		RemoveItemList(9) = "ContractTypeSub" & "ObjID"
+		RemoveItemList(10) = "ContractTypeSub" & "ObjName"
+		RemoveItemList(11) = "ContractTypeSub" & "ObjPath"
+		
+		RemoveItemList(12) = "Executor" & "ObjAccess"
+		RemoveItemList(13) = "Executor" & "ObjID"
+		RemoveItemList(14) = "Executor" & "ObjPath"
+		
+		RemoveItemList(15) = "Experts" & "ObjAccess"
+		RemoveItemList(16) = "Experts" & "ObjID"
+		RemoveItemList(17) = "Experts" & "ObjPath"
+		
+		RemoveItemList(18) = "Agreement" & "ObjAccess"
+		RemoveItemList(19) = "Agreement" & "ObjID"
+		RemoveItemList(20) = "Agreement" & "ObjPath"
+		
+		RemoveItemList(21) = "AgreementMain" & "ObjAccess"
+		RemoveItemList(22) = "AgreementMain" & "ObjID"
+		RemoveItemList(23) = "AgreementMain" & "ObjPath"
+		
+		RemoveItemList(24) = "Confirmer" & "ObjAccess"
+		RemoveItemList(25) = "Confirmer" & "ObjID"
+		RemoveItemList(26) = "Confirmer" & "ObjPath"
+		
+		RemoveItemList(27) = "ExpertDKIS1st" & "ObjAccess"
+		RemoveItemList(28) = "ExpertDKIS1st" & "ObjID"
+		RemoveItemList(29) = "ExpertDKIS1st" & "ObjPath"
+		
+		RemoveItemList(30) = "ExpertDKIS2st" & "ObjAccess"
+		RemoveItemList(31) = "ExpertDKIS2st" & "ObjID"
+		RemoveItemList(32) = "ExpertDKIS2st" & "ObjPath"
+		
+		RemoveItemList(33) = "AgreementDKIS" & "ObjAccess"
+		RemoveItemList(34) = "AgreementDKIS" & "ObjID"
+		RemoveItemList(35) = "AgreementDKIS" & "ObjPath"
+		
+		RemoveItemList(36) = "ExpertDPV1st" & "ObjAccess"
+		RemoveItemList(37) = "ExpertDPV1st" & "ObjID"
+		RemoveItemList(38) = "ExpertDPV1st" & "ObjPath"
+		
+		RemoveItemList(39) = "ExpertDPV2st" & "ObjAccess"
+		RemoveItemList(40) = "ExpertDPV2st" & "ObjID"
+		RemoveItemList(41) = "ExpertDPV2st" & "ObjPath"
+		
+		RemoveItemList(42) = "AgreementDPV" & "ObjAccess"
+		RemoveItemList(43) = "AgreementDPV" & "ObjID"
+		RemoveItemList(44) = "AgreementDPV" & "ObjPath"
+		
+		RemoveItemList(45) = "ExpertDOD1st" & "ObjAccess"
+		RemoveItemList(46) = "ExpertDOD1st" & "ObjID"
+		RemoveItemList(47) = "ExpertDOD1st" & "ObjPath"
+		
+		RemoveItemList(48) = "ExpertDOD2st" & "ObjAccess"
+		RemoveItemList(49) = "ExpertDOD2st" & "ObjID"
+		RemoveItemList(50) = "ExpertDOD2st" & "ObjPath"
+		
+		RemoveItemList(51) = "AgreementDOD" & "ObjAccess"
+		RemoveItemList(52) = "AgreementDOD" & "ObjID"
+		RemoveItemList(53) = "AgreementDOD" & "ObjPath"
+		
+		ForAll itemname In ClearItemList
+			If UIAppStore.doc.HasItem(itemname) Then
+				Call UIAppStore.doc.ReplaceItemValue(itemname, "")
+			End If	
+		End ForAll
+		
+		ForAll itemname In RemoveItemList
+			If UIAppStore.doc.HasItem(itemname) Then
+				Call UIAppStore.doc.RemoveItem(itemname)
+			End If
+		End ForAll
+		%ENDREM
+		
+		Call UIAppStore.docUI.Refresh()
+		
+		DelContractType = 1
+		Exit Function
+errh:
+		MsgBox Error$ & {. Error # } & CStr(Err) & { on line # } & CStr(Erl) & { in (DelContractType) "AppDirStore" class}
+		Resume endh
+endh:
+	End Function
+	
+	
+	Function SetContractTypeAsMultiTextCategory() As Integer
+		On Error GoTo errh
+		
+		Dim UIAppStore As New UIAppStore
+		Dim Viewname As String
+		Dim col As NotesDocumentCollection
+		Dim docCType As NotesDocument
+		Dim v As Variant
+		
+		
+		If (session Is Nothing) Then
+			Set session = New NotesSession
+		End If
+		If (db Is Nothing) Then
+			Set db = session.CurrentDatabase
+		End If
+		
+		Viewname = "(App.ContractType.OnlyParents)"
+		Set col = UIAppStore.ws.PickListCollection(3, True,_
+		db.Server, db.FilePath, Viewname,_
+		"Список видов договоров", "Выберите вид договора")
+		
+		If (col.Count = 0) Then
+			Exit Function
+		End If
+		
+		ReDim v(0) As String
+		Set docCType = col.GetFirstDocument
+		While (Not (docCType Is Nothing))
+			
+			If (CStr(v(0)) <> "") Then
+				ReDim Preserve v(UBound(v)+1) As String
+			End If
+			v(UBound(v)) = docCType.Title(0)
+			
+			Set docCType = col.GetNextDocument(docCType)
+		Wend
+		
+		UIAppStore.doc.ContractType = Arrays_Unique(v)
+		
+		Call UIAppStore.docUI.Refresh()
+		
+		SetContractTypeAsMultiTextCategory = 1
+		Exit Function
+errh:
+		MsgBox Error$ & {. Error # } & CStr(Err) & { on line # } & CStr(Erl) & { in (SetContractTypeAsMultiTextCategory) "AppDirStore" class}
+		Resume endh
+endh:
+	End Function
+	
+	
+	Function SetContractCategory() As Integer
+		On Error GoTo errh
+		
+		Dim UIAppStore As New UIAppStore
+		Dim Viewname As String
+		Dim col As NotesDocumentCollection
+		Dim docCCategory As NotesDocument
+		Dim docTemp As NotesDocument
+		Dim ItemRef As NotesItem
+		
+		If (UIAppStore.doc.ContractType(0) = "") Then
+			MsgBox {Необходимо заполнить поле "Вид договора"}, 48, ERR_MSG_TITLE
+			Exit Function
+		End If
+		
+		If (session Is Nothing) Then
+			Set session = New NotesSession
+		End If
+		If (db Is Nothing) Then
+			Set db = session.CurrentDatabase
+		End If
+		
+		Viewname = "(App.ContractCategoryByContractType)"
+		Set col = UIAppStore.ws.PickListCollection(3, False,_
+		db.Server, db.FilePath, Viewname,_
+		"Список типов договоров", "Выберите тип договора",_
+		UIAppStore.doc.ContractType(0))
+		
+		If (col.Count = 0) Then
+			Exit Function
+		End If
+		Set docCCategory = col.GetFirstDocument
+		
+		Set docTemp = db.CreateDocument
+		Call docTemp.MakeResponse(docCCategory)
+		Set ItemRef = docTemp.GetFirstItem("$Ref")
+		If (ItemRef Is Nothing) Then
+			MsgBox {Не удалось сформировать "$Ref" поле}, 16, ERR_MSG_TITLE
+			Exit Function
+		End If
+		Call ItemRef.CopyItemToDocument(UIAppStore.doc, "ContractCategoryRef")
+		UIAppStore.doc.ContractCategory = docCCategory.Title(0)
+		
+		Call UIAppStore.docUI.Refresh()
+		
+		SetContractCategory = 1
+		Exit Function
+errh:
+		MsgBox Error$ & {. Error # } & CStr(Err) & { on line # } & CStr(Erl) & { in (SetContractCategory) "AppDirStore" class}
+		Resume endh
+endh:
+	End Function
+	
+	
+	Public Sub copyToInformFromApplyBy()
+		' копирование содержимого поля ApplyBy в поле Inform
+		On Error GoTo error_point
+
+		Dim ws As New NotesUIWorkspace()
+		Dim db As NotesDatabase
+		Dim uidoc As NotesUIDocument
+		Dim doc As NotesDocument
+		
+		Set uidoc = ws.Currentdocument
+		If(uidoc Is Nothing)Then Exit Sub
+		
+		Set doc = uidoc.Document
+		If(doc Is Nothing)Then Exit Sub
+		
+		Set db = doc.Parentdatabase
+		
+		If(doc.getItemValue("ApplyByAll")(0) = "1")Then
+			' используется всеми
+			Dim sm As Variant
+			Dim setting As Fcore_setting
+			Set sm = getServicesManager()
+			Set setting = sm.core.settings( db ).get( "app.groups.allUsers" )
+			
+			If(setting Is Nothing)Then
+				MsgBox "В БД не найдена настройка app.groups.allUsers, обратитесь на хелпдеск!"
+				Exit Sub
+			End If
+			
+			Dim dbInfo As String, errString As String
+			dbInfo = doc.getItemValue("dbODPath")(0)
+			Dim od As New ODStore(dbInfo, errString)
+			If(errString <> "")Then
+				MsgBox errString
+				Exit Sub
+			End If
+			
+			Dim odObj As OdObj
+
+			Dim a As Variant
+			ReDim a(0) As OdObj
+			
+			ForAll id In setting.values.array 'сначала собираем
+				id = Trim(id)
+				If(id <> "")Then
+					Set odObj = od.GetObjByValue(CStr(id), errString)
+					If(errString <> "")Then
+						MsgBox "Не найдена группа " & id & " в ОД, обратитесь на хелпдеск! Ошибка:" & Chr(10) & errString
+						Exit Sub
+					End If
+					If Not(a(0) Is Nothing)Then ReDim Preserve a(UBound(a) + 1)
+					Set a(UBound(a)) = odObj
+				End If
+			End ForAll
+			
+			'собрали, сеттим
+			Dim isFirst As Boolean
+			isFirst = True
+			ForAll o In a
+				If(isFirst)Then 
+					Call o.WriteInReplace(doc, "Inform", "")
+					isFirst = False
+				Else
+					Call o.WriteInAppend(doc, "Inform", "")
+				End If 
+			End ForAll
+
+		Else
+			' указано, кем используется
+			Dim i As Integer, v As Variant, info As Variant, vv As Variant
+			v = doc.getItemValue("ApplyByObjAccess")
+			If(v(0) = "")Then Exit Sub 
+			
+			info = doc.getItemValue("InformObjAccess")
+			For i = LBound(v) To UBound(v)
+				Dim miniOd As New MiniOdObj()
+				Call miniOd.initFromField(doc, "ApplyBy", i)
+				Call miniOd.appendToFieldValue(doc, "Inform", True)
+			Next
+		End If
+		
+		Call uidoc.refresh(False)
+		
+
+		Exit Sub
+		
+error_point:
+		Error Err, GetThreadInfo(2) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$		
+		
+	End Sub
+	
+	Public Sub showMethodicsFor()
+		On Error GoTo error_point
+
+		Dim s As New NotesSession
+		Dim db As NotesDatabase
+		Dim tmp As NotesDocument, v As Variant
+		
+		Set db = s.currentDatabase
+		Set tmp = New NotesDocument(db)
+		
+		v = Evaluate({ @UserRoles *= "[Admin]":"[support]":"[SuperVisor]" }, tmp)
+		If(v(0) <> 1)Then Exit Sub
+		
+		Dim fByte As Servicesmanager, fBase As Fbaseservice, fBaseDatabases As Fbase_databasesservice, fBaseDatabase As Fbase_databasesetting
+		Dim odpath As String
+		Set fByte = Getservicesmanager()
+		Set fBase = fByte.Base
+		Set fBaseDatabases = fBase.Databases
+		Set fBaseDatabase = fBaseDatabases.getSetting( "tps.core.directory" )
+		If Not ( fBaseDatabase Is Nothing ) Then odpath = fBaseDatabase.Filepath
+		
+		Dim ErrorStr As String
+		
+		Dim odStoreUI As ODStoreUI
+		Set ODStoreUI = New ODStoreUI(odpath, ErrorStr)
+		If (ErrorStr <> "") Then Error 1001, ErrorStr
+
+		If (ODStoreUI.AddODObjBySetType(tmp, "Pos", false, "pos", ErrorStr) <> 1) Then
+			If (ErrorStr <> "") Then Error 1001, ErrorStr
+		End If
+		
+		Dim unwind As New Unwinder(odpath)
+		ReDim v(0)As String
+		
+		Call unwind.collectNames(tmp.getItemValue("posObjAccess")(0), v)
+		
+		If(v(0) <> "")Then
+			v = {"} & Join(v, {":"}) & {"} 
+			v = {Form = "F01" & status="approved" & ( } & v & { *= ApplyByObjAccess | ApplyByAll = "1")}
+			Call showMethodicsForPath(v, tmp.getItemValue("posObjName")(0))
+		End If 
+
+
+		Exit Sub
+		
+error_point:
+		Error Err, GetThreadInfo(2) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$		
+		
+	End Sub
+	
+	
+	
+	
+	Public Sub showMyMethodics()
+		On Error GoTo error_point
+
+		Dim v As Variant
+		v = Evaluate({ @UserNamesList })
+		v = {"} & Join(v, {":"}) & {"} 
+		v = {Form = "F01" & status="approved" & ( } & v & { *= ApplyByObjAccess | ApplyByAll = "1")}
+		
+		Call showMethodicsForPath(v, "вашим подразделением")
+		
+
+		Exit Sub
+		
+error_point:
+		Error Err, GetThreadInfo(2) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$		
+		
+	End Sub
+	
+	Public Sub showMethodicsForStaff()
+		On Error GoTo error_point
+
+		Dim s As New NotesSession
+		Dim db As NotesDatabase
+		Dim tmp As NotesDocument, v As Variant
+		
+		Dim workspace As New NotesUIWorkspace
+		
+		Dim col As NotesDocumentCollection
+		
+		Set db = s.currentDatabase
+		Set tmp = New NotesDocument(db)
+				
+		v = Evaluate({ @UserRoles *= "[Admin]":"[support]":"[SuperVisor]" }, tmp)
+		If(v(0) <> 1)Then Exit Sub
+		
+		Dim fByte As Servicesmanager, fBase As Fbaseservice, fBaseDatabases As Fbase_databasesservice, fBaseDatabase As Fbase_databasesetting
+		
+		Set fByte = Getservicesmanager()
+		Set fBase = fByte.Base
+		Set fBaseDatabases = fBase.Databases
+		
+		Dim hrdb As NotesDatabase
+		Set hrdb = fBaseDatabases.get( "tps.hr.staff" )
+		
+		If hrdb Is Nothing then
+			MessageBox "Не найдена БД по ключу tps.hr.staff"
+			Exit Sub
+		End if	
+		
+		Set col = workspace.PickListCollection( _
+		PICKLIST_CUSTOM, _
+		False, _
+		hrdb.Server, _
+		hrdb.Filepath, _
+		"StafflistNoSalary", _
+		"Выбор должности", _
+		"Пожалуйста, выберите должность для формирования списка методик" )
+		
+			
+		If col.Count=0 Then Exit sub			
+		
+		ReDim v(0)As String
+		
+		Dim setting As Variant	
+		'"fbyte.core.settings.lookup"	
+		Set setting  = fByte.core.settings(db).get("tps.workflow.methodics.company_od_prefix")	
+		
+		If (setting Is Nothing)Then
+			MessageBox "Не найдена настройка tps.workflow.methodics.company_od_prefix"
+			Exit Sub
+		End if	
+		
+		Dim prefix As String 
+		prefix = setting.value
+		
+		ForAll t In col.Getfirstdocument().Getitemvalue("PathFullWithCode")
+			If UBound(v) = 0 Then
+				v(UBound(v)) = prefix + " " +t
+			Else
+				v(UBound(v)) = v(UBound(v)-1) + "/" + t 
+			End If
+			
+			ReDim Preserve v(UBound(v)+1 )
+			
+		End ForAll
+		 
+		Dim i As integer 
+		
+'		For i=0 To 1 
+'			If i = 0 Then
+'				v(i) = col.Getfirstdocument().Getitemvalue("PathFullWithCode")(i)
+'			Else
+'				v(i) = v(i-1) + "/"+ col.Getfirstdocument().Getitemvalue("PathFullWithCode")(i)
+'			End If
+'							
+'			ReDim Preserve v(UBound(v)+1 )
+'			
+'		Next
+		
+		v = FullTrim(v)
+		
+		For i=0 To UBound(v)
+			v(i) = "{"+v(i)+"}"
+		Next
+		 
+		v(0) = v(UBound(v) - 1)
+		ReDim Preserve v(0)
+		v = Join(v, ":")
+		v = {Form = "F01" & status="approved" & ( ApplyByObjPath *= } & v & { | ApplyByAll = "1")}
+		 
+'		v = Join(v, ":")
+'		v = {Form = "F01" & status="approved" & ( } & v & { *= ApplyByObjPath | ApplyByAll = "1")}
+		
+		Call showMethodicsForPath(v, Join(col.Getfirstdocument().Getitemvalue("PathFullWithCode"),"/"))
+		
+
+		Exit Sub
+		
+error_point:
+		Error Err, GetThreadInfo(2) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$		
+		
+	End Sub
+	
+%REM 14.12.2018 - Томнов, http://jira.tpsgroup.ru/browse/TLD-361 - скрыть вызов функции в 01edit
+P.S. процедура некорректно прописывает id - берется UniversalID из управления персоналом?!!
+ 
+	Public Sub addVacancyToApplyFor()
+		On Error GoTo error_point
+
+		Dim s As New NotesSession
+		Dim db As NotesDatabase
+		Dim tmp As NotesDocument, v As Variant
+		
+		
+		
+		
+		Dim workspace As New NotesUIWorkspace
+		Dim uiDoc As NotesUIDocument
+		
+		Set uiDoc = workspace.Currentdocument
+		
+		Dim col As NotesDocumentCollection
+		
+		Set db = s.currentDatabase
+		'Set tmp = New NotesDocument(db)
+		
+		'v = Evaluate({ @UserRoles *= "[Admin]":"[support]":"[SuperVisor]" }, tmp)
+		'If(v(0) <> 1)Then Exit Sub
+		
+		Dim fByte As Servicesmanager, fBase As Fbaseservice, fBaseDatabases As Fbase_databasesservice, fBaseDatabase As Fbase_databasesetting
+		
+		Set fByte = Getservicesmanager()
+		Set fBase = fByte.Base
+		Set fBaseDatabases = fBase.Databases
+		
+		Dim hrdb As NotesDatabase
+		Set hrdb = fBaseDatabases.get( "tps.hr.staff" )
+		
+		If hrdb Is Nothing Then
+			MessageBox "Не найдена БД по ключу tps.hr.staff"
+			Exit Sub
+		End If	
+		
+		Set col = workspace.PickListCollection( _
+		PICKLIST_CUSTOM, _
+		False, _
+		hrdb.Server, _
+		hrdb.Filepath, _
+		"StafflistNoSalaryWithoutPostopen", _
+		"My Dialog", _
+		"Укажите вакантную позицию" )
+		
+		
+		If col.Count=0 Then Exit Sub			
+		
+		ReDim v(0)As String
+		
+		Dim setting As Variant	
+		'"fbyte.core.settings.lookup"	
+		Set setting  = fByte.core.settings(db).get("tps.workflow.methodics.company_od_prefix")	
+		
+		If (setting Is Nothing)Then
+			MessageBox "Не найдена настройка tps.workflow.methodics.company_od_prefix"
+			Exit Sub
+		End If	
+		
+		Dim prefix As String 
+		prefix = setting.value
+		
+		
+		'prefix +" "+ Join(col.Getfirstdocument().Getitemvalue("PathFullWithCode"),"/")
+		
+	
+		Dim doc As NotesDocument
+		Dim item As NotesItem
+		
+		Set doc = uiDoc.Document
+		
+	
+		If doc.Hasitem("ApplyByObjPath") Then
+			Set item = doc.Getfirstitem("ApplyByObjPath")
+			item.Appendtotextlist(prefix +" "+ Join(col.Getfirstdocument().Getitemvalue("PathFullWithCode"),"/"))
+			
+			Set item = doc.Getfirstitem("ApplyByObjID")
+			item.Appendtotextlist(col.Getfirstdocument().Universalid)
+			
+			Set item = doc.Getfirstitem("ApplyByObjName")
+			item.Appendtotextlist("<вакансия>" + Join(col.Getfirstdocument().Getitemvalue("PathFullWithCode"),"/"))
+			
+			Set item = doc.Getfirstitem("ApplyByObjAccess")
+			item.Appendtotextlist(col.Getfirstdocument().Universalid)
+		
+		Else
+			
+			doc.Replaceitemvalue "ApplyByObjPath", prefix +" "+ Join(col.Getfirstdocument().Getitemvalue("PathFullWithCode"),"/")
+			doc.Replaceitemvalue "ApplyByObjID", col.Getfirstdocument().Universalid
+			doc.Replaceitemvalue "ApplyByObjName", "<вакансия>" + Join(col.Getfirstdocument().Getitemvalue("PathFullWithCode"),"/")
+			doc.Replaceitemvalue "ApplyByObjAccess",col.Getfirstdocument().Universalid
+		End If
+	
+		
+		
+		Exit Sub
+		
+error_point:
+		Error Err, GetThreadInfo(2) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$		
+		
+	End Sub	
+%ENDREM	
+	
+	Private Sub showMethodicsForPath(searchStr As Variant, prompt As String)
+		On Error GoTo error_point
+
+		Dim ws As New NotesUIWorkspace()
+
+		Dim s As New NotesSession
+		Dim db As NotesDatabase
+		
+		Dim tmp As NotesDocument
+		Dim col As NotesDocumentCollection
+		Dim doc As NotesDocument
+		
+		Dim rtf As NotesRichTextItem, v As Variant
+		Dim richStyle As NotesRichTextStyle
+		
+		
+		Set db = s.currentDatabase
+		Set col = db.search(searchStr, Nothing, 0)
+		
+		If(col.count = 0)Then
+			MsgBox "Методик не найдено"
+			Exit Sub 
+		End If
+		
+		Set tmp = New NotesDocument(db)
+		Call tmp.replaceItemValue("Form", "RtfForm")
+		Call tmp.replaceItemValue("SaveOptions", "0")
+		Call tmp.replaceItemValue("Prompt", "Использующиеся " & prompt & " методики:")
+		Set rtf = New NotesRichTextItem(tmp, "Body")
+		Set richStyle = s.CreateRichTextStyle
+		
+		Set doc = col.Getfirstdocument()
+		While Not(doc Is Nothing)
+			v = CStr(doc.getItemValue("RegNumber")(0))
+			If(v = "")Then v = doc.getItemValue("NumberTotal")(0)
+			If(v <> "")Then v = "№ " & v & " "
+			v = v & doc.getItemValue("Name")(0)
+			
+			richStyle.NotesColor = COLOR_BLACK
+			If doc.Getitemvalue("ApplyByAll")(0) = "1" then		
+				richStyle.NotesColor = COLOR_DARK_GREEN
+			End If
+			Call rtf.AppendStyle(richStyle)
+			
+			Call rtf.Appenddoclink(doc, "", "")
+			Call rtf.Appendtext(" - " & v)
+			Call rtf.Addnewline(1)
+			
+			Set doc = col.Getnextdocument(doc)
+		Wend
+		
+		Call rtf.Getunformattedtext() 'rtf is bad :(
+		
+		Call ws.Editdocument(False, tmp, True)
+
+
+		Exit Sub
+		
+error_point:
+		Error Err, GetThreadInfo(2) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$		
+		
+	End Sub
+	
+	Sub addDepODObj(ItemPrefix As String, ItemDepPrefix  As String, multi As Boolean)
+		On Error GoTo errh
+		
+		Dim UIAppStore As New UIAppStore, ErrorStr As String
+		Dim view As NotesView, col As NotesDocumentCollection, docOD As NotesDocument, ODObj As ODObj
+		
+		Dim ODStore As New ODStore(UIAppStore.doc.dbODPath(0), ErrorStr)
+		Dim departODObj As ODObj
+		Set departODObj = ODStore.GetObjByValue(UIAppStore.doc.GetItemValue(ItemDepPrefix & "ObjID")(0), ErrorStr)
+		
+		If (Not departODObj Is Nothing) Then
+			Set view = ODStore.db.GetView("tps.core.directory.departments.bycompany.pl")
+			Set col = UIAppStore.ws.PickListCollection(PICKLIST_CUSTOM, multi,  ODStore.db.Server,  ODStore.db.FilePath, "tps.core.directory.departments.bycompany.pl", _
+			"Выбор", "Выберите из списка:", departODObj.doc.fullPathWithCode(0))
+			Set docOD = col.GetFirstDocument()
+			
+			While Not docOD Is Nothing 
+				Set ODObj = New ODObj
+				Call ODObj.Init(docOD, ErrorStr)
+				If multi Then 
+					Call ODObj.WriteInAppend(UIAppStore.doc, itemPrefix, ErrorStr)
+				Else
+					Call ODObj.WriteInReplace(UIAppStore.doc, itemPrefix, ErrorStr)
+				End If	
+				Set docOD = col.GetNextDocument(docOD)
+			Wend
+		
+		Else
+			Call UIAppStore.AddODObjBySetType("Dep", multi, ItemPrefix)
+			
+		End If
+		
+	Exit Sub
+		
+errh:
+	MsgBox Error$ & {. Error # } & CStr(Err) & { on line # } & CStr(Erl)
+		
+	End Sub
+	
+	Sub Delete()
+	End Sub
+	
+End Class
+
+
+Class Reminder
+	Private ViewVisa As NotesView
+	
+	Sub New()
+		If (session Is Nothing) Then Set session = New NotesSession
+		If (db Is Nothing) Then	Set db = session.CurrentDatabase
+	End Sub
+	
+	Function ProcessExpire() As Integer
+		On Error GoTo errh
+		
+		Dim Formula As String
+		Dim col As NotesDocumentCollection
+		Dim doc As NotesDocument
+		Dim v As Variant
+		Dim i As Integer
+		
+		' BUGFIX 2017.04.06 - Томнов - вынесение ключа сообщения в настройку
+		Const SETTING_ID = "tps.workflow.methodics.message_reminder_id" ' Ключ сообщения о просрочке
+
+		Dim msg_ID As String
+		Dim sm As Variant, setting As Variant
+		Set sm = getServicesManager()
+		Set setting = sm.core.settings( db ).get( SETTING_ID )
+		If setting Is Nothing Then Set setting = sm.core.settings( Nothing ).get( SETTING_ID )
+		If setting Is Nothing Then
+			msg_ID = "0290A7CC88D7142B44257ACA0050895A"  ' затычка для ТПСН
+		Else
+			msg_ID = setting.value
+		End If
+		' END 2017.04.06
+		
+		Formula = {(Form = "F01") & (StageCompleteDateTime < @Now) & (@UpperCase(StatusState) != @UpperCase("COMPLETE")) & (@Text($REF) = "")}
+		Set col = db.Search(Formula, Nothing, 0)
+		
+		If (col.Count = 0) Then
+			Exit Function
+		End If
+		
+		Set doc = col.GetFirstDocument
+		While (Not (doc Is Nothing))
+			
+			Select Case doc.StageType(0)
+			Case "Edit"
+				If doc.HasItem("StageOwnerObjAccess") Then
+					v = doc.GetFirstItem("StageOwnerObjAccess").Values
+				Else
+					MsgBox {В документе нет поля "StageOwnerObjAccess". ID = } & doc.UniversalID, 48, ERR_MSG_TITLE
+				End If
+			Case "Visa"
+				If (GetVisaStageUsers(doc, v) <> 1) Then
+					Exit Function
+				End If
+			End Select
+			
+			If (v(0) <> "") Then
+				ForAll ID In v
+					If (SendMail(doc, CStr(ID), msg_ID) <> 1) Then		' BUGFIX 2017.04.06 - Томнов
+						'Exit Function
+					End If
+				End ForAll
+			End If
+			
+			i= i+1
+			'Print {Обработано документов: } & CStr(i) & { из } & CStr(col.Count)
+			Set doc = col.GetNextDocument(doc)
+		Wend
+		
+		ProcessExpire = 1
+		Exit Function
+errh:
+		MsgBox Error$ & {. Error # } & CStr(Err) & { on line # } & CStr(Erl) & { in (ProcessExpire) "Reminder" class}
+		Resume endh
+endh:		
+	End Function
+	
+	
+	
+	Function GetVisaStageUsers(doc As NotesDocument, v As Variant) As Integer
+		On Error GoTo errh
+		
+		Dim Viewname As String
+		Dim col As NotesDocumentCollection
+		Dim key As String
+		Dim docVisa As NotesDocument
+		Dim StageOwners As Variant
+		Dim VisaInit As Variant
+		
+		Dim notChangeList As Variant
+		Dim newList As Variant
+		Dim delList As Variant
+		
+		Viewname = "(VisaByFullID-VisaResult)"
+		If (Me.ViewVisa Is Nothing) Then
+			Set Me.ViewVisa = db.GetView(Viewname)
+			If (Me.ViewVisa Is Nothing) Then
+				MsgBox {Не найдено представление "} & Viewname & {"}, 16, {Операция остановлена}
+				Exit Function
+			End If
+			Call Me.ViewVisa.Refresh()
+			Me.ViewVisa.AutoUpdate = False
+		End If
+		
+		key  = doc.CustomID(0) & "-" & doc.StageExclusionID(0)
+		Set col = ViewVisa.GetAllDocumentsByKey(key)
+		StageOwners = doc.GetFirstItem("StageOwnerObjAccess").Values
+		
+		If (col.Count = 0) Then
+			v = StageOwners
+		Else
+			ReDim VisaInit(0) As String
+			Set docVisa = col.GetFirstDocument
+			While (Not (docVisa Is Nothing))
+				
+				If CStr(docVisa.Complete(0)) = "1" Then		' 2016.12.22 - добавлена проверка на завершенность визы /Томнов/
+					If (VisaInit(0) <> "") Then
+						ReDim Preserve VisaInit(UBound(VisaInit)+1) As String
+					End If
+					VisaInit(UBound(VisaInit)) = docVisa.VisaInitAsObjAccess(0)					
+				End If
+				
+				Set docVisa = col.GetNextDocument(docVisa)
+			Wend
+			
+			If (CompareLists(StageOwners, VisaInit, notChangeList, newList, delList) <> 1) Then
+				Exit Function
+			End If
+			
+			If (notChangeList(0) <> "") Then
+				If (UBound(notChangeList) = UBound(StageOwners)) Then
+					ReDim v(0) As String
+					GetVisaStageUsers = 1
+					Exit Function
+				End If
+			End If
+			
+			If (CStr(delList(0)) <> "") Then
+				v = delList
+			End If
+		End If
+		
+		
+		
+		
+		GetVisaStageUsers = 1
+		Exit Function
+errh:
+		MsgBox Error$ & {. Error # } & CStr(Err) & { on line # } & CStr(Erl) & { in (GetVisaStageUsers) "Reminder" class}
+		Resume endh
+endh:
+	End Function
+	
+	
+	
+	
+	Function CompareLists(PreList As Variant, PostList As Variant, NotChangeList As Variant, NewList As Variant, DelList As Variant) As Integer
+		On Error GoTo errh
+		
+		Dim hasMatch As Integer
+		ReDim nl(0) As String
+		ReDim dl(0) As String
+		ReDim nchl(0) As String
+		
+		ForAll post In PostList 'ищем новые записи
+			hasMatch = 0
+			ForAll pre In PreList
+				If (LCase(post) = LCase(pre)) Then
+					If (CStr(nchl(0)) <> "") Then
+						ReDim Preserve nchl(UBound(nchl)+1) As String	
+					End If
+					nchl(UBound(nchl)) = post
+					hasMatch = 1
+					Exit ForAll
+				End If
+			End ForAll
+			If (hasMatch <> 1) Then
+				If (CStr(nl(0)) <> "") Then
+					ReDim Preserve nl(UBound(nl)+1) As String	
+				End If
+				nl(UBound(nl)) = post
+			End If
+		End ForAll
+		
+		ForAll pre In PreList 'ищем старые записи
+			hasMatch = 0
+			ForAll post In PostList
+				If (LCase(pre) = LCase(post)) Then
+					hasMatch = 1
+					Exit ForAll
+				End If
+			End ForAll
+			If (hasMatch <> 1) Then
+				If (CStr(dl(0)) <> "") Then
+					ReDim Preserve dl(UBound(dl)+1) As String	
+				End If
+				dl(UBound(dl)) = pre
+			End If
+		End ForAll
+		
+		NotChangeList = nchl
+		NewList = nl
+		DelList = dl
+		
+		CompareLists = 1
+		Exit Function
+errh:
+		MsgBox Error$ & {. Error # } & CStr(Err) & { on line # } & CStr(Erl) & { in (CompareLists) "Reminder" class}
+		Resume endh
+endh:
+	End Function
+	
+	
+	
+	Function SendMail(doc As NotesDocument, SendToID As String, MailDocID As String) As Integer
+		On Error GoTo errh
+		
+		Dim dbPC As NotesDatabase
+		Dim docMail As NotesDocument
+		Dim v As Variant
+		
+		v = doc.dbPCPath(0)
+		If (v = "") Then
+			MsgBox {В документе не задан Центр Обработки}, 48, ERR_MSG_TITLE
+			Exit Function	
+		End If
+		If (DWFSGetDatebase(CStr(v), dbPC) <> 1)Then
+			MsgBox {Не найдена база Центра Обработки}, 48, ERR_MSG_TITLE
+			Exit Function	
+		End If
+		
+		Set docMail 			= dbPC.CreateDocument
+		docMail.Form 			= "Task"
+		docMail.Action 		= "SendMail"
+		docMail.InitServer 		= doc.ParentDatabase.Server
+		docMail.AppPath 		= doc.ParentDatabase.FilePath
+		docMail.docMainID 		= doc.UniversalID
+		docMail.docInfoID 		= MailDocID
+		docMail.UserName 		= session.UserName
+		docMail.SendToID 		= SendToID
+		
+		Call docMail.Save(True, True)
+		If (DWFAAskForAction(docMail) <> 1) Then
+			Exit Function	
+		End If
+		
+		If (docMail.Error(0) <> "") Then
+			MsgBox docMail.Error(0), 48, ERR_MSG_TITLE
+			Exit Function	
+		End If
+		
+		SendMail = 1
+		Exit Function
+errh:
+		MsgBox Error$ & {. Error # } & CStr(Err) & { on line # } & CStr(Erl) & { in (SendMail) "AppStore" class}
+		Resume endh
+endh:
+	End Function
+	
+	
+	
+	
+	
+	Sub Delete()
+	End Sub
+End Class
+%REM
+	Class PrintService
+	Description: Comments for Class
+%END REM
+Class PrintService
+	'--------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Public Sub printInfosList ()
+		On Error GoTo error_point
+
+		Dim s As New NotesSession
+		Dim ws As New NotesUIWorkspace
+
+		Dim doc As NotesDocument
+		Set doc = ws.currentDocument.Document
+		
+		Dim infs As Variant
+		infs = doc.getItemValue("InformObjId")
+		If(infs(0) = "")Then
+			Print "Нет данных для листа ознакомления" 
+			Exit Sub
+		End If 
+		
+		'отковыриваем базу ОД
+		Dim odb As NotesDatabase, odPath As String
+		odPath = doc.getItemValue("dbODPath")(0)
+		If(odPath = "") Then Error 4001, "В документе не указан путь к базе ОД"
+		
+		Dim unwind As New Unwinder(odPath)
+		
+		Print "Собираются данные для листа ознакомления"
+		Dim people As New Mixcollection()
+		ForAll inf In infs
+			Call unwind.unwindToPost(inf, people)
+		End ForAll
+		If(people.Count = 0)Then
+			MsgBox "Не могу составить список должностей для ознакомления!"
+			Exit Sub 
+		End If
+		
+		Dim v As Variant, row As Integer
+		Dim eapp As Variant, ewb As Variant, esh As Variant
+		Set eapp = createobject("Excel.Application")
+		Set ewb = eapp.workbooks.add()
+		Set esh = ewb.worksheets.add()
+		
+		' page setup
+		eapp.printCommunication = False
+		With esh.PageSetup
+			.CenterHeader = "Лист ознакомления с Приказом" & Chr(10) & doc.getItemValue("Title")(0)
+			.RightFooter = "&P"
+			.DifferentFirstPageHeaderFooter = True
+			.LeftMargin = eapp.CentimetersToPoints(1.5)
+			.RightMargin = eapp.CentimetersToPoints(1)
+			.TopMargin = eapp.CentimetersToPoints(3)
+			.BottomMargin = eapp.CentimetersToPoints(1.5)
+			.HeaderMargin = eapp.CentimetersToPoints(0.8)
+			.FooterMargin = eapp.CentimetersToPoints(0.8)
+			.Zoom = 90
+		End With
+		eapp.printCommunication = True
+
+		
+		'eapp.visible = True
+		
+		Dim dataStartRow As Integer, startRow As Integer, headRow As Integer
+		Const MAX_COL = 4
+
+		row = 1
+		startRow = row
+		'печатаем заголовок
+		esh.rows(row).rowHeight = 21
+		esh.cells(row, 1).value = "ЛИСТ ОЗНАКОМЛЕНИЯ"
+		esh.cells(row, 1).font.bold = True
+		esh.cells(row, 1).font.size = 11
+		Call eMerge(esh.range(esh.cells(row, 1), esh.cells(row, MAX_COL)))
+		
+		row = row + 1
+		v = "с методикой " & Chr(10) & doc.getItemValue("Name")(0)
+		esh.rows(row).rowHeight = 51
+		esh.cells(row, 1).value = v
+		esh.cells(row, 1).font.bold = True
+		esh.cells(row, 1).font.size = 12
+		Call eMerge(esh.range(esh.cells(row, 1), esh.cells(row, MAX_COL)))
+		
+		row = row + 1
+		Select Case LCase(doc.getItemValue("ApprovedBy")(0))
+			Case "order":
+				v = "Приказом"
+			Case "boarddecision"
+				v = "Решением правления"
+			Case "directors"
+				v = "Решением Совета директоров"
+		End Select
+		v = "(утверждена " & v & " №" & doc.getItemValue("ActDocNumber")(0) & " от " & Format(doc.getItemValue("ActDate")(0), "dd.mm.yyy") & ")"
+		esh.rows(row).rowHeight = 24
+		esh.cells(row, 1).value = v
+		esh.cells(row, 1).font.bold = True
+		esh.cells(row, 1).font.size = 12
+		Call eMerge(esh.range(esh.cells(row, 1), esh.cells(row, MAX_COL)))
+
+		row = row + 1
+		headRow = row
+		esh.cells(row, 1).value = "должность"
+		esh.cells(row, 1).columnWidth = 27
+		
+		esh.cells(row, 2).value = "ФИО"
+		esh.cells(row, 2).columnWidth = 39
+		
+		esh.cells(row, 3).value = "дата"
+		esh.cells(row, 3).columnWidth = 12
+		
+		esh.cells(row, 4).value = "роспись"
+		esh.cells(row, 4).columnWidth = 19
+		
+		esh.rows(row).font.bold = True
+		
+
+		Dim processed() As String
+		ReDim processed(0)
+		'сортируем данные и фильтруем дубли
+		Dim i As Integer, postName As String, srt As String, vv As Variant
+		Dim toSort As Variant
+		ReDim toSort(0)As String
+		i = 0
+		ForAll post In people.Array
+			If IsNull(ArrayGetIndex(processed, post.universalId))Then
+				If(processed(0) <> "")Then ReDim Preserve processed(UBound(processed) + 1)
+				processed(UBound(processed)) = post.universalid
+				
+				Dim idx As String
+				postName = LCase(post.getItemValue("Name")(0))
+				If(InStr(postName, "президент") > 0 And InStr(postName, "вице") = 0)Then 
+					srt = "0"
+				ElseIf(InStr(postName, "президент") > 0 And InStr(postName, "вице") > 0)Then
+					srt = "3"
+				ElseIf(InStr(postName, "директор") > 0 )Then
+					srt = "5"
+				Else
+					srt = "9"
+				End If 
+				
+				If(toSort(0) <> "")Then ReDim Preserve toSort(UBound(toSort) + 1)
+				v = Join(post.getItemValue("PATHWITHCODE"), "~")
+				v = v & String(500 - Len(v), " ")
+				vv = post.getItemValue("FullPathWithCode")
+				vv = LCase(vv(UBound(vv)))
+				If(InStr(vv, "руководитель") > 0)Then
+					vv = "0" & vv
+				ElseIf(InStr(vv, "начальник") > 0)Then
+					vv = "1" & vv
+				Else
+					vv = "9" & vv
+				End If
+				v = v & "~" & vv
+				toSort(UBound(toSort)) = srt & v & "~" & post.getItemValue("PersonName")(0) & "##" & CStr(i)
+			End If
+			
+			i = i + 1
+		End ForAll
+		
+		toSort = Arrays_Sort(toSort, 1)
+		
+		dataStartRow = row + 1
+		
+		'печатаем
+		i = 0
+		Dim pDoc As NotesDocument, fpath As Variant, nme As String, pName As String
+		ForAll sorter In toSort
+			i = i + 1
+			If(i = 1 Or i Mod 25 = 0)Then Print "Выводим запись " & CStr(i) & " из " & CStr(UBound(toSort) + 1)
+			
+			row = row + 1
+
+			idx = CInt(StrRight(sorter, "##")) + 1
+			Set pDoc = people.Array(idx)
+			
+			fpath = pDoc.getItemValue("FullPath")
+			
+			esh.rows(row).wrapText = True
+			esh.rows(row).VerticalAlignment = xlCenter
+			
+			pName = LCase(fpath(UBound(fpath)))
+			If(InStr(pname, "президент") > 0 And InStr(pname, "вице") = 0)Then
+				Call eShade(esh.range(esh.cells(row, 1), esh.cells(row, MAX_COL)), -0.20)
+				pName = fpath(UBound(fpath))
+			ElseIf(InStr(pname, "президент") > 0 And InStr(pname, "вице") > 0)Then
+				Call eShade(esh.range(esh.cells(row, 1), esh.cells(row, MAX_COL)), -0.15)
+				pName = fpath(UBound(fpath))
+			ElseIf(InStr(pname, "руководител") > 0 Or InStr(pname, "управлени") > 0)Then
+				Call eShade(esh.range(esh.cells(row, 1), esh.cells(row, MAX_COL)), -0.10)
+				pName = fpath(UBound(fpath)) & ", " & fpath(UBound(fpath) - 1)
+			ElseIf(InStr(pname, "руководител") > 0 Or InStr(pname, "начальник") > 0)Then
+				Call eShade(esh.range(esh.cells(row, 1), esh.cells(row, MAX_COL)), -0.05)
+				pName = fpath(UBound(fpath)) & ", " & fpath(UBound(fpath) - 1)
+			Else
+				pName = fpath(UBound(fpath)) & ", " & fpath(UBound(fpath) - 1)
+			End If
+			nme = pDoc.getItemValue("PersonName")(0)
+			
+			esh.cells(row, 1).value = pName
+			esh.cells(row, 2).value = nme
+			
+			Call esh.rows(row).autoFit()
+			If(esh.rows(row).rowHeight < 42)Then esh.rows(row).rowHeight = 42
+			
+		End ForAll
+		
+		Dim endRow As Integer
+		endRow = row
+		
+		Print "Добавляются рамки..."
+
+		Dim rng As Variant
+		Set rng = esh.Range(esh.cells(startRow, 1), esh.cells(endRow, MAX_COL))
+		Call eDrawBorder(rng, xlEdgeTop)
+		Call eDrawBorder(rng, xlEdgeLeft)
+		Call eDrawBorder(rng, xlEdgeBottom)
+		Call eDrawBorder(rng, xlEdgeRight)
+		
+		Set rng = esh.Range(esh.cells(headRow, 1), esh.cells(headRow, MAX_COL))
+		Call eDrawBorder(rng, xlEdgeTop)
+		Call eDrawBorder(rng, xlEdgeBottom)
+		Call eDrawBorder(rng, xlInsideVertical)
+		Call eDrawBorder(rng, xlInsideHorizontal)
+		
+		Set rng = esh.Range(esh.cells(dataStartRow, 1), esh.cells(endRow, MAX_COL))
+		Call eDrawBorder(rng, xlInsideVertical)
+		Call eDrawBorder(rng, xlInsideHorizontal)
+		
+		Print "Устанавливаем параметры печати..."
+		Set rng = esh.Range(esh.cells(startRow, 1), esh.cells(endRow, MAX_COL))
+		eapp.printCommunication = False
+		esh.PageSetup.PrintArea = rng.address
+		eapp.printCommunication = True
+
+		eapp.visible = True
+
+		Print "Лист ознакомления собран"
+
+		
+		Exit Sub
+		
+error_point:
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Sub
+	
+
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------	
+	Private Sub eMerge(range As Variant)
+		On Error GoTo error_point
+		
+		With range
+			.HorizontalAlignment = xlCenter
+			.VerticalAlignment = xlCenter
+			.WrapText = True
+			.Orientation = 0
+			.AddIndent = False
+			.IndentLevel = 0
+			.ShrinkToFit = False
+			.ReadingOrder = xlContext
+			.MergeCells = False
+		End With
+		Call range.merge()
+		
+		
+		Exit Sub
+		
+error_point:
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Sub
+	
+	'--------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Private Sub eShade ( range As Variant, shade As Double )
+		On Error GoTo error_point
+		With range.interior 
+			.Pattern = 1
+			.PatternColorIndex = xlAutomatic
+			.ThemeColor = 1
+			.TintAndShade = shade
+			.PatternTintAndShade = 0
+		End With 
+
+		Exit Sub
+		
+error_point:
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Sub
+	
+	
+	'--------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Private Sub eDrawBorder (range As Variant, borderType As Variant)
+		On Error GoTo error_point
+
+		With range.borders(borderType)
+			.LineStyle = xlContinuous
+			.ColorIndex = 0
+			.TintAndShade = 0
+			.Weight = xlThin
+		End With
+
+
+		Exit Sub
+		
+error_point:
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Sub
+	
+End Class
+
+
+Private Class Unwinder
+	Private s As NotesSession
+	Private odb As NotesDatabase
+	Private odIdView As NotesView
+	Private odParentView As NotesView
+	Private odPostByUserView As NotesView
+	Private odMembersView As NotesView
+	
+	'класс для разматывания записей в ОД
+	Sub New(odPath As String)
+		Set s = New NotesSession()
+		Set odb = New NotesDatabase(s.currentDatabase.server, odPath)
+		'Set odb = New NotesDatabase("zeos", odPath)
+		If Not(odb.isOpen)Then Error 4001, "База " & odPath & " не найдена или не может быть открыта"
+		Set odIdView = odb.getView("(UNID)")
+		Set odParentView = odb.getView("(AllByParentRef)")
+		Set odPostByUserView = odb.getView("(AllPositionByUserID)")
+		Set odMembersView = odb.getView("(AllByMembersObjAccess)")
+	End Sub
+	
+	
+	' ------------------------------------------------------------------------------------------------------------------------
+	Public Sub unwindToPost(obj As Variant, mixPosts As Mixcollection)
+		On Error GoTo error_point
+
+		'get objId
+		Dim odDoc As NotesDocument
+		If(IsScalar(obj))Then 
+			Set odDoc = odIdView.getDocumentByKey(obj, True)
+			If(odDoc Is Nothing)Then Exit Sub 'нет так нет
+		Else
+			Set odDoc = obj
+		End If 
+		
+		Dim rcol As NotesDocumentCollection, rdoc As NotesDocument
+		Select Case UCase(odDoc.getItemValue("Form")(0))
+			Case "DWF01", "DWF02": 'компания или подразделение - берем нижестоящих
+				Set rcol = odParentView.getAllDocumentsByKey(odDoc.getItemValue("CustomId")(0), True)
+				If(rcol.count = 0)Then Set rcol = odParentView.getAllDocumentsByKey(odDoc.Universalid, True)
+				If(rcol.count = 0)Then
+					Print "Подразделение без сотрудников - " & Join(odDoc.getItemValue("FullPathWithCode"), "/") 
+					Exit Sub 'какое-то очень пустое подразделение
+				End If
+				Set rdoc = rcol.Getfirstdocument()
+				While Not(rdoc Is Nothing)
+					Call unwindToPost(rdoc, mixPosts)
+					Set rdoc = rcol.Getnextdocument(rdoc)
+				Wend
+			
+			Case "DWF03": 'должность - вот то, что нужно, дальше не идём
+				Call mixPosts.Append(odDoc)
+				
+			Case "DWF04": 'юзер - берем должность
+				Set rdoc = odPostByUserView.getDocumentByKey(odDoc.getItemValue("LotusAddress")(0))
+				If(rdoc Is Nothing)Then Set rdoc = odPostByUserView.getDocumentByKey(odDoc.getItemValue("CustomId")(0))
+				If(rdoc Is Nothing)Then Set rdoc = odPostByUserView.getDocumentByKey(odDoc.Universalid)
+				If Not(rdoc Is Nothing)Then Call unwindToPost(rdoc, mixPosts)
+								
+			Case "DWF05": 'группа - берем состав
+				Dim membs As Variant
+				membs = odDoc.getItemValue("MembersObjAccess")
+				ForAll memb In membs
+					If(memb <> "")Then Call unwindToPost(CStr(memb), mixPosts)
+				End ForAll
+				
+		End Select
+		
+		Exit Sub
+		
+error_point:
+		Error Err, GetThreadInfo(2) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$		
+	End Sub
+	
+	
+	' ------------------------------------------------------------------------------------------------------------------------
+	Public Sub collectNames(odId As String, arr As Variant)
+		'аналог @UserNamesList для произвольного юзера / произвольной сущности ОД
+		' //TODO: ДОБАВЛЯТЬ В СПИСОК ЕЩЁ ГРУППЫ ИЗ АДРЕСНОЙ КНИЖКИ ЛОТУСА (для полного сходства) 
+		On Error GoTo error_point
+		On Error 4091 Resume Next 
+		
+		ReDim arr(0) As String
+		
+		'для начала - это кто?
+		Dim odDoc As NotesDocument, rdoc As NotesDocument
+		Set odDoc = odIdView.Getdocumentbykey(odId, True)
+		If(odDoc Is Nothing)Then Exit Sub 'не знаем таких
+		
+		Dim lotusName As String
+		
+		Select Case UCase(odDoc.getItemValue("Form")(0))
+			Case "DWF03": 'должность - достаём из неё юзера
+				lotusName = odDoc.getItemValue("UserLotusAddress")(0)
+				
+			Case "DWF04": 'юзер - берем должность
+				lotusName = odDoc.getItemValue("LotusAddress")(0)
+				Set rdoc = odPostByUserView.getDocumentByKey(lotusName)
+				If(rdoc Is Nothing)Then Set rdoc = odPostByUserView.getDocumentByKey(odDoc.getItemValue("CustomId")(0))
+				If(rdoc Is Nothing)Then Set rdoc = odPostByUserView.getDocumentByKey(odDoc.Universalid)
+				If Not(rdoc Is Nothing)Then Set odDoc = rdoc
+			
+		End Select
+		
+		If(lotusName = "" And odDoc Is Nothing)Then Exit Sub 'никого нет? такого не может быть в теории, но на всякий случай пусть будет
+		
+		If(lotusName <> "")Then
+			Dim nn As New NotesName(lotusName)
+			Call appendValueUnique(arr, lotusName)
+			Call appendValueUnique(arr, nn.abbreviated)
+			Call appendValueUnique(arr, nn.canonical)
+
+			Call collectGroups(lotusName, arr)
+		End If 
+		If Not(odDoc Is Nothing)Then
+			Call collectParents(odDoc.getItemValue("GroupName")(0), arr)
+		End If 
+		
+
+		Exit Sub
+		
+error_point:
+		Error Err, GetThreadInfo(2) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$		
+		
+	End Sub 
+	
+	
+	' ------------------------------------------------------------------------------------------------------------------------
+	Private Sub collectParents(childId As String, arr As Variant)
+		' собирает парентов ВМЕСТЕ с группами, куда они включены
+		On Error GoTo error_point
+		On Error 4091 Resume Next
+
+		If Not(IsNull(ArrayGetIndex(arr, childId)))Then Exit Sub 'нет кольцам!
+
+		Call appendValueUnique(arr, childId)
+
+		Dim doc As NotesDocument
+		Set doc = odIdView.Getdocumentbykey(childId, True)
+		
+		If(doc Is Nothing)Then Exit Sub
+		
+		Call collectGroups(childId, arr)
+		
+		If(CStr(doc.getItemValue("ParentRef")(0)) <> "")Then
+			Dim pdoc As NotesDocument
+			Set pdoc = odIdView.Getdocumentbykey(CStr(doc.getItemValue("ParentRef")(0)), True)
+			If Not(pdoc Is Nothing)Then
+				Call collectParents(pdoc.getItemValue("GroupName")(0), arr)
+			End If 
+		End If
+		
+
+		Exit Sub
+		
+error_point:
+		Error Err, GetThreadInfo(2) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$		
+		
+	End Sub
+	
+	Private Sub collectGroups(memberId As String, arr As Variant)
+		' собирает группы, куда оно входит
+		On Error GoTo error_point
+		
+		Call appendValueUnique(arr, memberId)
+
+		Dim rcol As NotesDocumentCollection
+		Dim rdoc As NotesDocument
+		
+		Set rcol = odMembersView.Getalldocumentsbykey(memberId, True)
+		If(rcol.count = 0)Then Exit Sub
+		Set rdoc = rcol.Getfirstdocument()
+		While Not(rdoc Is Nothing)
+			If(IsNull(ArrayGetIndex(arr, rdoc.getItemValue("GroupName")(0))))Then 'нет кольцам!
+				Call collectGroups(rdoc.getItemValue("GroupName")(0), arr)
+			End If 
+			
+			Set rdoc = rcol.Getnextdocument(rdoc)
+		Wend
+		
+
+		Exit Sub
+		
+error_point:
+		Error Err, GetThreadInfo(2) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$		
+
+
+	End Sub
+
+	' ------------------------------------------------------------------------------------------------------------------------
+	Sub appendValueUnique(arr As Variant, v As Variant)
+		If Not(IsNull(ArrayGetIndex(arr, v)))Then Exit Sub 
+		If(CStr(arr(0)) <> "")Then ReDim Preserve arr(UBound(arr) + 1)
+		arr(UBound(arr)) = v
+	End Sub
+
+	
+End Class
+
+
+Public Class MiniOdObj
+	%REM
+	Class odObj
+	Description: мини-класс, представляющий OdObject для локальных манипуляций
+	ВНИМАНИЕ! LAZY-объект! ни в какие базы не лезет, просто значения полей хранит! 
+	%END REM
+	Private m_id As String
+	Private m_access As String
+	Private m_name As String
+	Private m_path As String
+	
+	
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------	
+	Public Sub New()
+		'nothing
+	End Sub
+	
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------	
+	Private Property Get isInit As Boolean
+		If(me.m_id <> "" And me.m_access <> "" And me.m_name <> "" And me.m_path <> "")Then
+			isInit = True
+		Else
+			isInit = False
+		End If
+	End Property
+
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------	
+	Public Property Get odObjId As String
+		odObjId = me.m_id
+	End Property
+	
+	Public Property Set odObjId As String
+		me.m_id = odObjId
+	End Property
+	
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------	
+	Public Property Get odObjName As String
+		odObjName = me.m_name
+	End Property
+
+	Public Property Set odObjName As String
+		me.m_name = odObjName
+	End Property
+
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------	
+	Public Property Get odObjAccess As String
+		odObjAccess = me.m_access
+	End Property
+
+	Public Property Set odObjAccess As String
+		me.m_access = odObjAccess
+	End Property
+
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------	
+	Public Property Get odObjPath As String
+		odObjPath = m_path
+	End Property
+
+	Public Property Set odObjPath As String
+		me.m_path = odObjPath
+	End Property
+	
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------	
+	Public Sub initFromField ( doc As NotesDocument, itemPrefix As String, itemIndex As Integer )
+		On Error GoTo error_point
+
+		me.m_id = doc.getItemValue(itemPrefix & "ObjId")(itemIndex)
+		me.m_name = doc.getItemValue(itemPrefix & "ObjName")(itemIndex)
+		me.m_access = doc.getItemValue(itemPrefix & "ObjAccess")(itemIndex)
+		me.m_path = doc.getItemValue(itemPrefix & "ObjPath")(itemIndex)
+
+
+		Exit Sub
+		
+error_point:
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$		
+	End Sub
+
+	
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	%REM
+		appendToField
+		добавляет текущий объект в указанные поля документа
+		isUnique: если true, то при добавлении проводится проверка на уникальность 
+			(проверка по ObjID, если элемент уже присутствует - новый не добавляется)
+		возвращает true, если в поле что-то реально было добавлено (уникальность и всё такое)
+	%END REM	
+	Public Function appendToFieldValue ( doc As NotesDocument, itemPrefix As String, isUnique As Boolean ) As Boolean
+		On Error GoTo error_point
+
+		If Not(me.isInit)Then Error 1001, "Объект не инициализирован"
+		
+		appendToFieldValue = False
+		
+		If( doc.getItemValue(itemPrefix & "ObjId")(0) = "")Then
+			Call me.replaceFieldValue(doc, itemPrefix)
+			appendToFieldValue = True
+			Exit Function
+		End If
+
+		Dim i As Integer, ids As Variant
+		ids = doc.getitemvalue(itemPrefix & "ObjId")
+		i = UBound(ids)
+		
+		Dim doAdd As Boolean
+
+		If(Not isUnique)Then
+			doAdd = True
+		Else
+			If(IsNull(ArrayGetIndex(ids, me.odObjId)))Then
+				doAdd = True
+			Else
+				doAdd = False
+			End If
+		End If
+		
+		If(doAdd)Then
+			Call appendValueToField(doc, itemPrefix & "ObjId", me.odObjId)
+			Call appendValueToField(doc, itemPrefix & "ObjAccess", me.odObjAccess)
+			Call appendValueToField(doc, itemPrefix & "ObjName", me.odObjName)
+			Call appendValueToField(doc, itemPrefix & "ObjPath", me.odObjPath)
+			appendToFieldValue = True
+		End If
+
+
+		Exit Function
+		
+error_point:
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$		
+	End Function
+
+	
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------	
+	Public Sub replaceFieldValue ( doc As NotesDocument, itemPrefix As String )
+		On Error GoTo error_point
+
+		If Not(me.isInit)Then Error 1001, "Объект не инициализирован"
+
+		Call doc.replaceItemValue(itemPrefix & "ObjId", me.odObjId)
+		Call doc.replaceItemValue(itemPrefix & "ObjAccess", me.odObjAccess)
+		Call doc.replaceItemValue(itemPrefix & "ObjName", me.odObjName)
+		Call doc.replaceItemValue(itemPrefix & "ObjPath", me.odObjPath)
+
+
+		Exit Sub
+		
+error_point:
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$		
+	End Sub
+
+	
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------	
+	%REM
+		STATIC Sub eraseFieldValues
+		Description: удаляет из дока соотв.поля 
+	%END REM
+	Public Sub removeFieldValues ( doc As NotesDocument, itemPrefix As String )
+		On Error GoTo error_point
+
+		Call doc.Removeitem(itemPrefix & "ObjId")
+		Call doc.Removeitem(itemPrefix & "ObjAccess")
+		Call doc.Removeitem(itemPrefix & "ObjName")
+		Call doc.Removeitem(itemPrefix & "ObjPath")
+
+
+		Exit Sub
+		
+error_point:
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$		
+	End Sub
+
+
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------	
+	%REM
+		Function removeFromFieldValues
+		Description: удаляет себя из поля
+		возвращает true, если значение поля действительно было изменено
+	%END REM
+	Public Function removeFromFieldValues( doc As NotesDocument, itemPrefix As String ) As Boolean
+		On Error GoTo error_point
+
+		Dim tmp As Variant 
+		tmp = doc.Getitemvalue(itemPrefix & "ObjId")
+		
+		removeFromFieldValues = False 
+		
+		Dim i As Variant
+		i = ArrayGetIndex(tmp, me.odObjId)
+		If(IsNull(i))Then Exit Function
+		
+		removeFromFieldValues = True
+		
+		tmp = Arrays_RemoveElement(tmp, i)
+		Call doc.Replaceitemvalue(itemPrefix & "ObjId", tmp)
+		
+		tmp = doc.Getitemvalue(itemPrefix & "ObjAccess")
+		tmp = Arrays_RemoveElement(tmp, i)
+		Call doc.Replaceitemvalue(itemPrefix & "ObjAccess", tmp)
+		
+		tmp = doc.Getitemvalue(itemPrefix & "ObjName")
+		tmp = Arrays_RemoveElement(tmp, i)
+		Call doc.Replaceitemvalue(itemPrefix & "ObjName", tmp)
+		
+		tmp = doc.Getitemvalue(itemPrefix & "ObjPath")
+		tmp = Arrays_RemoveElement(tmp, i)
+		Call doc.Replaceitemvalue(itemPrefix & "ObjPath", tmp)
+		
+		
+		Exit Function
+		
+error_point:
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$		
+	End Function
+
+
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------	
+	%REM
+		Property Get cleanOdObjName
+		Description: возвращает "чистое" имя (без скобок, кавычек и прочих штук)
+	%END REM
+	Public Property Get cleanOdObjName As String
+		On Error GoTo error_point
+
+		Dim res As String, i As Integer, k As Integer
+		
+		res = m_name
+		i = InStr(res, ".> ")
+		If(i > 0)Then
+			res = Mid$(res, i + 3)
+		End If
+		i = InStr(res, "(")
+		k = InStr(res, ")")
+		If(i > 0 And k > 0 And i < k)Then
+			res = Left$(res, k - 1)
+			res = Mid$(res, i + 1)
+		End If
+		cleanOdObjName = res
+
+		Exit Property
+		
+error_point:
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$		
+	End Property
+
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------	
+	%REM
+	Sub appendValueToField
+	Description: добавляет значение к полю в документе (проверяет поле на "пусто")
+	%END REM
+	Private Sub appendValueToField ( doc As NotesDocument, fieldName As String, valueToAdd As Variant )
+		On Error GoTo error_point
+
+		Dim tmp As Variant
+		
+		tmp = doc.getItemValue(fieldName)
+		tmp = Arrays_AppendElement(tmp, valueToAdd)
+		Call doc.replaceItemValue(fieldName, tmp)
+		
+
+		Exit Sub
+		
+error_point:
+		Error Err, GetThreadInfo(2) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$		
+	End Sub
+	
+End Class
+'++LotusScript Development Environment:2:2:Terminate:1:10
+Sub Terminate
+	
+End Sub
+
+
+
+'++LotusScript Development Environment:2:2:changeField:1:8
+Private Sub changeField(dbPC As NotesDatabase, tdoc As NotesDocument, fieldName As String, v As Variant)
+	On Error GoTo error_point
+	
+	Dim session As New NotesSession
+	Dim docMail As NotesDocument
+	Set docMail = dbPC.CreateDocument
+	
+	docMail.Form 			= "Task"
+	docMail.Action 			= "ChangeItem"
+	docMail.InitServer 		= session.CurrentDatabase.Server
+	docMail.AppPath 		= session.CurrentDatabase.replicaId
+	docMail.docMainID 		= tDoc.Universalid
+	docMail.UserName 		= session.UserName
+	docMail.WriteInType		= "replace"
+	docMail.Itemname		= fieldName
+	docMail.NewValue		= v
+	
+	Call docMail.Save(True, True)
+	If (DWFAAskForAction(docMail) <> 1) Then
+		ReturnResult = -1
+		Exit Sub	
+	End If
+	
+	If (docMail.Error(0) <> "") Then
+		MsgBox docMail.Error(0), 48, ERR_MSG_TITLE
+		Exit Sub	
+	End If
+	Exit Sub
+	
+error_point:
+	On Error GoTo 0
+	Error Err, GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$	
+End Sub
+
+
+
+'++LotusScript Development Environment:2:2:ReloadDocumentFromDisk:5:8
+%REM
+	Function ReloadDocumentFromDisk
+	Description: Comments for Function
+%END REM
+Private Sub ReloadDocumentFromDisk(in_doc As NotesDocument)
+	On Error GoTo ErrHandler
+
+	Dim ViewID As NotesView
+	Dim ID$
+
+	Set ViewID = in_doc.ParentDatabase.GetView("(UNID)")
+	Call ViewID.Refresh()
+	ViewID.AutoUpdate = False
+		
+	ID = in_doc.UniversalID
+	Set in_doc = ViewID.GetDocumentByKey(ID)
+	
+	Exit Sub
+ErrHandler:
+	On Error GoTo 0
+	Error Err, GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+End sub
+
+
+
+
+
+
+
+
+
+
+

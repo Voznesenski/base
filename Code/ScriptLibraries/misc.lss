@@ -1,0 +1,59 @@
+'++LotusScript Development Environment:2:5:(Options):0:74
+%REM
+	Library misc
+	Created Nov 10, 2017 by Salpagarov/tps
+	Description: Comments for Library
+%END REM
+Option Public
+Option Declare
+
+Use "fbyte"
+
+'++LotusScript Development Environment:2:5:(Forward):0:1
+Declare Sub Terminate
+Declare Function checkServer As Boolean
+
+'++LotusScript Development Environment:2:5:(Declarations):0:2
+
+'++LotusScript Development Environment:2:2:Terminate:1:10
+Sub Terminate
+	
+End Sub
+
+
+'++LotusScript Development Environment:2:1:checkServer:1:8
+Function checkServer As Boolean
+	On Error GoTo error_point
+	
+	Dim fsm As Servicesmanager, fCore As FCoreService, fCoreSettings As FCore_SettingsManager
+	Set fsm = getServicesManager()
+	Set fCore = fsm.Core
+	Set fCoreSettings = fCore.settings( Nothing )
+	
+	Dim fCoreSetting As FCore_Setting, fArray As MixCollection
+	Set fCoreSetting = fCoreSettings.Get( "tps.system.servers.agent.name" )
+	If ( fCoreSetting Is Nothing ) Then
+		Set fArray = New MixCollection
+		Call fArray.Append( "zeos/tps" )
+	Else
+		Set fArray = fCoreSetting.Values
+	End If
+	
+	Dim s As New NotesSession, cdb As NotesDatabase
+	Set cdb = s.Currentdatabase
+	
+	Dim nnServerCurrent As New NotesName( cdb.Server )
+	
+	Dim i As Integer
+	For i=1 To fArray.Count
+		Dim nnServerAgent As New NotesName( fArray.Element(i))
+		If ( LCase( nnServerAgent.Canonical ) = LCase( nnServerCurrent.Canonical )) Then
+			checkServer = True
+			Exit For
+		End If
+	Next
+	Exit Function
+	
+error_point:
+	Error Err, GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$	
+End Function

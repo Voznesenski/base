@@ -1,0 +1,2397 @@
+'++LotusScript Development Environment:2:5:(Options):0:74
+Option Public
+Option Declare
+
+Use "DWFODLib.UI"
+
+
+'++LotusScript Development Environment:2:5:(Forward):0:1
+Declare Class UIProcessStore
+Declare Class ProcessObject
+Declare Class UIProcessObject As ProcessObject
+Declare Class UIPropertyStore
+Declare Class PProperty As ProcessObject
+Declare Class FormItem
+Declare Class FormulaValue
+Declare Sub ActUIRemoveAddDoc(AddDocType As String)
+Declare Function ActUIRemoveProcess() As Integer
+Declare Sub ActUIAddMsg() '(TargerType As String)
+Declare Sub ActUIRemoveRelation()
+Declare Sub ActUITaskUIAddDirectoryEntry()
+Declare Sub ActUITaskUIRemoveDirectoryEntry()
+Declare Function ActUIAddParentProcess() As Integer
+Declare Function ActUIRemoveAddDocToCheck()
+Declare Sub ActUIAddRelationProperty()
+Declare Sub ActUIRemoveAddDocBasic()
+Declare Function ActUIAddVisaRangeValue(TargetItemName As String)
+Declare Sub ActUIAddAddDoc(AddDocType As String)
+Declare Function ActUIAddProcess() As Integer
+Declare Sub ActUIRemoveMsg() '(TargerType As String)
+Declare Sub ActUIAddRelation()
+Declare Function ActUIRemoveParentProcess() As Integer
+Declare Function ActUIAddAddDocToCheck()
+Declare Sub ActUIRemoveRelationProperty()
+Declare Sub ActUIAddAddDocBasic()
+Declare Function ActUIRemoveVisaRangeValue(TargetItemName As String)
+
+'++LotusScript Development Environment:2:5:(Declarations):0:10
+Class UIProcessStore
+	Public ws As NotesUIWorkspace
+	Public docUI As NotesUIDocument
+	Public doc As NotesDocument
+	Public ODStoreUI As ODStoreUI
+	
+	Private ErrorStr_ As String
+	
+	Sub new()
+		Set ws 	= New NotesUIWorkspace
+		Set docUI	= ws.CurrentDocument
+		Set doc 	= docUI.Document
+	End Sub
+	
+	Function AddObj(multi As Boolean, ItemPrefix As String) As Integer
+		On Error Goto errh
+		
+		Dim v As Variant
+		Dim docTemp As NotesDocument
+		Dim ODStoreUI As ODStoreUI
+		Dim ErrorStr As String
+		
+		Dim ProcessObject As New ProcessObject
+		If (ProcessObject.Init(Me.docUI.Document, ErrorStr) <> 1) Then
+			Msgbox ErrorStr, 48, ERR_MSG_TITLE
+			Exit Function
+		End If
+		
+		Set docTemp = ProcessObject.db.CreateDocument
+		Redim v(2) As String
+		v(0) = "Выбрать из дополнительных признаков"
+		v(1) = "Выбрать из орг. директории"
+		v(2) = "Поле на форме"
+		docTemp.Members = v
+		If Not (Me.ws.DialogBox("DWF101", True, True, False, False, False, False, ProcessObject.db.Title, docTemp, True, False, True)) Then
+			Exit Function
+		End If
+		
+		Set Me.ODStoreUI = New ODStoreUI(ProcessObject.docProcess.OrgDir(0), ErrorStr)
+		If (ErrorStr <> "") Then
+			Msgbox ErrorStr, 48, ERR_MSG_TITLE
+			Exit Function
+		End If
+		
+		Select Case docTemp.List(0)
+		Case v(0):
+			Dim UIPropertyStore As New UIPropertyStore(Me, ProcessObject.docProcess)
+			If (UIPropertyStore.SetProperty(multi, ItemPrefix, ErrorStr) <> 1) Then
+				If (ErrorStr <> "") Then
+					Msgbox ErrorStr, 48, ERR_MSG_TITLE
+				End If
+				Exit Function
+			End If
+		Case v(1):
+			If (Me.SetODObj(multi, ItemPrefix, ErrorStr) <> 1) Then
+				If (ErrorStr <> "") Then
+					Msgbox ErrorStr, 48, ERR_MSG_TITLE
+				End If
+				Exit Function
+			End If
+		Case v(2):
+			Dim FormItem As New FormItem(Me)
+			If (FormItem.Set(ItemPrefix, ErrorStr)<>1) Then
+				If (ErrorStr <> "") Then
+					Msgbox ErrorStr, 48, ERR_MSG_TITLE
+				End If
+				Exit Function
+			End If
+		End Select
+		
+		
+		Call Me.docUI.Refresh()
+		
+		AddObj = 1
+		
+		Exit Function
+errh:
+		Msgbox Error$ & {. Error # } & Cstr(Err) & { on line # } & Cstr(Erl) & { in (AddObj) "UIProcessStore" class}
+		Resume endh
+endh:
+	End Function
+	
+	Function AddODObj(multi As Boolean, ItemPrefix As String) As Integer
+		On Error Goto errh
+		
+		Dim ODStoreUI As ODStoreUI
+		Dim ErrorStr As String
+		
+		Dim ProcessObject As New ProcessObject
+		If (ProcessObject.Init(Me.docUI.Document, ErrorStr) <> 1) Then
+			Msgbox ErrorStr, 48, ERR_MSG_TITLE
+			Exit Function
+		End If
+		
+		Set Me.ODStoreUI = New ODStoreUI(ProcessObject.docProcess.OrgDir(0), ErrorStr)
+		If (ErrorStr <> "") Then
+			Msgbox ErrorStr, 48, ERR_MSG_TITLE
+			Exit Function
+		End If
+		
+		If (Me.SetODObj(multi, ItemPrefix, ErrorStr) <> 1) Then
+			If (ErrorStr <> "") Then
+				Msgbox ErrorStr, 48, ERR_MSG_TITLE
+			End If
+			Exit Function
+		End If
+		
+		Call Me.docUI.Refresh()
+		
+		AddODObj = 1
+		
+		Exit Function
+errh:
+		Msgbox Error$ & {. Error # } & Cstr(Err) & { on line # } & Cstr(Erl) & { in (AddODObj) "UIProcessStore" class}
+		Resume endh
+endh:
+	End Function
+	
+	
+	Function SetAddressee(multi As Boolean, ItemPrefix As String) As Integer
+		On Error Goto errh
+		
+		Dim v As Variant
+		Dim docTemp As NotesDocument
+		Dim ODStoreUI As ODStoreUI
+		Dim ErrorStr As String
+		
+		Dim ProcessObject As New ProcessObject
+		If (ProcessObject.Init(Me.docUI.Document, ErrorStr) <> 1) Then
+			Msgbox ErrorStr, 48, ERR_MSG_TITLE
+			Exit Function
+		End If
+		
+		Set docTemp = ProcessObject.db.CreateDocument
+		Redim v(2) As String
+'		v(0) = "Выбрать из дополнительных признаков"
+		v(0) = "Выбрать из орг. директории"
+		v(1) = "Поле на форме"
+		v(2) = "@-формула"
+		docTemp.Members = v
+		If Not (Me.ws.DialogBox("DWF101", True, True, False, False, False, False, ProcessObject.db.Title, docTemp, True, False, True)) Then
+			Exit Function
+		End If
+		
+		Set Me.ODStoreUI = New ODStoreUI(ProcessObject.docProcess.OrgDir(0), ErrorStr)
+		If (ErrorStr <> "") Then
+			Msgbox ErrorStr, 48, ERR_MSG_TITLE
+			Exit Function
+		End If
+		
+		Select Case docTemp.List(0)
+%REM
+		Case v(0):
+			Dim UIPropertyStore As New UIPropertyStore(Me, ProcessObject.docProcess)
+			If (UIPropertyStore.SetProperty(multi, ItemPrefix, ErrorStr) <> 1) Then
+				If (ErrorStr <> "") Then
+					Msgbox ErrorStr, 48, ERR_MSG_TITLE
+				End If
+				Exit Function
+			End If
+%END REM
+		Case v(0):
+			If (Me.SetODObj(multi, ItemPrefix, ErrorStr) <> 1) Then
+				If (ErrorStr <> "") Then
+					Msgbox ErrorStr, 48, ERR_MSG_TITLE
+				End If
+				Exit Function
+			End If
+		Case v(1):
+			Dim FormItem As New FormItem(Me)
+			If (FormItem.Set(ItemPrefix, ErrorStr)<>1) Then
+				If (ErrorStr <> "") Then
+					Msgbox ErrorStr, 48, ERR_MSG_TITLE
+				End If
+				Exit Function
+			End If
+		Case v(2):
+			Dim FormulaValue As New FormulaValue(Me)
+			If (FormulaValue.Set(ItemPrefix, ErrorStr)<>1) Then
+				If (ErrorStr <> "") Then
+					Msgbox ErrorStr, 48, ERR_MSG_TITLE
+				End If
+				Exit Function
+			End If
+		End Select
+		
+		
+		Call Me.docUI.Refresh()
+		
+		SetAddressee = 1
+		
+		Exit Function
+errh:
+		Msgbox Error$ & {. Error # } & Cstr(Err) & { on line # } & Cstr(Erl) & { in (SetAddressee) "UIProcessStore" class}
+		Resume endh
+endh:
+	End Function	
+	
+	
+	Function RemoveObj(multi As Boolean, ItemPrefix As String) As Integer
+		On Error Goto errh
+		
+		Dim v As Variant
+		Dim docTemp As NotesDocument
+		Dim ObjType As Variant, ObjID As Variant, ObjName As Variant
+		Dim i As Integer
+		Dim Form As String
+		Dim ErrorStr As String
+		
+		
+		Dim ProcessObject As New ProcessObject
+		If (ProcessObject.Init(Me.docUI.Document, ErrorStr) <> 1) Then
+			Msgbox ErrorStr, 48, ERR_MSG_TITLE
+			Exit Function
+		End If
+		
+		v = Me.GetObjectValueByItem(ItemPrefix, ObjType, ObjID, ObjName, ErrorStr)
+		If (ErrorStr <> "") Then
+			Msgbox ErrorStr, 48, ERR_MSG_TITLE
+			Exit Function
+		End If
+		If (v = 0) Then
+			Exit Function
+		End If
+		
+		Set docTemp = ProcessObject.db.CreateDocument
+		Redim v(0) As String
+		For i=0 To Ubound(ObjID)
+			If (v(0) <> "") Then
+				Redim Preserve v(Ubound(v)+1) As String
+			End If
+			v(Ubound(v)) = ObjName(i) & {|} & ObjID(i)
+		Next
+		docTemp.Members = v
+		docTemp.promt = "Выберите значение для удаления"
+		
+		If (multi = True) Then
+			Form = "DWF105"
+		Else
+			Form = "DWF104"
+		End If
+		
+		If Not (ws.DialogBox(Form, True, True, False, False, False, False, ProcessObject.db.Title, docTemp, True, False, True)) Then
+			Exit Function
+		End If
+		If (docTemp.List(0) = "") Then
+			Exit Function
+		End If
+		
+		v = docTemp.List
+		Forall v1 In v
+			For i=0 To Ubound(ObjID)
+				If (Lcase(v1) = Lcase(ObjID(i))) Then
+					ObjType(i)	= ""
+					ObjID(i) 		= ""
+					ObjName(i) 	= ""
+				End If
+			Next
+		End Forall
+		ObjType	= Fulltrim(ObjType)
+		ObjID 	= Fulltrim(ObjID)
+		ObjName 	= Fulltrim(ObjName)
+		
+		If (Me.WriteInReplaceByObjValue(ItemPrefix, ObjType, ObjID, ObjName, ErrorStr) <> 1) Then
+			If (ErrorStr <> "") Then
+				Msgbox ErrorStr, 48, ERR_MSG_TITLE
+			End If
+			Exit Function
+		End If
+		
+		Call Me.docUI.Refresh()
+		
+		RemoveObj = 1
+		
+		Exit Function
+errh:
+		Msgbox Error$ & {. Error # } & Cstr(Err) & { on line # } & Cstr(Erl) & { in (RemoveObj) "UIProcessStore" class}
+		Resume endh
+endh:
+	End Function
+	
+	
+	
+	
+	
+	Function SetODObj(multi As Boolean, ItemPrefix As String, ErrorStr As String) As Integer
+		On Error Goto errh
+		
+		Dim db As NotesDatabase
+		Dim v As Variant
+		Dim docTemp As NotesDocument
+		Dim col As NotesDocumentCollection
+		Dim doc As NotesDocument
+		Dim ODObj As ODObj
+		Dim i As Integer
+		
+		
+		Set db = Me.doc.ParentDatabase
+		Set docTemp = db.CreateDocument
+		If Not (ws.DialogBox("DWF103", True, True, False, False, False, False, db.Title, docTemp, True, False, True)) Then
+			Exit Function
+		End If
+		
+		If (Me.ODStoreUI.PickObject(Cstr(docTemp.List(0)), multi, "", col, ErrorStr) <>1) Then
+			Exit Function
+		End If
+		
+		v = Me.CheckODItemIsReplace(ItemPrefix, ErrorStr)
+		If (ErrorStr <> "") Then
+			Exit Function
+		End If
+		Select Case v
+		Case -1 : 'cancel
+			Exit Function
+		Case 6 : 'yes
+			If (Me.ClearODItem(ItemPrefix, ErrorStr) <> 1) Then
+				Exit Function
+			End If
+		Case 7 : 'no
+			'nothing
+		End Select
+		
+		Set doc = col.GetFirstDocument
+		While (Not (doc Is Nothing))
+			Set ODObj = New ODObj
+			If (ODObj.Init(doc, ErrorStr) <>1) Then
+				Exit Function
+			End If
+			
+			If (Me.WriteInAppend(ODObj, ItemPrefix, ErrorStr) <>1) Then
+				Exit Function
+			End If
+			Set doc = col.GetNextDocument(doc)
+		Wend
+		
+		
+		SetODObj = 1
+		Exit Function
+errh:
+		ErrorStr = Error$ & {. Error # } & Cstr(Err) & { on line # } & Cstr(Erl) & { in (SetODObj) "UIProcessStore" class }
+		Resume endh
+endh:
+	End Function
+	
+	
+	
+	Function CheckODItemIsReplace(ItemPrefix As String, ErrorStr As String) As Integer
+		On Error Goto errh
+		
+		CheckODItemIsReplace = Me.ODStoreUI.CheckItemIsReplace(Me.doc, ItemPrefix, ErrorStr)
+		
+		Exit Function
+errh:
+		ErrorStr = Error$ & {. Error # } & Cstr(Err) & { on line # } & Cstr(Erl) & { in (CheckODItemIsReplace) "UIProcessStore" class }
+		Resume endh
+endh:
+	End Function
+	
+	
+	Function ClearODItem(ItemPrefix As String, ErrorStr As String) As Integer
+		On Error Goto errh
+		
+		Call doc.RemoveItem(ItemPrefix & "ObjType")
+		Call doc.RemoveItem(ItemPrefix & "ObjID")
+		Call doc.RemoveItem(ItemPrefix & "ObjName")
+		
+		ClearODItem = 1
+		Exit Function
+errh:
+		ErrorStr = Error$ & {. Error # } & Cstr(Err) & { on line # } & Cstr(Erl) & { in (ClearODItem) "UIProcessStore" class }
+		Resume endh
+endh:
+	End Function
+	
+	
+	Function WriteInReplace(Obj As Variant, ItemPrefix As String, ErrorStr As String) As Integer
+		On Error Goto errh
+		Dim sType As String, sID As String, sName As String
+		
+		If Obj Isa "ODObj" Then
+			sType = "<odobj>"
+		Elseif Obj Isa "PProperty" Then
+			sType = "<property>"
+		Elseif Obj Isa "FormItem" Then
+			sType = "<formitem>"
+		Elseif Obj Isa "FormulaValue" Then
+			sType = "<formulavalue>"
+		Else
+			ErrorStr = {UIProcessStore.WriteInReplace() - Неизвестный формат объекта}
+			Exit Function
+		End If
+		sID 		= Obj.ObjID
+		sName 	= Obj.ObjName
+		
+		Call doc.ReplaceItemValue(ItemPrefix & "ObjType", sType)
+		Call doc.ReplaceItemValue(ItemPrefix & "ObjID", 	sID)
+		Call doc.ReplaceItemValue(ItemPrefix & "ObjName", sName)
+		
+		WriteInReplace =1
+		
+		Exit Function
+errh:
+		ErrorStr = Error$ & {. Error # } & Cstr(Err) & { on line # } & Cstr(Erl) & { in (WriteInReplace) "UIProcessStore" class }
+		Resume endh
+endh:
+	End Function
+	
+	
+	
+	Function WriteInAppend(Obj As Variant, ItemPrefix As String, ErrorStr As String) As Integer
+		On Error Goto errh
+		
+		Dim Item As NotesItem
+		Dim vType As Variant, vID As Variant, vName As Variant
+		Dim sType As String, sID As String, sName As String
+		Dim i As Integer, j As Integer
+		
+		Set Item = doc.GetFirstItem(ItemPrefix & "ObjType")
+		If Not (Item Is Nothing) Then
+			If (Obj Isa "ODObj") Then
+				sType = "<odobj>"
+			Elseif (Obj Isa "PProperty") Then
+				sType = "<property>"
+			Elseif (Obj Isa "FormItem") Then
+				sType = "<formitem>"
+			Elseif Obj Isa "FormulaValue" Then
+				sType = "<formulavalue>"
+			Else
+				ErrorStr = {UIProcessStore.WriteInAppend() - Неизвестный формат объекта}
+				Exit Function
+			End If
+			sID 		= Obj.ObjID
+			sName 	= Obj.ObjName
+			
+			vType 	= Item.Values
+			Set Item 	= doc.GetFirstItem(ItemPrefix & "ObjID")
+			vID 		= Item.Values			
+			Set Item 	= doc.GetFirstItem(ItemPrefix & "ObjName")
+			vName 	= Item.Values
+			
+			For i=0 To Ubound(vID)
+				If (Lcase(vID(i)) = Lcase(sID)) Then
+					Exit Function
+				End If		
+			Next
+			vType	= Fulltrim(Arrayappend(vType, 	sType))
+			vID 		= Fulltrim(Arrayappend(vID, 		sID))
+			vName 	= Fulltrim(Arrayappend(vName, 	sName))
+			
+			Call doc.ReplaceItemValue(ItemPrefix & "ObjType", 	vType)
+			Call doc.ReplaceItemValue(ItemPrefix & "ObjID", 		vID)
+			Call doc.ReplaceItemValue(ItemPrefix & "ObjName", 	vName)
+		Else
+			If (Me.WriteInReplace(Obj, ItemPrefix, ErrorStr) <> 1) Then
+				WriteInAppend = 0
+			End If
+		End If
+		
+		WriteInAppend = 1
+		
+		Exit Function
+errh:
+		ErrorStr = Error$ & {. Error # } & Cstr(Err) & { on line # } & Cstr(Erl) & { in (WriteInAppend) "UIProcessStore" class }
+		Resume endh
+endh:
+	End Function
+	
+	
+	Function WriteInReplaceByObjValue(_
+	ItemPrefix As String,_
+	ObjType As Variant, ObjID As Variant, ObjName As Variant, ErrorStr As String) As Integer
+		On Error Goto errh
+		
+		Call doc.ReplaceItemValue(ItemPrefix & "ObjType", ObjType)
+		Call doc.ReplaceItemValue(ItemPrefix & "ObjID", 	ObjID)
+		Call doc.ReplaceItemValue(ItemPrefix & "ObjName", ObjName)
+		
+		WriteInReplaceByObjValue = 1
+		
+		Exit Function
+errh:
+		ErrorStr = Error$ & {. Error # } & Cstr(Err) & { on line # } & Cstr(Erl) & { in (WriteInReplaceByObjValue) "UIProcessStore" class}
+		Resume endh
+endh:
+	End Function
+	
+	Function GetObjectValueByItem(_
+	ItemPrefix As String,_
+	ObjType As Variant, ObjID As Variant, ObjName As Variant, ErrorStr As String) As Integer
+		On Error Goto errh
+		
+		Dim Item As NotesItem
+		Dim v As Variant
+		
+		If (ItemPrefix = "") Then
+			Print "Не задан префикс поля со значением"
+			GetObjectValueByItem = -1
+			Exit Function
+		End If
+		
+		Set Item = doc.GetFirstItem(ItemPrefix & "ObjType")
+		If Not (Item Is Nothing) Then
+			v = Item.Values
+			If (v(0) = "") Then
+				GetObjectValueByItem = 0
+				Exit Function
+			End If
+			ObjType = v
+		Else
+			GetObjectValueByItem = 0
+			Exit Function
+		End If
+		
+		Set Item = doc.GetFirstItem(ItemPrefix & "ObjID")
+		If Not (Item Is Nothing) Then
+			v = Item.Values
+			If (v(0) = "") Then
+				GetObjectValueByItem = 0
+				Exit Function
+			End If
+			ObjID = v
+		Else
+			GetObjectValueByItem = 0
+			Exit Function
+		End If
+		
+		
+		Set Item = doc.GetFirstItem(ItemPrefix & "ObjName")
+		If Not (Item Is Nothing) Then
+			v = Item.Values
+			If (v(0) = "") Then
+				GetObjectValueByItem = 0
+				Exit Function
+			End If
+			ObjName = v
+		Else
+			GetObjectValueByItem = 0
+			Exit Function
+		End If
+		
+		
+		GetObjectValueByItem = 1
+		
+		Exit Function
+errh:
+		ErrorStr = Error$ & {. Error # } & Cstr(Err) & { on line # } & Cstr(Erl) & { in (GetObjectValueByItem) "UIProcessStore" class}
+		Resume endh
+endh:	
+	End Function
+	
+	
+	Property Set ErrorStr
+		ErrorStr_ = ErrorStr
+	End Property
+	Public Property Get ErrorStr
+		ErrorStr = ErrorStr_
+	End Property
+	
+End Class
+
+
+
+Class ProcessObject
+	Public session As NotesSession
+	
+	Public db As NotesDatabase
+	Public doc As NotesDocument
+	Public docProcess As NotesDocument
+	
+	Sub new()
+		Set session = New NotesSession
+		Set db = Me.session.CurrentDatabase
+	End Sub
+	
+	Function Init(doc As NotesDocument, ErrorStr As String) As Integer
+		If (Me.doc Is Nothing) Then
+			Set Me.doc = doc
+		End If
+		Set docProcess = GetProcessDoc(doc, ErrorStr)
+		If (ErrorStr <> "") Then
+			Exit Function
+		End If
+		Init = 1
+	End Function
+	
+	Private Function GetProcessDoc(doc As NotesDocument, ErrorStr As String) As NotesDocument
+		On Error Goto errh
+		
+		Dim prosessRef As String
+		Dim parentRef As String
+		Dim docTemp As NotesDocument
+		
+		If (doc.Form(0) = "DWF01") Then
+			Set docTemp = doc
+		Else
+			prosessRef = doc.ProcessRef(0)
+			If (prosessRef = "") Then
+				parentRef = doc.ParentRef(0)
+				If (parentRef = "") Then
+					ErrorStr = {Документ не содержит значения поля "ProsessRef" или "ParentRef", либо оно пустое}
+					Exit Function
+				End If
+				On Error 4091 Resume Next 'bad unid
+				Set docTemp = Me.db.GetDocumentByUNID(parentRef)
+				On Error Goto errh
+				If (docTemp Is Nothing) Then
+					ErrorStr = {Не найден родительский документ по ключу "} & parentRef & {"}
+					Exit Function
+				End If
+				prosessRef = docTemp.ProcessRef(0)
+				If (prosessRef = "") Then
+					ErrorStr = {Документ не содержит значения поля "ProsessRef" или оно пустое}
+					Exit Function
+				End If
+			End If
+			On Error 4091 Resume Next 'bad unid
+			Set docTemp = Me.db.GetDocumentByUNID(prosessRef)
+			On Error Goto errh
+			If (docTemp Is Nothing) Then
+				ErrorStr = {Не найден документ процесса по ключу "} & prosessRef & {"}
+				Exit Function
+			End If
+		End If
+		
+		If (docTemp.OrgDir(0) = "") Then
+			ErrorStr = {В документе "Процесса" не задана Орг. директория}
+			Exit Function
+		End If
+		
+		Set GetProcessDoc = docTemp
+		
+		Exit Function
+errh:
+		ErrorStr =  Error$ & {. Error # } & Cstr(Err) & { on line # } & Cstr(Erl) & { in (GetProcessDoc) "ProcessObject" class}
+		Resume endh
+endh:
+	End Function
+	
+	
+	
+	Sub delete()
+	End Sub
+	
+End Class
+
+'этот класс вроде не нужен
+Class UIProcessObject As ProcessObject
+	Public Source As NotesUIDocument
+	
+	Sub new (Source As NotesUIDocument)
+		Dim ErrorStr As String
+		Set Source = Source
+		Call Init(Source.Document, ErrorStr)
+	End Sub
+End Class
+
+
+
+Class UIPropertyStore
+	Private UIProcessStore As UIProcessStore
+	Private db As NotesDatabase
+	Private docProcess As NotesDocument
+	
+	Sub new(UIProcessStore As UIProcessStore, docProcess As NotesDocument)
+		Set Me.UIProcessStore = UIProcessStore
+		Set Me.db = docProcess.ParentDatabase
+		Set Me.docProcess = docProcess
+	End Sub
+	
+	Function SetProperty(multi As Boolean, ItemPrefix As String, ErrorStr As String) As Integer
+		On Error Goto errh
+		
+		Dim col As NotesDocumentCollection
+		Dim doc As NotesDocument
+		Dim PProperty As PProperty
+		Dim v As Variant
+		
+		If (Me.PickProperty(multi, col, ErrorStr) <>1) Then
+			Exit Function
+		End If
+		
+		v = Me.UIProcessStore.CheckODItemIsReplace(ItemPrefix, ErrorStr)
+		If (ErrorStr <> "") Then
+			Exit Function
+		End If
+		Select Case v
+		Case -1 : 'cancel
+			Exit Function 
+		Case 6 : 'yes
+			If (Me.UIProcessStore.ClearODItem(ItemPrefix, ErrorStr) <> 1) Then
+				Exit Function
+			End If
+		Case 7 : 'no
+			'nothing
+		End Select
+		
+		Set doc = col.GetFirstDocument
+		While (Not (doc Is Nothing))
+			
+			Set PProperty = New PProperty(doc)
+			
+			If (Me.UIProcessStore.WriteInAppend(PProperty, ItemPrefix, ErrorStr) <>1) Then
+				Exit Function
+			End If
+			
+			Set doc = col.GetNextDocument(doc)
+		Wend
+		
+		SetProperty = 1
+		
+		Exit Function
+errh:
+		ErrorStr =  Error$ & {. Error # } & Cstr(Err) & { on line # } & Cstr(Erl) & { in (SetProperty) "UIPropertyStore" class}
+		Resume endh
+endh:
+	End Function
+	
+	
+	Function PickProperty(multi As Boolean, colProp As NotesDocumentCollection, ErrorStr As String) As Integer
+		On Error Goto errh
+		
+		Dim View As NotesView, ViewP As NotesView
+		Dim v As Variant
+		Dim col As NotesDocumentCollection
+		Dim doc As NotesDocument
+		
+		Set View = Me.db.GetView("($DWFProcess&Stages)")
+		If (View Is Nothing) Then
+			ErrorStr = {Не найдено представление "($DWFProcess&Stage)"}
+			Exit Function
+		End If
+		
+		Redim v(0) As String
+		v(0) = Me.docProcess.UniversalID
+		Set col = Me.UIProcessStore.ws.PickListCollection(_
+		PICKLIST_CUSTOM,_
+		False,_
+		db.Server,_
+		db.FilePath,_
+		{($DWFProcess&Stages)},_
+		db.Title & {. Процесс и стадии},_
+		{Выберите документ, где задан дополнителный признак},_
+		v(0))
+		If (Isempty(col)) Then
+			Exit Function
+		End If
+		If (col.Count = 0) Then
+			Exit Function
+		End If
+		Set doc = col.GetFirstDocument
+		
+		Set ViewP = db.GetView("($DWFProperties)")
+		If (ViewP Is Nothing) Then
+			ErrorStr = {Не найдено представление "($DWFProperties)"}
+			Exit Function
+		End If
+		
+		Redim v(0) As String
+		v(0) = doc.UniversalID
+		Set colProp = Me.UIProcessStore.ws.PickListCollection(_
+		PICKLIST_CUSTOM,_
+		multi,_
+		db.Server,_
+		db.FilePath,_
+		{($DWFProperties)},_
+		{Дополнительные признаки},_
+		{Выберите дополнительный(е) признак(и)},_
+		v(0))
+		If (Isempty(colProp)) Then
+			Exit Function
+		End If
+		If (colProp.Count = 0) Then
+			Exit Function
+		End If
+		
+		PickProperty = 1
+		
+		Exit Function
+errh:
+		ErrorStr =  Error$ & {. Error # } & Cstr(Err) & { on line # } & Cstr(Erl) & { in (PickProperty) "UIPropertyStore" class}
+		Resume endh
+endh:
+	End Function
+	
+	
+End Class
+
+
+
+
+Class PProperty As ProcessObject
+	Public Parent As NotesDocument
+	ObjID_ As String
+	ObjName_ As String
+	
+	Sub new (doc As NotesDocument)
+		Dim ErrorStr As String
+		
+		Set Me.doc = doc
+		Set Parent  = GetParentDoc(doc, ErrorStr)
+		If (Not (Parent Is Nothing)) Then
+			Call Init(Parent, ErrorStr)	
+		End If
+		
+		Me.ObjID		= doc.UniversalID
+		Me.ObjName	= {<Доп. признак> } & doc.ItemName(0)
+	End Sub	
+	
+	Private Function GetParentDoc(doc As NotesDocument, ErrorStr As String) As NotesDocument
+		On Error Goto errh
+		
+		Dim ParentRef As String
+		
+		ParentRef = Cstr(doc.ParentRef(0))
+		If (ParentRef = "") Then
+			ErrorStr = {Документ не содержит значения поля "ParentRef" или оно пустое}
+			Exit Function
+		End If
+		On Error 4091 Resume Next 'bad unid
+		Set GetParentDoc = Me.db.GetDocumentByUNID(ParentRef)
+		On Error Goto errh
+		If (GetParentDoc Is Nothing) Then
+			ErrorStr = {Не найден родительский документ по ключу "} & ParentRef & {"}
+			Exit Function
+		End If
+		
+		Exit Function
+errh:
+		ErrorStr = Error$ & {. Error # } & Cstr(Err) & { on line # } & Cstr(Erl) & { in (GetParentDoc) "PProperty" class}
+		Resume endh
+endh:
+	End Function
+	
+	
+	Property Set ObjID
+		ObjID_ = ObjID
+	End Property
+	Public Property Get ObjID
+		ObjID = ObjID_
+	End Property
+	
+	Property Set ObjName
+		ObjName_ = ObjName
+	End Property
+	Public Property Get ObjName
+		ObjName = ObjName_
+	End Property
+	
+	
+	Sub delete()
+	End Sub
+End Class
+
+Class FormItem
+	UIProcessStore As UIProcessStore
+	ObjID_ As String
+	ObjName_ As String
+	
+	Sub new(UIProcessStore As UIProcessStore)
+		Set Me.UIProcessStore = UIProcessStore
+	End Sub
+	
+	Function Set(ItemPrefix As String, ErrorStr As String) As Integer
+		On Error Goto errh
+		
+		Dim InputValue As Variant
+		Dim v As Variant
+		
+		InputValue = Inputbox$("Введите префикс поля, содержащий необходимые данные", "Ввод данных")
+		If (Datatype(InputValue) <> 8) Then
+			ErrorStr = {Не верный формат введенных данных}
+			Exit Function
+		End If
+		
+		Me.ObjID 		= {formitem-} & InputValue
+		Me.ObjName	= {<Поле на форме> } & InputValue
+		
+		v = Me.UIProcessStore.CheckODItemIsReplace(ItemPrefix, ErrorStr)
+		If (ErrorStr <> "") Then
+			Exit Function
+		End If
+		Select Case v
+		Case -1 : 'cancel
+			Exit Function
+		Case 6 : 'yes
+			If (Me.UIProcessStore.ClearODItem(ItemPrefix, ErrorStr) <> 1) Then
+				Exit Function
+			End If
+		Case 7 : 'no
+			'nothing
+		End Select
+		
+		If (Me.UIProcessStore.WriteInAppend(Me, ItemPrefix, ErrorStr) <> 1) Then
+			Exit Function
+		End If
+		
+		Me.Set = 1
+		
+		Exit Function
+errh:
+		ErrorStr = Error$ & {. Error # } & Cstr(Err) & { on line # } & Cstr(Erl) & { in (Set) "FormItem"}
+		Resume endh
+endh:
+	End Function
+	
+	Property Set ObjID
+		ObjID_ = ObjID
+	End Property
+	Public Property Get ObjID
+		ObjID = ObjID_
+	End Property
+	
+	Property Set ObjName
+		ObjName_ = ObjName
+	End Property
+	Public Property Get ObjName
+		ObjName = ObjName_
+	End Property
+	
+	Sub delete()
+	End Sub
+End Class
+
+
+Class FormulaValue
+	UIProcessStore As UIProcessStore
+	ObjID_ As String
+	ObjName_ As String
+	
+	Sub new(UIProcessStore As UIProcessStore)
+		Set Me.UIProcessStore = UIProcessStore
+	End Sub
+	
+	Function Set(ItemPrefix As String, ErrorStr As String) As Integer
+		On Error Goto errh
+		
+		Dim db As NotesDatabase
+		Dim docTemp As NotesDocument
+		Dim InputValue As Variant
+		Dim sValue As String
+		Dim v As Variant
+		
+		
+		Set db = UIProcessStore.doc.ParentDatabase
+		Set docTemp = db.CreateDocument
+		
+'		If Not (UIProcessStore.ws.DialogBox("DWF101", True, True, False, False, False, False, ProcessObject.db.Title, docTemp, True, False, True)) Then
+'			Exit Function
+'		End If
+		
+		If ( Not(UIProcessStore.ws.DialogBox("DWF107", True, True, False, False, False, False, "Введите @-формулу", docTemp, True, False, True))) Then
+			Exit Function
+		End If
+		
+		sValue = docTemp.Formula(0)
+		If (Datatype(sValue) <> 8) Then
+			ErrorStr = {Не верный формат введенных данных}
+			Exit Function
+		End If
+		
+		
+		InputValue = Inputbox$("Введите название для @-формулы", "Ввод данных")
+		If (Datatype(InputValue) <> 8) Then
+			ErrorStr = {Не верный формат введенных данных}
+			Exit Function
+		End If
+		If (Cstr(InputValue) = "") Then
+			Exit Function
+		End If
+		
+		
+		Me.ObjID 		= {formulavalue-} & sValue
+		Me.ObjName	= {<@-формула> } & InputValue
+		
+		v = Me.UIProcessStore.CheckODItemIsReplace(ItemPrefix, ErrorStr)
+		If (ErrorStr <> "") Then
+			Exit Function
+		End If
+		Select Case v
+		Case -1 : 'cancel
+			Exit Function
+		Case 6 : 'yes
+			If (Me.UIProcessStore.ClearODItem(ItemPrefix, ErrorStr) <> 1) Then
+				Exit Function
+			End If
+		Case 7 : 'no
+			'nothing
+		End Select
+		
+		If (Me.UIProcessStore.WriteInAppend(Me, ItemPrefix, ErrorStr) <> 1) Then
+			Exit Function
+		End If
+		
+		Me.Set = 1
+		
+		Exit Function
+errh:
+		ErrorStr = Error$ & {. Error # } & Cstr(Err) & { on line # } & Cstr(Erl) & { in (Set) "FormulaValue"}
+		Resume endh
+endh:
+	End Function
+	
+	Property Set ObjID
+		ObjID_ = ObjID
+	End Property
+	Public Property Get ObjID
+		ObjID = ObjID_
+	End Property
+	
+	Property Set ObjName
+		ObjName_ = ObjName
+	End Property
+	Public Property Get ObjName
+		ObjName = ObjName_
+	End Property
+	
+	Sub delete()
+	End Sub
+End Class
+'++LotusScript Development Environment:2:2:ActUIRemoveAddDoc:1:8
+Sub ActUIRemoveAddDoc(AddDocType As String)
+	On Error Goto errh
+	
+	
+	Dim ws As New NotesUIWorkspace
+	Dim db As NotesDatabase
+	Dim docUI As NotesUIDocument
+	Dim doc As NotesDocument
+	Dim View As NotesView
+	Dim colAddDoc As NotesDocumentCollection
+	Dim docAddDoc As NotesDocument
+	Dim v As Variant
+	Dim hasMatch As Integer
+	Dim i As Integer
+	Dim ViewName As String
+	
+	Select Case Lcase(AddDocType)
+	Case Lcase("basic")
+		ViewName = "($DWFAddDocBasicByStageID)"
+	Case Lcase("response")
+		ViewName = "($DWFAddDocResponseByStageID)"
+	Case Else
+		Msgbox {Указан не верный тип доп. документов}, 48, ERR_MSG_TITLE
+		Exit Sub
+	End Select
+	
+	
+	Set docUI = ws.CurrentDocument
+	Set doc = docUI.Document
+	Set db  = doc.ParentDatabase
+	Set View = db.GetView(ViewName)
+	If (View Is Nothing) Then
+		Msgbox {Не найдено представление "} & ViewName & {"}, 48, ERR_MSG_TITLE
+		Exit Sub
+	End If
+	
+	
+	Set colAddDoc = ws.PickListCollection(_
+	3, True,_
+	db.Server, db.FilePath, ViewName,_
+	"Список доп. документов", "Выберите доп. документы",_
+	doc.UniversalID)
+	If (colAddDoc Is Nothing) Then Exit Sub
+	If (colAddDoc.Count = 0) Then Exit Sub
+	
+	Set docAddDoc = colAddDoc.GetFirstDocument
+	While (Not (docAddDoc Is Nothing))
+		Redim v(0)
+		hasMatch = 0
+		v = docAddDoc.GetItemValue("StageID")
+		If Isarray(v) Then
+			For i=0 To Ubound(v)
+				If (Lcase(v(i)) = Lcase(doc.UniversalID)) Then
+					v(i) = ""
+					hasMatch = 1
+					Exit For
+				End If
+			Next
+			If (hasMatch = 1) Then
+				v = Fulltrim(v)
+				Call docAddDoc.ReplaceItemValue("StageID", v)
+				Call docAddDoc.Save(True, True)
+			End If
+		End If 
+		
+		Set docAddDoc = colAddDoc.GetNextDocument(docAddDoc)
+	Wend
+	
+	Call ws.ViewRefresh()
+	
+	
+	
+	
+	
+	
+	
+	Exit Sub
+errh:
+	Msgbox Error$ & {. Error # } & Cstr(Err) & { on line # } & Cstr(Erl) & { in (ActUIRemoveMsg) "DWFProcessAction"}
+	Resume endh
+endh:
+End Sub
+
+'++LotusScript Development Environment:2:1:ActUIRemoveProcess:1:8
+Function ActUIRemoveProcess() As Integer
+	On Error Goto errh
+	
+	Dim ws As New NotesUIWorkspace
+	Dim db As NotesDatabase
+	Dim docUI As NotesUIDocument
+	Dim doc As NotesDocument
+	
+	Set docUI = ws.CurrentDocument
+	Set doc = docUI.Document
+	
+	Call doc.ReplaceItemValue("ProcessServer", "")
+	Call doc.ReplaceItemValue("ProcessFilePath", "")
+	Call doc.ReplaceItemValue("ProcessName", "")
+	Call doc.ReplaceItemValue("ProcessID", "")
+	
+	Call docUI.Refresh()
+	
+	ActUIRemoveProcess = 1
+	
+	
+	Exit Function
+errh:
+	Msgbox Error$ & {. Error # } & Cstr(Err) & { on line # } & Cstr(Erl) & { in (ActUIRemoveProcess) "DWFProcessAction"}
+	Resume endh
+endh:
+End Function
+
+'++LotusScript Development Environment:2:2:ActUIAddMsg:1:8
+Sub ActUIAddMsg() '(TargerType As String)
+	On Error Goto errh
+	
+	Dim ws As New NotesUIWorkspace
+	Dim db As NotesDatabase
+	Dim docUI As NotesUIDocument
+	Dim doc As NotesDocument
+	Dim View As NotesView
+	Dim colM As NotesDocumentCollection
+	Dim docM As NotesDocument
+	Dim ParentRef As String
+	Dim ProcessRef As String
+	Dim v As Variant
+	Dim hasMatch As Integer
+	Dim i As Integer
+	Dim ActionID As String
+	Dim docTemp As NotesDocument
+	
+	
+	Set docUI = ws.CurrentDocument
+	Set doc = docUI.Document
+	Set db  = doc.ParentDatabase
+	Set View = db.GetView("($DWFMsgByProcessRef)")
+	If (View Is Nothing) Then
+		Msgbox {Не найдено представление "($DWFMsgByProcessRef)"}, 48, ERR_MSG_TITLE
+		Exit Sub
+	End If
+	
+	ParentRef = doc.GetItemValue("ParentRef")(0)
+	If (ParentRef = "") Then
+		Msgbox {В документе поле "ParentRef" пустое}, 16, ERR_MSG_TITLE
+		Exit Sub
+	End If
+	On Error 4091 Resume Next 'bad unid
+	Set docTemp = db.GetDocumentByUNID(parentRef)
+	On Error Goto errh
+	If (docTemp Is Nothing) Then
+		Msgbox {Не найден родительский документ по ключу "} & parentRef & {"}, 48, ERR_MSG_TITLE
+		Exit Sub
+	End If
+	
+	ProcessRef = docTemp.GetItemValue("ProcessRef")(0)
+	If (ProcessRef = "") Then
+		Msgbox {В документе стадии поле "ProcessRef" пустое}, 16, ERR_MSG_TITLE
+		Exit Sub
+	End If
+	
+	Set colM = ws.PickListCollection(_
+	3, True,_
+	db.Server, db.FilePath, "($DWFMsgByProcessRef)",_
+	"Список шаблонов сообщений", "Выберите шаблон сообщения",_
+	ProcessRef)
+	If (colM Is Nothing) Then Exit Sub
+	If (colM.Count = 0) Then Exit Sub
+	
+	ActionID = doc.UniversalID '& {-} & TargerType
+	Set docM = colM.GetFirstDocument
+	While (Not (docM Is Nothing))
+		Redim v(0)
+		hasMatch = 0
+		
+		v = docM.GetItemValue("ActionID")
+		If Isarray(v) Then
+			For i=0 To Ubound(v)
+				If (Lcase(v(i)) = Lcase(ActionID)) Then
+					hasMatch = 1
+					Exit For
+				End If
+			Next
+			If (hasMatch = 0) Then
+				If (v(0) <> "") Then
+					Redim Preserve v(Ubound(v)+1) As String	
+				End If
+				v(Ubound(v)) = ActionID
+				Call docM.ReplaceItemValue("ActionID", v)
+				Call docM.Save(True, True)
+			End If
+			
+		End If 
+		
+		Set docM = colM.GetNextDocument(docM)
+	Wend
+	
+	Call ws.ViewRefresh()
+	Call ws.ViewRefresh()
+	
+	
+	
+	
+	Exit Sub
+errh:
+	Msgbox Error$ & {. Error # } & Cstr(Err) & { on line # } & Cstr(Erl) & { in (ActUIAddMsg) "DWFProcessAction"}
+	Resume endh
+endh:
+End Sub
+
+
+'++LotusScript Development Environment:2:2:ActUIRemoveRelation:1:8
+Sub ActUIRemoveRelation()
+	On Error Goto errh
+	
+	Dim ws As New NotesUIWorkspace
+	Dim docUI As NotesUIDocument
+	Dim doc As NotesDocument
+	
+	
+	
+	Set docUI = ws.CurrentDocument
+	Set doc = docUI.Document
+	
+	
+	Call doc.ReplaceItemValue("Rel1Name", "" )
+	Call doc.ReplaceItemValue("Rel1ID", "" )
+	
+	
+	Call docUI.Refresh
+	
+	Exit Sub
+errh:
+	Msgbox Error$ & {. Error # } & Cstr(Err) & { on line # } & Cstr(Erl) & { in (ActUIRemoveRelation) "DWFProcessAction"}
+	Resume endh
+endh:
+End Sub
+
+
+'++LotusScript Development Environment:2:2:ActUITaskUIAddDirectoryEntry:1:8
+Sub ActUITaskUIAddDirectoryEntry()
+	On Error Goto errh
+	
+	
+	Dim ws As New NotesUIWorkspace
+	Dim db As NotesDatabase
+	Dim docUI As NotesUIDocument
+	Dim doc As NotesDocument
+	Dim docParent As NotesDocument
+	Dim docProcess As NotesDocument
+	Dim dbDirectory As NotesDatabase
+	Dim ViewDir As NotesView
+	Dim colDir As NotesDocumentCollection
+	Dim docDir As NotesDocument
+	Dim v As Variant
+	
+	Set docUI = ws.CurrentDocument
+	Set doc = docUI.Document
+	Set db = doc.ParentDatabase
+	On Error 4091 Resume Next
+	Set docParent = db.GetDocumentByUNID(doc.GetItemValue("ParentRef")(0))
+	On Error Goto errh
+	If (docParent Is Nothing) Then
+		Msgbox {Не найден родительский документ}, 48, ERR_MSG_TITLE
+		Exit Sub
+	End If
+	
+	If (docParent.Form(0) = "DWF01") Then
+		Set docProcess = docParent
+	Else
+		On Error 4091 Resume Next
+		Set docProcess = db.GetDocumentByUNID(docParent.GetItemValue("ProcessRef")(0))
+		On Error Goto errh
+	End If
+	If (docProcess Is Nothing) Then
+		Msgbox {Не найден документ Процесса}, 48, ERR_MSG_TITLE
+		Exit Sub
+	End If
+	
+	Redim v(0) As String
+	v(0) = docProcess.Directory(0)
+	If (Cstr(v(0)) = "") Then
+		Msgbox {В документе Процесса не задан Справочник}, 48, ERR_MSG_TITLE
+		Exit Sub
+	End If
+	
+	If (DWFSGetDatebase(Cstr(v(0)), dbDirectory) <> 1)Then
+		Msgbox {Не найдена база Справочника}, 48, ERR_MSG_TITLE
+		Exit Sub
+	End If
+	Set ViewDir = dbDirectory.GetView("Directory")
+	If (ViewDir Is Nothing) Then
+		Msgbox {Не найдено представление "Directory"}, 48, ERR_MSG_TITLE
+		Exit Sub
+	End If
+	
+	Set colDir = ws.PickListCollection(_
+	PICKLIST_CUSTOM,_
+	False,_
+	dbDirectory.Server,_
+	dbDirectory.FilePath,_
+	{Directory},_
+	{Список справочников},_
+	{Выберите справочник})
+	If (Isempty(colDir)) Then
+		Exit Sub
+	End If
+	If (colDir.Count = 0) Then
+		Exit Sub
+	End If
+	Set docDir = colDir.GetFirstDocument
+	
+	If (Lcase(doc.ValueType(0)) = Lcase("ODObj")) Then
+		If (Lcase(docDir.DataFormat(0)) <> Lcase("odobj")) Then
+			Msgbox {Несоответствие Формата запроса и справочника}, 48, ERR_MSG_TITLE
+			Exit Sub
+		End If
+	End If
+	If (Lcase(doc.ValueType(0)) <> Lcase("ODObj")) Then
+		If (Lcase(docDir.DataFormat(0)) = Lcase("odobj")) Then
+			Msgbox {Несоответствие Формата запроса и справочника}, 48, ERR_MSG_TITLE
+			Exit Sub
+		End If
+	End If
+	
+	Call doc.ReplaceItemValue("DirectoryEntryName", docDir.Name(0) )
+	Call doc.ReplaceItemValue("DirectoryEntryID", docDir.UniversalID )
+	
+	Call docUI.Refresh
+	
+	
+	
+	
+	Exit Sub
+errh:
+	Msgbox Error$ & {. Error # } & Cstr(Err) & { on line # } & Cstr(Erl) & { in (ActUITaskUIAddDirectoryEntry) "DWFProcessAction"}
+	Resume endh
+endh:
+End Sub
+
+'++LotusScript Development Environment:2:2:ActUITaskUIRemoveDirectoryEntry:1:8
+Sub ActUITaskUIRemoveDirectoryEntry()
+	On Error Goto errh
+	
+	Dim ws As New NotesUIWorkspace
+	Dim docUI As NotesUIDocument
+	Dim doc As NotesDocument
+	
+	
+	
+	Set docUI = ws.CurrentDocument
+	Set doc = docUI.Document
+	
+	
+	Call doc.ReplaceItemValue("DirectoryEntryName", "" )
+	Call doc.ReplaceItemValue("DirectoryEntryID", "" )
+	
+	
+	Call docUI.Refresh
+	
+	Exit Sub
+errh:
+	Msgbox Error$ & {. Error # } & Cstr(Err) & { on line # } & Cstr(Erl) & { in (ActUITaskUIRemoveDirectoryEntry) "DWFProcessAction"}
+	Resume endh
+endh:
+End Sub
+
+'++LotusScript Development Environment:2:1:ActUIAddParentProcess:1:8
+Function ActUIAddParentProcess() As Integer
+	On Error Goto errh
+	
+	Dim ws As New NotesUIWorkspace
+	Dim db As NotesDatabase
+	Dim docUI As NotesUIDocument
+	Dim doc As NotesDocument
+	Dim View As NotesView
+	Dim colP As NotesDocumentCollection
+	Dim docP As NotesDocument
+	Dim PBasicName As Variant, PBasicID As Variant
+	Dim oPBasicName As Variant, oPBasicID As Variant
+	
+	Set docUI = ws.CurrentDocument
+	Set doc = docUI.Document
+	Set db  = doc.ParentDatabase
+	Set View = db.GetView("DWFBasicProcess")
+	If (View Is Nothing) Then
+		Msgbox {Не найдено представление "DWFBasicProcess"}, 48, ERR_MSG_TITLE
+		Exit Function
+	End If
+	
+	Set colP = ws.PickListCollection(_
+	3, True,_
+	db.Server, db.FilePath, "DWFBasicProcess",_
+	"Список основных процессов", "Выберите процесс")
+	If (colP Is Nothing) Then Exit Function
+	If (colP.Count = 0) Then Exit Function
+	
+	Redim PBasicName(0) As String
+	Redim PBasicID(0) As String
+	Set docP = colP.GetFirstDocument
+	While (Not (docP Is Nothing)) 
+		If (PBasicID(0) <> "") Then
+			Redim Preserve PBasicName(Ubound(PBasicName)+1) As String
+			Redim Preserve PBasicID(Ubound(PBasicID)+1) As String
+		End If
+		PBasicName(Ubound(PBasicName))= docP.GetItemValue("Name")(0)
+		If (PBasicName(Ubound(PBasicName)) = "") Then
+			PBasicName(Ubound(PBasicName)) = "<не определено>"
+		End If
+		PBasicID(Ubound(PBasicID)) = docP.UniversalID
+		Set docP = colP.GetNextDocument(docP)
+	Wend
+	If (PBasicID(0) = "") Then
+		Exit Function
+	End If
+	
+	If doc.HasItem("ParentProcessID") Then
+		oPBasicName = doc.GetFirstItem("ParentProcessName").Values
+		oPBasicID = doc.GetFirstItem("ParentProcessID").Values
+	Else
+		Redim oPBasicName(0) As String
+		Redim oPBasicID(0) As String
+	End If
+	If (oPBasicID(0) <> "") Then
+		PBasicName = Arrayunique(Fulltrim(Arrayappend(oPBasicName, PBasicName)))
+		PBasicID = Arrayunique(Fulltrim(Arrayappend(oPBasicID, PBasicID)))
+	End If
+	
+	Call doc.ReplaceItemValue("ParentProcessName", PBasicName)
+	Call doc.ReplaceItemValue("ParentProcessID", PBasicID)
+	
+	Call docUI.Refresh()
+	
+	ActUIAddParentProcess = 1
+	
+	
+	Exit Function
+errh:
+	Msgbox Error$ & {. Error # } & Cstr(Err) & { on line # } & Cstr(Erl) & { in (ActUIAddParentProcess) "DWFProcessAction"}
+	Resume endh
+endh:
+End Function
+
+'++LotusScript Development Environment:2:1:ActUIRemoveAddDocToCheck:1:8
+Function ActUIRemoveAddDocToCheck()
+	On Error Goto errh
+	
+	
+	Dim ws As New NotesUIWorkspace
+	Dim db As NotesDatabase
+	Dim docUI As NotesUIDocument
+	Dim doc As NotesDocument
+	Dim View As NotesView
+	Dim colAddDoc As NotesDocumentCollection
+	Dim docAddDoc As NotesDocument
+	Dim StageID As String
+	Dim v As Variant
+	Dim hasMatch As Integer
+	Dim i As Integer
+	
+	
+	Set docUI = ws.CurrentDocument
+	Set doc = docUI.Document
+	Set db  = doc.ParentDatabase
+	Set View = db.GetView("($DWFAddDocByStageCheckDocID)")
+	If (View Is Nothing) Then
+		Msgbox {Не найдено представление "($DWFAddDocByStageCheckDocID)"}, 48, ERR_MSG_TITLE
+		Exit Function
+	End If
+	StageID = doc.UniversalID
+	
+	
+	Set colAddDoc = ws.PickListCollection(_
+	3, True,_
+	db.Server, db.FilePath, "($DWFAddDocByStageCheckDocID)",_
+	"Список шаблонов сообщений", "Выберите шаблон сообщения",_
+	StageID)
+	If (colAddDoc Is Nothing) Then Exit Function
+	If (colAddDoc.Count = 0) Then Exit Function
+	
+	Set docAddDoc = colAddDoc.GetFirstDocument
+	While (Not (docAddDoc Is Nothing))
+		Redim v(0)
+		hasMatch = 0
+		v = docAddDoc.GetItemValue("StageCheckDocID")
+		If Isarray(v) Then
+			For i=0 To Ubound(v)
+				If (Lcase(v(i)) = Lcase(StageID)) Then
+					v(i) = ""
+					hasMatch = 1
+					Exit For
+				End If
+			Next
+			If (hasMatch = 1) Then
+				v = Fulltrim(v)
+				Call docAddDoc.ReplaceItemValue("StageCheckDocID", v)
+				Call docAddDoc.Save(True, True)
+			End If
+		End If 
+		
+		Set docAddDoc = colAddDoc.GetNextDocument(docAddDoc)
+	Wend
+	
+	Call ws.ViewRefresh()
+	
+	
+	
+	
+	Exit Function
+errh:
+	Msgbox Error$ & {. Error # } & Cstr(Err) & { on line # } & Cstr(Erl) & { in (ActUIRemoveAddDocToCheck) "DWFProcessAction"}
+	Resume endh
+endh:
+End Function
+
+'++LotusScript Development Environment:2:2:ActUIAddRelationProperty:1:8
+Sub ActUIAddRelationProperty()
+	On Error Goto errh
+	
+	
+	Dim ws As New NotesUIWorkspace
+	Dim db As NotesDatabase
+	Dim docUI As NotesUIDocument
+	Dim doc As NotesDocument
+	Dim View As NotesView
+	Dim col As NotesDocumentCollection
+	Dim docP As NotesDocument
+	Dim docParent As NotesDocument
+	Dim ViewA As NotesView
+	Dim colA As NotesDocumentCollection
+	Dim docA As NotesDocument
+	Dim v As Variant
+	
+	Set docUI = ws.CurrentDocument
+	Set doc = docUI.Document
+	Set db = doc.ParentDatabase
+	On Error 4091 Resume Next
+	Set docParent = db.GetDocumentByUNID(doc.GetItemValue("ParentRef")(0))
+	On Error Goto errh
+	If (docParent Is Nothing) Then
+		Msgbox {Не найдено родительский документ}, 48, ERR_MSG_TITLE
+		Exit Sub
+	End If
+	
+	
+	Set View = db.GetView("($DWFProcess&Stages)")
+	If (View Is Nothing) Then
+		Msgbox {Не найдено представление "($DWFProcess&Stage)"}, 48, ERR_MSG_TITLE
+		Exit Sub
+	End If
+	
+	Redim v(0) As String
+	If (docParent.Form(0) = "DWF01") Then
+		v(0) = docParent.UniversalID	
+	Else
+		v(0) = docParent.GetItemValue("ProcessRef")(0)
+	End If
+	
+	Set col = ws.PickListCollection(_
+	PICKLIST_CUSTOM,_
+	False,_
+	db.Server,_
+	db.FilePath,_
+	{($DWFProcess&Stages)},_
+	db.Title & {. Процесс и стадии},_
+	{Выберите документ, где задан дополнителный признак},_
+	v(0))
+	If (Isempty(col)) Then
+		Exit Sub
+	End If
+	If (col.Count = 0) Then
+		Exit Sub
+	End If
+	Set docP = col.GetFirstDocument
+	
+	Set ViewA = db.GetView("($DWFProperties)")
+	If (ViewA Is Nothing) Then
+		Msgbox {Не найдено представление "($DWFProperties)"}, 48, ERR_MSG_TITLE
+		Exit Sub
+	End If
+	
+	Redim v(0) As String
+	v(0) = docP.UniversalID
+	Set colA = ws.PickListCollection(_
+	PICKLIST_CUSTOM,_
+	False,_
+	db.Server,_
+	db.FilePath,_
+	{($DWFProperties)},_
+	{Дополнительные признаки},_
+	{Выберите дополнительный(е) признак(и)},_
+	v(0))
+	If (Isempty(colA)) Then
+		Exit Sub
+	End If
+	If (colA.Count = 0) Then
+		Exit Sub
+	End If
+	
+	
+	
+	Set docA = colA.GetFirstDocument
+	Call doc.ReplaceItemValue("Rel1PropertyName", {<Доп. признак> } & docA.Name(0) )
+	Call doc.ReplaceItemValue("Rel1PropertyID", docA.UniversalID )
+	
+	Call docUI.Refresh
+	
+	
+	
+	
+	Exit Sub
+errh:
+	Msgbox Error$ & {. Error # } & Cstr(Err) & { on line # } & Cstr(Erl) & { in (ActUIAddRelationProperty) "DWFProcessAction"}
+	Resume endh
+endh:
+End Sub
+
+
+'++LotusScript Development Environment:2:2:ActUIRemoveAddDocBasic:1:8
+Sub ActUIRemoveAddDocBasic()
+	On Error Goto errh
+	
+	
+	Dim ws As New NotesUIWorkspace
+	Dim db As NotesDatabase
+	Dim docUI As NotesUIDocument
+	Dim doc As NotesDocument
+	Dim View As NotesView
+	Dim colAddDoc As NotesDocumentCollection
+	Dim docAddDoc As NotesDocument
+	Dim v As Variant
+	Dim hasMatch As Integer
+	Dim i As Integer
+	
+	
+	Set docUI = ws.CurrentDocument
+	Set doc = docUI.Document
+	Set db  = doc.ParentDatabase
+	Set View = db.GetView("($DWFAddDocByResponseID)")
+	If (View Is Nothing) Then
+		Msgbox {Не найдено представление "($DWFAddDocByResponseID)"}, 48, ERR_MSG_TITLE
+		Exit Sub
+	End If
+	
+	
+	Set colAddDoc = ws.PickListCollection(_
+	3, True,_
+	db.Server, db.FilePath, "($DWFAddDocByResponseID)",_
+	"Список доп. документов", "Выберите доп. документы",_
+	doc.UniversalID)
+	If (colAddDoc Is Nothing) Then Exit Sub
+	If (colAddDoc.Count = 0) Then Exit Sub
+	
+	Set docAddDoc = colAddDoc.GetFirstDocument
+	While (Not (docAddDoc Is Nothing))
+		Redim v(0)
+		hasMatch = 0
+		v = docAddDoc.GetItemValue("ResponseID")
+		If Isarray(v) Then
+			For i=0 To Ubound(v)
+				If (Lcase(v(i)) = Lcase(doc.UniversalID)) Then
+					v(i) = ""
+					hasMatch = 1
+					Exit For
+				End If
+			Next
+			If (hasMatch = 1) Then
+				v = Fulltrim(v)
+				Call docAddDoc.ReplaceItemValue("ResponseID", v)
+				Call docAddDoc.Save(True, True)
+			End If
+		End If 
+		
+		Set docAddDoc = colAddDoc.GetNextDocument(docAddDoc)
+	Wend
+	
+	Call ws.ViewRefresh()
+	
+	
+	
+	
+	
+	
+	
+	Exit Sub
+errh:
+	Msgbox Error$ & {. Error # } & Cstr(Err) & { on line # } & Cstr(Erl) & { in (ActUIRemoveMsg) "DWFProcessAction"}
+	Resume endh
+endh:
+End Sub
+
+'++LotusScript Development Environment:2:1:ActUIAddVisaRangeValue:1:8
+Function ActUIAddVisaRangeValue(TargetItemName As String)
+	
+	Dim ws As New NotesUIWorkspace
+	Dim db As NotesDatabase
+	Dim docUI As NotesUIDocument
+	Dim doc As NotesDocument
+	Dim docTemp As NotesDocument
+	Dim v As Variant
+	Dim i As Integer
+	Dim SetValues As Variant
+	
+	
+	Set docUI = ws.CurrentDocument
+	Set doc = docUI.Document
+	Set db = doc.ParentDatabase
+	Call docUI.Refresh
+	
+	v = doc.GetFirstItem("VisaRange").Values
+	If (v(0) = "") Then
+		Msgbox {Необходимо ввести Список занчений выбора},48, ERR_MSG_TITLE
+		Exit Function
+	End If
+	Redim v(0) As String
+	For i=0 To Ubound(doc.VisaRange)
+		If (v(0) <> "") Then
+			Redim Preserve v(Ubound(v)+1) As String
+		End If
+		If (Instr(doc.VisaRange(i), {|}) = 0) Then
+			Msgbox {Не верный формат введенных данных:} & doc.VisaRange(i), 48, ERR_MSG_TITLE
+		Else
+			v(Ubound(v)) = doc.VisaRange(i)
+		End If
+	Next
+	If (v(0) = "") Then
+		Exit Function
+	End If
+	
+	Set docTemp = db.CreateDocument
+	docTemp.Members = v
+	docTemp.promt = "Выберите значение для удаления"
+	
+	
+	If Not (ws.DialogBox("DWF105", True, True, False, False, False, False, db.Title, docTemp, True, False, True)) Then
+		Exit Function
+	End If
+	If (docTemp.List(0) = "") Then
+		Exit Function
+	End If
+	
+	v = docTemp.List
+	Redim SetValues(0) As String
+	Forall v1 In v
+		If (v(0) <> "") Then
+			Redim Preserve SetValues(Ubound(SetValues)+1) As String
+		End If
+		SetValues(Ubound(SetValues)) = v1
+	End Forall
+	
+	Call doc.ReplaceItemValue(TargetItemName, SetValues)
+	
+	
+	
+	Call docUI.Refresh
+	
+	
+	Exit Function
+errh:
+	Msgbox Error$ & {. Error # } & Cstr(Err) & { on line # } & Cstr(Erl) & { in (ActUIAddVisaRangeValue) "DWFProcessAction"}
+	Resume endh
+endh:
+End Function
+
+'++LotusScript Development Environment:2:2:ActUIAddAddDoc:1:8
+Sub ActUIAddAddDoc(AddDocType As String)
+	On Error Goto errh
+	
+	Dim ws As New NotesUIWorkspace
+	Dim db As NotesDatabase
+	Dim docUI As NotesUIDocument
+	Dim doc As NotesDocument
+	Dim View As NotesView
+	Dim colAddDoc As NotesDocumentCollection
+	Dim docAddDoc As NotesDocument
+	Dim ProcessRef As String
+	Dim v As Variant
+	Dim hasMatch As Integer
+	Dim i As Integer
+	Dim  ViewName As String
+	
+	Select Case Lcase(AddDocType)
+	Case Lcase("basic")
+		ViewName = "($DWFAddDocBasicByProcessRef)"
+	Case Lcase("response")
+		ViewName = "($DWFAddDocResponseByProcessRef)"
+	Case Else
+		Msgbox {Указан не верный тип доп. документов}, 48, ERR_MSG_TITLE
+		Exit Sub
+	End Select
+	
+	
+	
+	Set docUI = ws.CurrentDocument
+	Set doc = docUI.Document
+	Set db  = doc.ParentDatabase
+	Set View = db.GetView(ViewName)
+	If (View Is Nothing) Then
+		Msgbox {Не найдено представление "} & ViewName & {"}, 48, ERR_MSG_TITLE
+		Exit Sub
+	End If
+	ProcessRef = doc.GetItemValue("ProcessRef")(0)
+	If (ProcessRef = "") Then
+		Msgbox {В документе стадии поле "ProcessRef" пустое}, 16, ERR_MSG_TITLE
+		Exit Sub
+	End If
+	
+	Set colAddDoc = ws.PickListCollection(_
+	3, True,_
+	db.Server, db.FilePath, ViewName,_
+	"Список доп. документов", "Выберите доп. документы",_
+	ProcessRef)
+	If (colAddDoc Is Nothing) Then Exit Sub
+	If (colAddDoc.Count = 0) Then Exit Sub
+	
+	Set docAddDoc = colAddDoc.GetFirstDocument
+	While (Not (docAddDoc Is Nothing))
+		Redim v(0)
+		hasMatch = 0
+		
+		v = docAddDoc.GetItemValue("StageID")
+		If Isarray(v) Then
+			For i=0 To Ubound(v)
+				If (Lcase(v(i)) = Lcase(doc.UniversalID)) Then
+					hasMatch = 1
+					Exit For
+				End If
+			Next
+			If (hasMatch = 0) Then
+				If (v(0) <> "") Then
+					Redim Preserve v(Ubound(v)+1) As String	
+				End If
+				v(Ubound(v)) = doc.UniversalID
+				Call docAddDoc.ReplaceItemValue("StageID", v)
+				Call docAddDoc.Save(True, True)
+			End If
+			
+		End If 
+		
+		Set docAddDoc = colAddDoc.GetNextDocument(docAddDoc)
+	Wend
+	
+	Call ws.ViewRefresh()
+	Call ws.ViewRefresh()
+	
+	Exit Sub
+errh:
+	Msgbox Error$ & {. Error # } & Cstr(Err) & { on line # } & Cstr(Erl) & { in (ActUIAddAddDoc) "DWFProcessAction"}
+	Resume endh
+endh:
+End Sub
+
+'++LotusScript Development Environment:2:1:ActUIAddProcess:1:8
+Function ActUIAddProcess() As Integer
+	On Error Goto errh
+	
+	Dim ws As New NotesUIWorkspace
+	Dim session As New NotesSession
+	Dim db As NotesDatabase
+	Dim docUI As NotesUIDocument
+	Dim doc As NotesDocument
+	Dim dbProcess As NotesDatabase
+	Dim path As Variant
+	Dim sServer As String, sFilePath As String, sReplicaID As String
+	Dim View As NotesView
+	Dim colP As NotesDocumentCollection
+	Dim docP As NotesDocument
+	Dim PBasicName As Variant, PBasicID As Variant
+	Dim oPBasicName As Variant, oPBasicID As Variant
+	
+	Set docUI = ws.CurrentDocument
+	Set doc = docUI.Document
+	Set db  = doc.ParentDatabase
+	
+	path = ws.Prompt(13, "", "")
+	If Isempty(path) Then
+		Exit Function
+	End If
+	If (Not (Isarray(path))) Then
+		Msgbox {Не верный формат данных}, 16, "Операция остановлена"
+		Exit Function
+	End If
+	If (path(0) = "") Then
+		Msgbox {База процесса должна находиться на сервере}, 16, "Операция остановлена"
+		Exit Function
+	End If
+	sServer = path(0)
+	sFilePath = path(1)	
+	
+	If (DWFSGetDatebaseOnServer(sServer, sFilePath, dbProcess) <> 1) Then
+		Exit Function
+	End If
+	sReplicaID = dbProcess.Replicaid
+	
+	Set View = dbProcess.GetView("DWFProcess")
+	If (View Is Nothing) Then
+		Msgbox {Не найдено представление "DWFProcess"}, 48, ERR_MSG_TITLE
+		Exit Function
+	End If
+	
+	Set colP = ws.PickListCollection(_
+	3, False,_
+	dbProcess.Server, dbProcess.FilePath, "DWFProcess",_
+	"Список процессов", "Выберите процесс")
+	If (colP Is Nothing) Then Exit Function
+	If (colP.Count = 0) Then Exit Function
+	
+	Redim PBasicName(0) As String
+	Redim PBasicID(0) As String
+	Set docP = colP.GetFirstDocument
+	While (Not (docP Is Nothing)) 
+		If (PBasicID(0) <> "") Then
+			Redim Preserve PBasicName(Ubound(PBasicName)+1) As String
+			Redim Preserve PBasicID(Ubound(PBasicID)+1) As String
+		End If
+		PBasicName(Ubound(PBasicName))= docP.GetItemValue("Name")(0)
+		If (PBasicName(Ubound(PBasicName)) = "") Then
+			PBasicName(Ubound(PBasicName)) = "<не определено>"
+		End If
+		PBasicID(Ubound(PBasicID)) = docP.UniversalID
+		Set docP = colP.GetNextDocument(docP)
+	Wend
+	If (PBasicID(0) = "") Then
+		Exit Function
+	End If
+	
+	Call doc.ReplaceItemValue("ProcessServer", sServer )
+	Call doc.ReplaceItemValue("ProcessFilePath", sFilePath )
+	Call doc.ReplaceItemValue("ProcessReplicaID", sReplicaID )
+	Call doc.ReplaceItemValue("ProcessName", PBasicName )
+	Call doc.ReplaceItemValue("ProcessID", PBasicID )
+	
+	Call docUI.Refresh()
+	
+	ActUIAddProcess = 1
+	
+	
+	Exit Function
+errh:
+	Msgbox Error$ & {. Error # } & Cstr(Err) & { on line # } & Cstr(Erl) & { in (ActUIAddProcess) "DWFProcessAction"}
+	Resume endh
+endh:
+End Function
+
+'++LotusScript Development Environment:2:2:ActUIRemoveMsg:1:8
+Sub ActUIRemoveMsg() '(TargerType As String)
+	On Error Goto errh
+	
+	
+	Dim ws As New NotesUIWorkspace
+	Dim db As NotesDatabase
+	Dim docUI As NotesUIDocument
+	Dim doc As NotesDocument
+	Dim View As NotesView
+	Dim colM As NotesDocumentCollection
+	Dim docM As NotesDocument
+	Dim ActionID As String
+	Dim v As Variant
+	Dim hasMatch As Integer
+	Dim i As Integer
+	
+	
+	Set docUI = ws.CurrentDocument
+	Set doc = docUI.Document
+	Set db  = doc.ParentDatabase
+	Set View = db.GetView("($DWFMsgByActionID)")
+	If (View Is Nothing) Then
+		Msgbox {Не найдено представление "($DWFMsgByActionID)"}, 48, ERR_MSG_TITLE
+		Exit Sub
+	End If
+	ActionID = doc.UniversalID '& {-} & TargerType
+	
+	
+	Set colM = ws.PickListCollection(_
+	3, True,_
+	db.Server, db.FilePath, "($DWFMsgByActionID)",_
+	"Список шаблонов сообщений", "Выберите шаблон сообщения",_
+	ActionID)
+	If (colM Is Nothing) Then Exit Sub
+	If (colM.Count = 0) Then Exit Sub
+	
+	Set docM = colM.GetFirstDocument
+	While (Not (docM Is Nothing))
+		Redim v(0)
+		hasMatch = 0
+		v = docM.GetItemValue("ActionID")
+		If Isarray(v) Then
+			For i=0 To Ubound(v)
+				If (Lcase(v(i)) = Lcase(ActionID)) Then
+					v(i) = ""
+					hasMatch = 1
+					Exit For
+				End If
+			Next
+			If (hasMatch = 1) Then
+				v = Fulltrim(v)
+				Call docM.ReplaceItemValue("ActionID", v)
+				Call docM.Save(True, True)
+			End If
+		End If 
+		
+		Set docM = colM.GetNextDocument(docM)
+	Wend
+	
+	Call ws.ViewRefresh()
+	
+	
+	
+	
+	
+	
+	
+	Exit Sub
+errh:
+	Msgbox Error$ & {. Error # } & Cstr(Err) & { on line # } & Cstr(Erl) & { in (ActUIRemoveMsg) "DWFProcessAction"}
+	Resume endh
+endh:
+End Sub
+
+'++LotusScript Development Environment:2:2:ActUIAddRelation:1:8
+Sub ActUIAddRelation()
+	On Error Goto errh
+	
+	Dim ws As New NotesUIWorkspace
+	Dim db As NotesDatabase
+	Dim docUI As NotesUIDocument
+	Dim doc As NotesDocument
+	Dim docParent As NotesDocument
+	Dim docProcess As NotesDocument
+	Dim dbOD As NotesDatabase
+	Dim v As Variant
+	Dim View As NotesView
+	Dim colRel As NotesDocumentCollection
+	Dim docRel As NotesDocument
+	
+	
+	
+	Set docUI = ws.CurrentDocument
+	Set doc = docUI.Document
+	Set db = doc.ParentDatabase
+	On Error 4091 Resume Next
+	Set docParent = db.GetDocumentByUNID(doc.GetItemValue("ParentRef")(0))
+	On Error Goto errh
+	If (docParent Is Nothing) Then
+		Msgbox {Не найдено родительский документ}, 48, ERR_MSG_TITLE
+		Exit Sub
+	End If
+	
+	If (docParent.Form(0) = "DWF01") Then
+		Set docProcess = docParent
+	Else
+		On Error 4091 Resume Next
+		Set docProcess = db.GetDocumentByUNID( docParent.GetItemValue("ProcessRef")(0) )
+		On Error Goto errh
+	End If
+	If (docProcess Is Nothing) Then
+		Msgbox {Не найдено документ "Процесса"}, 48, ERR_MSG_TITLE
+		Exit Sub
+	End If
+	v = docProcess.OrgDir(0)
+	If (v = "") Then
+		Msgbox {В документе "Процесса" не задана Орг. директория}, 48, ERR_MSG_TITLE
+		Exit Sub
+	End If
+	
+	If (DWFSGetDatebase(Cstr(v), dbOD) <> 1)Then
+		Exit Sub
+	End If
+	
+	
+	Set colRel = ws.PickListCollection(_
+	PICKLIST_CUSTOM,_
+	False,_
+	dbOD.Server,_
+	dbOD.FilePath,_
+	{Relation},_
+	{Список реляций},_
+	{Выберите реляцию})
+	If (Isempty(colRel)) Then
+		Exit Sub
+	End If
+	If (colRel.Count = 0) Then
+		Exit Sub
+	End If
+	
+	Set docRel = colRel.GetFirstDocument
+	Call doc.ReplaceItemValue("Rel1Name", {<Реляция> } & docRel.Name(0) )
+	Call doc.ReplaceItemValue("Rel1ID", docRel.UniversalID )
+	
+	Call docUI.Refresh
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	Exit Sub
+errh:
+	Msgbox Error$ & {. Error # } & Cstr(Err) & { on line # } & Cstr(Erl) & { in (ActUIAddRelation) "DWFProcessAction"}
+	Resume endh
+endh:
+End Sub
+
+
+'++LotusScript Development Environment:2:1:ActUIRemoveParentProcess:1:8
+Function ActUIRemoveParentProcess() As Integer
+	On Error Goto errh
+	
+	Dim ws As New NotesUIWorkspace
+	Dim db As NotesDatabase
+	Dim docUI As NotesUIDocument
+	Dim doc As NotesDocument
+	
+	Set docUI = ws.CurrentDocument
+	Set doc = docUI.Document
+	
+	Call doc.ReplaceItemValue("ParentProcessName", "")
+	Call doc.ReplaceItemValue("ParentProcessID", "")
+	
+	Call docUI.Refresh()
+	
+	ActUIRemoveParentProcess = 1
+	
+	
+	Exit Function
+errh:
+	Msgbox Error$ & {. Error # } & Cstr(Err) & { on line # } & Cstr(Erl) & { in (ActUIRemoveParentProcess) "DWFProcessAction"}
+	Resume endh
+endh:
+End Function
+
+
+'++LotusScript Development Environment:2:1:ActUIAddAddDocToCheck:1:8
+Function ActUIAddAddDocToCheck()
+	On Error Goto errh
+	
+	Dim ws As New NotesUIWorkspace
+	Dim db As NotesDatabase
+	Dim docUI As NotesUIDocument
+	Dim doc As NotesDocument
+	Dim View As NotesView
+	Dim colAddDoc As NotesDocumentCollection
+	Dim docAddDoc As NotesDocument
+	Dim v As Variant
+	Dim hasMatch As Integer
+	Dim i As Integer
+	Dim StageID As String
+	
+	Set docUI = ws.CurrentDocument
+	Set doc = docUI.Document
+	Set db  = doc.ParentDatabase
+	Set View = db.GetView("($DWFAddDocByStageID)")
+	If (View Is Nothing) Then
+		Msgbox {Не найдено представление "($DWFAddDocByStageID)"}, 48, ERR_MSG_TITLE
+		Exit Function
+	End If
+	StageID = doc.GetItemValue("ParentRef")(0)
+	If (StageID = "") Then
+		Msgbox {В документе стадии поле "ParentRef" пустое}, 16, ERR_MSG_TITLE
+		Exit Function
+	End If
+	
+	Set colAddDoc = ws.PickListCollection(_
+	3, True,_
+	db.Server, db.FilePath, "($DWFAddDocByStageID)",_
+	"Список доп. документтов стадии", "Выберите доп. документ",_
+	StageID)
+	If (colAddDoc Is Nothing) Then Exit Function
+	If (colAddDoc.Count = 0) Then Exit Function
+	
+	StageID = doc.UniversalID
+	Set docAddDoc = colAddDoc.GetFirstDocument
+	While (Not (docAddDoc Is Nothing))
+		Redim v(0)
+		hasMatch = 0
+		
+		v = docAddDoc.GetItemValue("StageCheckDocID")
+		If Isarray(v) Then
+			For i=0 To Ubound(v)
+				If (Lcase(v(i)) = Lcase(StageID)) Then
+					hasMatch = 1
+					Exit For
+				End If
+			Next
+			If (hasMatch = 0) Then
+				If (v(0) <> "") Then
+					Redim Preserve v(Ubound(v)+1) As String	
+				End If
+				v(Ubound(v)) = StageID
+				Call docAddDoc.ReplaceItemValue("StageCheckDocID", v)
+				Call docAddDoc.Save(True, True)
+			End If
+			
+		End If 
+		
+		Set docAddDoc = colAddDoc.GetNextDocument(docAddDoc)
+	Wend
+	
+	Call ws.ViewRefresh()
+	Call ws.ViewRefresh()
+	
+	Exit Function
+errh:
+	Msgbox Error$ & {. Error # } & Cstr(Err) & { on line # } & Cstr(Erl) & { in (ActUIAddAddDocToCheck) "DWFProcessAction"}
+	Resume endh
+endh:
+End Function
+
+'++LotusScript Development Environment:2:2:ActUIRemoveRelationProperty:1:8
+Sub ActUIRemoveRelationProperty()
+	On Error Goto errh
+	
+	Dim ws As New NotesUIWorkspace
+	Dim docUI As NotesUIDocument
+	Dim doc As NotesDocument
+	
+	
+	
+	Set docUI = ws.CurrentDocument
+	Set doc = docUI.Document
+	
+	
+	Call doc.ReplaceItemValue("Rel1PropertyName", "" )
+	Call doc.ReplaceItemValue("Rel1PropertyID", "" )
+	
+	
+	Call docUI.Refresh
+	
+	Exit Sub
+errh:
+	Msgbox Error$ & {. Error # } & Cstr(Err) & { on line # } & Cstr(Erl) & { in (ActUIRemoveRelationProperty) "DWFProcessAction"}
+	Resume endh
+endh:
+End Sub
+
+
+'++LotusScript Development Environment:2:2:ActUIAddAddDocBasic:1:8
+Sub ActUIAddAddDocBasic()
+	On Error Goto errh
+	
+	Dim ws As New NotesUIWorkspace
+	Dim db As NotesDatabase
+	Dim docUI As NotesUIDocument
+	Dim doc As NotesDocument
+	Dim View As NotesView
+	Dim colAddDoc As NotesDocumentCollection
+	Dim docAddDoc As NotesDocument
+	Dim ProcessRef As String
+	Dim v As Variant
+	Dim hasMatch As Integer
+	Dim i As Integer
+	
+	
+	Set docUI = ws.CurrentDocument
+	Set doc = docUI.Document
+	Set db  = doc.ParentDatabase
+	Set View = db.GetView("($DWFAddDocBasicByProcessRef)")
+	If (View Is Nothing) Then
+		Msgbox {Не найдено представление "($DWFAddDocBasicByProcessRef)"}, 48, ERR_MSG_TITLE
+		Exit Sub
+	End If
+	ProcessRef = doc.GetItemValue("ProcessRef")(0)
+	If (ProcessRef = "") Then
+		Msgbox {В документе стадии поле "ProcessRef" пустое}, 16, ERR_MSG_TITLE
+		Exit Sub
+	End If
+	
+	Set colAddDoc = ws.PickListCollection(_
+	3, True,_
+	db.Server, db.FilePath, "($DWFAddDocBasicByProcessRef)",_
+	"Список доп. документов", "Выберите доп. документы",_
+	ProcessRef)
+	If (colAddDoc Is Nothing) Then Exit Sub
+	If (colAddDoc.Count = 0) Then Exit Sub
+	
+	Set docAddDoc = colAddDoc.GetFirstDocument
+	While (Not (docAddDoc Is Nothing))
+		Redim v(0)
+		hasMatch = 0
+		
+		v = docAddDoc.GetItemValue("ResponseID")
+		If Isarray(v) Then
+			For i=0 To Ubound(v)
+				If (Lcase(v(i)) = Lcase(doc.UniversalID)) Then
+					hasMatch = 1
+					Exit For
+				End If
+			Next
+			If (hasMatch = 0) Then
+				If (v(0) <> "") Then
+					Redim Preserve v(Ubound(v)+1) As String	
+				End If
+				v(Ubound(v)) = doc.UniversalID
+				Call docAddDoc.ReplaceItemValue("ResponseID", v)
+				Call docAddDoc.Save(True, True)
+			End If
+			
+		End If 
+		
+		Set docAddDoc = colAddDoc.GetNextDocument(docAddDoc)
+	Wend
+	
+	Call ws.ViewRefresh()
+	Call ws.ViewRefresh()
+	
+	
+	
+	
+	Exit Sub
+errh:
+	Msgbox Error$ & {. Error # } & Cstr(Err) & { on line # } & Cstr(Erl) & { in (ActUIAddDocBasic) "DWFProcessAction"}
+	Resume endh
+endh:
+End Sub
+
+'++LotusScript Development Environment:2:1:ActUIRemoveVisaRangeValue:1:8
+Function ActUIRemoveVisaRangeValue(TargetItemName As String)
+	On Error Goto errh
+	
+	Dim ws As New NotesUIWorkspace
+	Dim docUI As NotesUIDocument
+	Dim doc As NotesDocument
+	
+	
+	Set docUI = ws.CurrentDocument
+	Set doc = docUI.Document
+	
+	Call doc.ReplaceItemValue(TargetItemName, "" )
+	Call docUI.Refresh
+	
+	Exit Function
+errh:
+	Msgbox Error$ & {. Error # } & Cstr(Err) & { on line # } & Cstr(Erl) & { in (ActUIRemoveVisaRangeValue) "DWFProcessAction"}
+	Resume endh
+endh:
+End Function

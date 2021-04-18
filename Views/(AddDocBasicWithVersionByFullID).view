@@ -1,0 +1,70 @@
+<?xml version='1.0' encoding='utf-8'?>
+<note class='view' xmlns='http://www.lotus.com/dxl' version='10.0' maintenanceversion='1.0'
+ replicaid='44257D5C002A4928'>
+<noteinfo noteid='2d2' unid='6448CCC49CE258EDC325776700381166' sequence='103'>
+<created><datetime dst='true'>20100721T141224,70+04</datetime></created>
+<modified><datetime>20210418T115554,84+03</datetime></modified>
+<revised><datetime>20201118T171321,30+03</datetime></revised>
+<lastaccessed><datetime>20210418T115554,83+03</datetime></lastaccessed>
+<addedtofile><datetime>20210418T115554,83+03</datetime></addedtofile></noteinfo>
+<updatedby><name>CN=Tambiev/O=tps</name><name>CN=Salpagarov/O=tps</name><name
+>CN=Tambiev/O=tps</name><name>CN=Salpagarov/O=tps</name><name>CN=Tambiev/O=tps</name><name
+>CN=Salpagarov/O=tps</name></updatedby>
+<wassignedby><name>CN=Salpagarov/O=tps</name></wassignedby>
+<item name='$FormatNote' summary='true' sign='true'>
+<rawitemdata type='4'>
+AQDNiX2QycSf6khRPQALdyXD
+</rawitemdata></item>
+<item name='$FormulaClass' sign='true'><text>1</text></item>
+<item name='$TITLE' sign='true'><text>(AddDocBasicWithVersionByFullID)|AddDocBasicWithVersionByFullID</text></item>
+<item name='$Index' sign='true'><text/></item>
+<item name='$Formula' summary='true' sign='true'><formula compiled='true'>
+0gECAK4AAwAkMTAABQAHAE1haW5SZWYAVgEBAAEALQAiAgUAEABTdGFnZUV4Y2x1c2lvbklEIgIB
+AAEALQAiAgUAFQBBZGREb2NJbml0QXNPYmpBY2Nlc3MAAQABAC0AIgIFABgAQWRkRG9jSW5pdGlh
+dG9yT2JqQWNjZXNzIgIBAAEALQAiAgUAGwBBRERET0NJTklUSUFUT1JMT1RVU0FERFJFU1MAIgJi
+ASICAwAFAB4AGgADAAMACQAEACQxMCRDb25mbGljdCRSRUYEAAQABwBaAFQAU0VMRUNUIChkb2NL
+aW5kID0gIkFkZERvYyIpICYgKEBUZXh0KFBhcmVudFJlZikgPSAiIikgJiAoQFRleHQoQURERG9j
+VmVyc2lvbikgIT0gIiIpBwAKAAMACTFTAAcANgAwACAF7gXyBeoF6wX+BfcF6AXrIAXSBeAF7AXh
+BegF5QXiIAXQLiAyMDE3LjExLjA5IAcADAAFAAkwUjFTAAAAPgAFAAcAZG9jS2luZAABAAYAQWRk
+RG9jCgIEAAUADQBBREREb2NWZXJzaW9uAFYBAQAAAAsCBAAcAgMABwAcABUACTBSUkwxUzNTNFM2
+UzdTMTJTMTNTAA==
+</formula></item>
+<item name='$Collation' summary='true'>
+<rawitemdata type='2'>
+EAABAABEgGYAAAADACQxMA==
+</rawitemdata></item>
+<item name='$ViewFormat' summary='true' sign='true'>
+<rawitemdata type='5'>
+AQABAAsACEAAAFZDAQADAFAA4gAAAPsCAQAACAAAAAAAAAAAAAICAAAAJDEwTWFpblJlZiArIFN0
+YWdlRXhjbHVzaW9uSUQgKyBJbml0QXNPYmpBY2Nlc3MgKyBJbml0aWF0b3JPYmpBY2Nlc3MgKyBM
+b3R1c0FkZHJlc3PiAAIArgADACQxMAAFAAcATWFpblJlZgBWAQEAAQAtACICBQAQAFN0YWdlRXhj
+bHVzaW9uSUQiAgEAAQAtACICBQAVAEFkZERvY0luaXRBc09iakFjY2VzcwABAAEALQAiAgUAGABB
+ZGREb2NJbml0aWF0b3JPYmpBY2Nlc3MiAgEAAQAtACICBQAbAEFERERPQ0lOSVRJQVRPUkxPVFVT
+QUREUkVTUwAiAmIBIgIDAAcAMgArAAk0UzVTNlM3UjhTOVMxMFMxMVIxNFMxNVMxNlMxN1MxOFMx
+OVMyMFMyMVMAJgABAAAAAQEACQEAAAoBAQ4KAAABAK0rAQABAAEAAAAAAAAAAABXQwQBAAkAAAAA
+AAAAAAAAAAAAAAAAAQAEAAAAAAD//wAAAAAAAAAAAAAAAAAAQgAQAAAAAQD///8ABQD///8AAQAA
+AAAAAAAAAAAAAAABAP///wABAP///wAAAAEAAAAAAAEAAAAAAAEAAAAAAAAACAAAAAAAAQA=
+</rawitemdata></item>
+<item name='$Comment' sign='true'><text/></item>
+<item name='$Flags'><text>Y</text></item>
+<item name='$DesignerVersion'><text>8.5.3</text></item>
+<item name='$V5ACTIONS' sign='true'>
+<rawitemdata type='1'>
+vRwRAAAAAQABAAAAAQAAAAAAAAAAAAAACAACAHn/bAABAOzp2AABAAAAAAAJAAAAAAABAOzp2AAA
+AB8AAAAAAAAAAAADAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+AAAAAAAAAAAAAAAAAAAAAAAAAAAAAPz/OgAAAAAAAQAAAAAAAQAAAAAAAAAAAAAAAAAAAAAAAAAA
+AAAAAAAAAAEAAAAAAAAAAAAAAAAAAAC+/yYAAAAFAAAAnQEAAAsAAAAAAAAAQ2F0ZWdvcmlfemVh
+AQBOfL7/KAAAAAUAAACdAQAADgAAAAAAAABfRWRpdCBEb2N1bWVudAIAAgq+/ygAAAAFAAAAnQEA
+AA4AAAAAAAAAX1NlbmQgRG9jdW1lbnQDAAMKvv8iAAAABQAAAJ0BAAAIAAAAAAAAAF9Gb3J3YXJk
+BAAECr7/LAAAAAUAAACdAQAAEgAAAAAAAABfTW92ZSBUbyBGb2xkZXIuLi4FAD18vv8uAAAABQAA
+AJ0BAAATAAAAAAAAAF9SZW1vdmUgRnJvbSBGb2xkZXIABgA+fA==
+</rawitemdata></item>
+<item name='$ACTIONS' sign='true'>
+<rawitemdata type='1'>
+vRwRAAAAAQABAAAAAQAAAAAAAAAAAAAACAACAL7/JgAAAAUAAACdAQAACwAAAAAAAABDYXRlZ29y
+aV96ZQABAE58vv8oAAAABQAAAJ0BAAAOAAAAAAAAAF9FZGl0IERvY3VtZW50AgACCr7/KAAAAAUA
+AACdAQAADgAAAAAAAABfU2VuZCBEb2N1bWVudAMAAwq+/yIAAAAFAAAAnQEAAAgAAAAAAAAAX0Zv
+cndhcmQEAAQKvv8sAAAABQAAAJ0BAAASAAAAAAAAAF9Nb3ZlIFRvIEZvbGRlci4uLgUAPXy+/y4A
+AAAFAAAAnQEAABMAAAAAAAAAX1JlbW92ZSBGcm9tIEZvbGRlckUGAD58
+</rawitemdata></item></note>
+

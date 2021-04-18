@@ -1,0 +1,46 @@
+'++LotusScript Development Environment:2:5:(Options):0:74
+Option Public
+Option Declare
+
+'++LotusScript Development Environment:2:5:(Forward):0:1
+
+'++LotusScript Development Environment:2:5:(Declarations):0:10
+
+
+
+
+
+
+Const ERR_MSG_TITLE = {Операция остановлена}
+
+
+Const VIEW_OD_SELECT_USER = {(SelectPersonByName)}
+Const VIEW_OD_SELECT_POS_BY_USER = {(SelectPositionByUserName)}
+Const VIEW_OD_SELECT_POS_BY_HRRCH = {(SelectPositionByHirerarchy)}
+Const VIEW_OD_SELECT_DEP_BY_HRRCH = {(SelectDepByHirerarchy)}
+' Const VIEW_OD_SELECT_GROUP = {FGroupByName} 2019/02/04 - Томнов - http://jira.tpsgroup.ru/browse/TLD-337
+Const VIEW_OD_SELECT_GROUP = {tps.core.directory.groups.pl}
+
+Const VIEW_OD_SELECT_CATEGORY_USER = {(SelectPersonByName.Category)}
+Const VIEW_OD_SELECT_CATEGORY_POS_BY_USER = {(SelectPositionByUserName.Category)}
+Const VIEW_OD_SELECT_CATEGORY_POS_BY_HRRCH = {(SelectPositionByHirerarchy.Category)}
+
+Const VIEW_OD_SELECT_CATEGORY_POS_VAC_BY_HRRCH = {(SelectPositionByHirerarchyWithVacancies.Category)}
+Const VIEW_OD_SELECT_POS_VAC_BY_HRRCH = {tps.core.directory.positions.with.vac.pl}
+Const VIEW_OD_SELECT_POS_VAC_BY_USER = {SelectPositionByUserNameWithVacancies}
+Const VIEW_OD_SELECT_CATEGORY_POS_VAC_BY_USER = {SelectPositionByUserNameWithVacancies.Category}
+
+
+'//	Ключи объектов
+' Задания на платеж
+Const OBJ_TYPE_TPS_PAYS_DICT_COMPANY = "tps.payments.dictionary.company"
+Const OBJ_TYPE_TPS_PAYS_DICT_DIRECTION = "tps.payments.dictionary.direction"
+Const OBJ_TYPE_TPS_PAYS_DICT_COST = "tps.payments.dictionary.cost"
+
+Const OBJ_TYPE_TPS_CONTRAGENTS_CONTRAGENT = "tps.contragents.contragent"
+Const OBJ_TYPE_TPS_PHONES_PERSON = "tps.phones.person"
+
+' Внутр. контр. Обмен с 1С
+Const  OBJ_TYPE_TPS_EXCHANGE_1C_ORGANIZATION = "tps.exchange.1C.organization"
+Const  OBJ_TYPE_TPS_EXCHANGE_1C_DEPARTMENT = "tps.exchange.1C.department"
+Const  OBJ_TYPE_TPS_EXCHANGE_1C_POSITION = "tps.exchange.1C.position"

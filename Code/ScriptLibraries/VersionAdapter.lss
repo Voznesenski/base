@@ -1,0 +1,140 @@
+'++LotusScript Development Environment:2:5:(Options):0:74
+%REM
+	Library VersionAdapter
+	Created May 6, 2020 by Igor V Tomnov/SVO
+	Description: Библиотека создана для использования механизма наследования элементов дизайна в версии 20 из версии 1.
+	Но, поскольку версии fbyte несовместимы, то для отвязки от них будет использоваться эта библиотека.
+	Версия для fbyte10.
+%END REM
+
+Option Public
+Option Declare
+
+Use "tps.core.directory"
+
+'++LotusScript Development Environment:2:5:(Forward):0:1
+Declare Sub Terminate
+Declare Function getSetting(in_db As notesdatabase, in_key As String) As Variant
+Declare Function getODdb As NotesDatabase
+Declare Function getPositionNotesDocumentById(in_id As String) As NotesDocument
+Declare Function setProjectInDoc(in_doc As NotesDocument, ItemName As String, in_multiple As Boolean) As integer
+Declare Function getFGroupNotesDocumentById(in_id As String) As NotesDocument
+
+'++LotusScript Development Environment:2:5:(Declarations):0:2
+
+'++LotusScript Development Environment:2:2:Terminate:1:10
+Sub Terminate
+	
+End Sub
+
+
+'++LotusScript Development Environment:2:1:getSetting:5:8
+%REM
+	Function getSetting
+	Description: Возвращает настроечный объект
+%END REM
+Function getSetting(in_db As notesdatabase, in_key As String) As Variant
+	On Error GoTo errh
+
+	Dim sm As Variant
+	Set sm = getServicesManager()
+	Dim setting As Variant, addsearchquery As String
+	Set setting = sm.core.settings( in_db ).get( in_key )
+	Set getSetting = setting
+	Exit Function
+errh:
+	On Error GoTo 0
+	Error Err, "VersionAdapter::" & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+endh:
+End Function
+
+'++LotusScript Development Environment:2:1:getODdb:5:8
+%REM
+	Function getODdb
+	Description: Возвращает БД Орг. директория
+%END REM
+Function getODdb As NotesDatabase
+	On Error GoTo errh
+	Dim sm As Servicesmanager, fBaseDatabases As Fbase_databasesservice
+	Set sm = getServicesManager()
+	Set fBaseDatabases = sm.base.databases
+	Set getODdb = fBaseDatabases.get( "tps.core.directory" )
+	
+	Exit Function
+errh:
+	On Error GoTo 0
+	Error Err, "VersionAdapter::" & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+endh:
+End Function
+
+
+
+
+'++LotusScript Development Environment:2:1:getPositionNotesDocumentById:1:8
+Function getPositionNotesDocumentById(in_id As String) As NotesDocument
+	On Error GoTo error_point
+	
+	Dim db As NotesDatabase, vw As NotesView, doc As NotesDocument
+	Set db = getODdb()
+	Set vw = db.getView( "(UNID)" )
+	Set doc = vw.Getdocumentbykey( in_id, True )
+	If ( doc Is Nothing ) Then
+		Error 1001, "Entity by id '" & in_id & "' is not exist"
+	Else
+		Set getPositionNotesDocumentById = doc
+	End If
+	
+exit_point:
+	Exit Function
+	
+error_point:
+	On Error GoTo 0
+	Error Err, "VersionAdapter::" & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+End Function
+
+'++LotusScript Development Environment:2:1:setProjectInDoc:5:8
+%REM
+	Function getProjectService
+	Description: Comments for Function
+%END REM
+Function setProjectInDoc(in_doc As NotesDocument, ItemName As String, in_multiple As Boolean) As integer
+	On Error GoTo error_point
+	
+	Dim sm As Variant
+	Set sm = getServicesManager()
+
+	Dim pckgTPS As Variant
+	Set pckgTPS = getPackageObject( "tps", "getTPSService" )
+	Call sm.set( pckgTPS )
+	
+	Dim tps As Variant
+	Set tps = sm.get( "tps" )
+	setProjectInDoc = tps.projects20.setProjectInDoc(in_doc, in_multiple)
+	
+	Exit Function
+error_point:
+	On Error GoTo 0
+	Error Err, "VersionAdapter::" & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+End Function
+
+'++LotusScript Development Environment:2:1:getFGroupNotesDocumentById:1:8
+Function getFGroupNotesDocumentById(in_id As String) As NotesDocument
+	On Error GoTo error_point
+	
+	Dim db As NotesDatabase, vw As NotesView, doc As NotesDocument
+	Set db = getODdb()
+	Set vw = db.getView( "(UNID)" )
+	Set doc = vw.Getdocumentbykey( in_id, True )
+	If ( doc Is Nothing ) Then
+		Error 1001, "Entity by id '" & in_id & "' is not exist"
+	Else
+		Set getFGroupNotesDocumentById = doc
+	End If
+	
+exit_point:
+	Exit Function
+	
+error_point:
+	On Error GoTo 0
+	Error Err, "VersionAdapter::" & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+End Function

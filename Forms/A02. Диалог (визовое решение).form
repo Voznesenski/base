@@ -1,0 +1,71 @@
+<?xml version='1.0' encoding='utf-8'?>
+<note class='form' xmlns='http://www.lotus.com/dxl' version='10.0' maintenanceversion='1.0'
+ replicaid='44257D5C002A4928'>
+<noteinfo noteid='282' unid='6846B4E8B105957DC325776C0024F3A8' sequence='126'>
+<created><datetime dst='true'>20100726T104336,72+04</datetime></created>
+<modified><datetime>20210418T115554,42+03</datetime></modified>
+<revised><datetime>20201118T171317,45+03</datetime></revised>
+<lastaccessed><datetime>20210418T115554,41+03</datetime></lastaccessed>
+<addedtofile><datetime>20210418T115554,41+03</datetime></addedtofile></noteinfo>
+<updatedby><name>CN=Tambiev/O=tps</name><name>CN=zeos/O=tps</name><name>CN=Tambiev/O=tps</name><name
+>CN=zeos/O=tps</name><name>CN=Tambiev/O=tps</name><name>CN=zeos/O=tps</name><name
+>CN=Salpagarov/O=tps</name><name>CN=zeos/O=tps</name><name>CN=Tambiev/O=tps</name><name
+>CN=zeos/O=tps</name><name>CN=Tambiev/O=tps</name><name>CN=zeos/O=tps</name><name
+>CN=Tambiev/O=tps</name><name>CN=zeos/O=tps</name><name>CN=Tambiev/O=tps</name><name
+>CN=zeos/O=tps</name><name>CN=Tambiev/O=tps</name><name>CN=zeos/O=tps</name><name
+>CN=Tambiev/O=tps</name><name>CN=zeos/O=tps</name><name>CN=Tambiev/O=tps</name><name
+>CN=zeos/O=tps</name><name>CN=Tambiev/O=tps</name><name>CN=zeos/O=tps</name><name
+>CN=develop/O=tps</name><name>CN=Tambiev/O=tps</name><name>CN=Salpagarov/O=tps</name><name
+>CN=Tambiev/O=tps</name><name>CN=Salpagarov/O=tps</name><name>CN=Tambiev/O=tps</name><name
+>CN=Salpagarov/O=tps</name><name>CN=Tambiev/O=tps</name><name>CN=Salpagarov/O=tps</name></updatedby>
+<wassignedby><name>CN=Salpagarov/O=tps</name></wassignedby>
+<item name='OriginalModTime' sign='true'><datetime dst='true'>20100726T112920,53+04</datetime></item>
+<item name='$HTMLCode' sign='true'>
+<rawitemdata type='1'>
+X/8QAAIADwAHAAAAAAAAAA==
+</rawitemdata></item>
+<item name='$TITLE'><textlist><text>A02. Диалог (визовое решение)</text><text
+>DWFVisaSolution</text></textlist></item>
+<item name='$Info' sign='true'>
+<rawitemdata type='1'>
+hhgBAIAAAAAAgAAAPwABAO/v7wAQAAAA
+</rawitemdata></item>
+<item name='$Flags'><text>CD</text></item>
+<item name='$DesignerVersion' sign='true'><text>6.5</text></item>
+<item name='VisaValue' placeholder='true'>
+<rawitemdata type='0'>
+</rawitemdata></item>
+<item name='$Fields'><text>VisaValue</text></item>
+<item name='$$ScriptName' summary='false' sign='true'><text>DWFVisaSolution</text></item>
+<item name='$Body' sign='true'>
+<rawitemdata type='1'>
+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
+</rawitemdata></item></note>
+

@@ -1,0 +1,1453 @@
+'++LotusScript Development Environment:2:5:(Options):0:74
+Option Public
+Option Declare
+
+Use "fbyte"
+Use "DWFAppLib"
+Use "tps.contragents.account"
+
+'++LotusScript Development Environment:2:5:(Forward):0:1
+Declare Public Class TPS_ContragentsService As FBase_Abstract_Service
+Declare Public Class TPS_Contragents_Contragent As FBase_Abstract_Object_Doc
+Declare Class TPS_Contragents_Contragent_1CInfo As FBase_Abstract_Object_Doc
+Declare Class TPS_Contragents_Contragent_InitObj As Fbase_abstract_service
+Declare Public Class TPS_Contragents_Contragent_Person As FBase_Abstract_Object_Doc
+Declare Public Class TPS_Contragents_Unit As FBase_Abstract_Object_Doc
+
+'++LotusScript Development Environment:2:5:(Declarations):0:10
+Private Const DATABASE_KEY = "tps.catalogs.correspondents"
+
+Const DOMAIN_TPS_CONTRAGENTS_CONTRAGENT = "tps.catalogs.contragents.contragent"
+Const DOMAIN_TPS_CONTRAGENTS_CONTRAGENT_PERSON = "tps.contragents.contragent_person"
+Const DOMAIN_TPS_CONTRAGENTS_UNIT = "tps.catalogs.contragents.unit"
+
+
+'======================================================================================================================================
+'	CLASS TPS_ContragentsService
+'======================================================================================================================================
+Public Class TPS_ContragentsService As FBase_Abstract_Service
+	Private m_db As NotesDatabase
+	Private m_account As Variant
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Private Function getId( in_key As Variant ) As String
+		On Error Goto error_point
+		Call Me.log.enter( Typename( Me ) & "." & Getthreadinfo(1))
+		
+		Dim key As String
+		If ( Lcase( Typename( in_key )) = "objectlink" ) Then
+			key = in_key.id 
+		Elseif Isscalar( in_key ) Then 
+			key = in_key
+		Else
+			Error 1001, "The type of data of parameter 'in_key' is '" & Typename( in_key ) & "'. It is not supported"
+		End If
+		
+		getId = key
+		
+		Call Me.log.trace( "result: " & getId )
+		Call Me.log.exit( Typename( Me ) & "." & Getthreadinfo(1))
+		Exit Function
+		
+error_point:
+		On Error Goto 0
+		Error Err, Typename( Me ) & "." & Getthreadinfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Function
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	'	PUBLIC:
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Sub New( in_ps As Variant )
+	End Sub
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Property Get account As Variant
+		On Error GoTo error_point
+		
+		If IsEmpty(m_account)Then
+			Set m_account = New TPS_Contragents_AccountService( Me.Me_Variant )
+		End If
+		Set account = m_account
+		Exit Property
+		
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Property
+	
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Property Get db As NotesDatabase
+		On Error Goto error_point
+		Call Me.log.enter( Typename( Me ) & "." & Getthreadinfo(1))
+		
+		If ( m_db Is Nothing )Then
+			Set m_db = Me.sm.base.databases.get( DATABASE_KEY )
+		End If
+		Set db = m_db
+		
+		Call Me.log.traceObject( "result", db )		
+		Call Me.log.exit( Typename( Me ) & "." & Getthreadinfo(1))
+		Exit Property
+		
+error_point:
+		On Error Goto 0
+		Error Err, Typename( Me ) & "." & Getthreadinfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Property
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Function getObject( in_link As Variant ) As Variant
+		On Error Goto error_point
+		Call Me.log.enter( Typename( Me ) & "." & Getthreadinfo(1))
+		'Call Me.log.parameter( "in_link", in_link )
+		
+		Select Case in_link.domain
+		Case DOMAIN_TPS_CONTRAGENTS_CONTRAGENT:
+			Set getObject = getContragent( in_link )
+		Case DOMAIN_TPS_CONTRAGENTS_CONTRAGENT_PERSON
+			Set getObject = getContragentPerson( in_link )
+		Case Else
+			Error 1001, "The data of type '" & in_link.domain & "' of parameter 'in_link.domain' is not supported"
+		End Select
+		
+		'Call Me.log.traceObject( "result", getObject )
+		Call Me.log.exit( Typename( Me ) & "." & Getthreadinfo(1))
+		Exit Function
+		
+error_point:
+		On Error Goto 0
+		Error Err, Typename( Me ) & "." & Getthreadinfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Function
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Function getDocObject( in_doc As NotesDocument ) As Variant
+		On Error Goto error_point
+		Call Me.log.enter( Typename( Me ) & "." & Getthreadinfo(1))
+		'Call Me.log.parameter( "in_doc", in_doc )
+		
+		'<проверка нет ли обновления>
+		Dim docActual As NotesDocument
+		Set docActual = Me.getActualDoc( in_doc )
+		'</проверка нет ли обновления>
+		Select Case Lcase( docActual.form(0))
+		Case "contragent", "сounteragent", "tps.contragent":
+				Set getDocObject = New TPS_Contragents_Contragent( docActual, Me.Me_variant )
+		Case "tps.contragent.person":'Gorbunov 20172002
+				Set getDocObject = New TPS_Contragents_Contragent_Person( docActual, Me.Me_variant )
+		Case "tps.contragent.account":
+				Set getDocObject = New TPS_Contragents_Account( docActual, Me.Me_variant )
+		Case "tps.contragent.unit":
+				Set getDocObject = New TPS_Contragents_Unit( docActual, Me.Me_variant )
+		Case Else:
+			Error 1001, "Форма '" & docActual.form(0) & "' не поддерживается"
+		End Select
+		
+		'Call Me.log.traceObject( "result", getDocObject )
+		Call Me.log.exit( Typename( Me ) & "." & Getthreadinfo(1))
+		Exit Function
+		
+error_point:
+		On Error Goto 0
+		Error Err, Typename( Me ) & "." & Getthreadinfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Function
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Function getOriginalVersionByContragent( in_contragent As TPS_Contragents_Contragent ) As Variant
+		On Error GoTo error_point
+		Call Me.log.enter( TypeName( Me ) & "." & GetThreadInfo(1))
+
+		Dim nv As NotesView
+		Set nv = Me.db.Getview("tps.contragents.byParentRef")
+		Dim dc As NotesDocumentCollection
+		Set dc = nv.Getalldocumentsbykey(in_contragent.id)
+		While dc.count > 0 
+			Dim actual_doc As NotesDocument
+			Set actual_doc = dc.Getfirstdocument()
+			Set dc = nv.Getalldocumentsbykey(actual_doc.Universalid)
+		Wend
+
+		Set getOriginalVersionByContragent = New TPS_Contragents_Contragent( actual_doc, Me.Me_variant )
+		
+		Call Me.log.exit( TypeName( Me ) & "." & GetThreadInfo(1))
+		Exit Function
+		
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$ 
+	End Function	
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Function getAllVersionsByContragent( in_contragent As TPS_Contragents_Contragent ) As MixCollection
+		On Error GoTo error_point
+		Call Me.log.enter( TypeName( Me ) & "." & GetThreadInfo(1))
+
+		Dim actual_contr As TPS_Contragents_Contragent
+		Set actual_contr = getActualVersionByContragent(in_contragent)
+		
+		Dim mx As New MixCollection
+		Call mx.Append(actual_contr)
+		
+		Dim nv As NotesView
+		Set nv = Me.db.Getview("tps.contragents.byParentRef")
+		Dim dc As NotesDocumentCollection
+		Set dc = nv.Getalldocumentsbykey(actual_contr.id)
+		While dc.count > 0 
+			Dim actual_doc As NotesDocument
+			Set actual_doc = dc.Getfirstdocument()
+			Dim contr As TPS_Contragents_Contragent
+			Set contr = New TPS_Contragents_Contragent( actual_doc, Me.Me_variant )
+			Call mx.Append(contr)
+			Set dc = nv.Getalldocumentsbykey(actual_doc.Universalid)
+		Wend
+
+		Set getAllVersionsByContragent = mx
+		
+		Call Me.log.exit( TypeName( Me ) & "." & GetThreadInfo(1))
+		Exit Function
+		
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$ 
+	End Function	
+'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Function getContragent( in_key As Variant ) As Variant
+		On Error Goto error_point
+		Call Me.log.enter( Typename( Me ) & "." & Getthreadinfo(1))
+		'Call Me.log.parameter( "in_key", in_key )
+		
+		Dim id As String, doc As NotesDocument
+		id = Me.getId( in_key )
+		Set doc = Me.db.Getdocumentbyunid( id )
+		Set getContragent = Me.getDocObject( doc )
+		
+		'Call Me.log.traceObject( "result", getContragent )
+		Call Me.log.exit( Typename( Me ) & "." & Getthreadinfo(1))
+		Exit Function
+		
+error_point:
+		On Error Goto 0
+		Error Err, Typename( Me ) & "." & Getthreadinfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$ 
+	End Function
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Function getActualVersionByContragent( in_contragent As TPS_Contragents_Contragent ) As Variant
+		On Error GoTo error_point
+		Call Me.log.enter( TypeName( Me ) & "." & GetThreadInfo(1))
+
+		Set getActualVersionByContragent = Me.getContragent(in_contragent.id)
+		
+		Call Me.log.exit( TypeName( Me ) & "." & GetThreadInfo(1))
+		Exit Function
+		
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$ 
+	End Function
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------	
+	Function dialogSelectContragents( in_isMult As Boolean ) As MixCollection
+		On Error Goto error_point
+		Call Me.log.enter( "<" & Typename( Me ) & "." & Getthreadinfo(1) & ">" )
+		Call Me.log.parameter( "in_isMult", in_isMult )
+		
+		Dim mxResult As New MixCollection
+		Set dialogSelectContragents = mxResult
+		
+		Dim vw As NotesView
+		Set vw = Me.db.getView( "tps.contragents.bytitle" )
+		If ( vw Is Nothing ) Then
+			Set vw = Me.db.getView( "contragent" )
+			If ( vw Is Nothing ) Then
+				Error 1001, "View 'tps.contragent.byTitle' is not exist"
+			End If
+		End If		
+		
+		Dim ws As New NotesUIWorkspace, dc As NotesDocumentCollection
+		Set dc = ws.PickListCollection( 3, in_isMult, Me.db.Server, Me.db.FilePath, vw.Name, "Список контрагентов", "Выберите документ(ы) и нажмите  OK" )
+		If ( dc.Count > 0 ) Then
+			Dim doc As NotesDocument
+			Set doc = dc.GetFirstDocument
+			Do While Not ( doc Is Nothing )
+				Dim c As Variant
+				Set c = Me.getDocObject(doc)
+				Call mxResult.Append( c )
+				Set doc = dc.GetNextDocument( doc )
+			Loop
+		End If
+		
+		Call Me.log.exit( "</" & Typename( Me ) & "." & Getthreadinfo(1) & ">" )
+		Exit Function
+		
+error_point:
+		On Error Goto 0
+		Error Err, Typename( Me ) & "." & Getthreadinfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Function
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------	
+	Function createNew( in_initObj As Variant ) As TPS_Contragents_Contragent
+		On Error Goto error_point
+		Call Me.log.enter( "<" & Typename( Me ) & "." & Getthreadinfo(1) & ">" )
+		
+		Dim dbPC As NotesDatabase
+		Set dbPC = Me.sm.base.databases.get( "tps.core.processcenter" )
+		If ( dbPC Is Nothing ) Then
+			Set dbPC = Me.sm.base.databases.get( "tps.core.process_center" )
+		End If
+		
+		If ( dbPC Is Nothing ) Then
+			Set dbPC = Me.sm.base.databases.get( "tps.systems.process_center" )
+		End If
+		
+		If ( dbPC Is Nothing ) Then
+			Msgbox "Не удалось получить БД 'tps.systems.process_center'", 64, "Системная ошибка"
+			Call Me.log.exit( "</" & Typename( Me ) & "." & Getthreadinfo(1) & ">" )
+			Exit Function
+		End If
+		
+		Dim session As New NotesSession
+		Dim docMail As NotesDocument
+		
+		Set docMail = dbPC.CreateDocument
+		docMail.Form 		= "Task"
+		docMail.Action 		= "InitProcess"
+		docMail.InitServer 	= Me.db.Server
+		docMail.AppPath 	= Me.db.FilePath
+		docMail.UserName 	= session.UserName
+		docMail.ProcessID 	= in_initObj.processID
+		docMail.InitPosID 	= in_initObj.initPositionID 
+		docMail.InitObjID 	= in_initObj.initObjID
+		
+		Call docMail.Save(True, True)
+		If ( DWFAAskForAction( docMail ) <> 1 ) Then
+			
+		Elseif ( docMail.Error(0) <> "" ) Then
+			Msgbox docMail.Error(0), 48, ERR_MSG_TITLE
+		Else
+			Dim docMain As NotesDocument
+			Set docMain = Me.db.GetDocumentByUNID( docMail.docMainUNID(0))
+			If ( docMain Is Nothing ) Then
+				Msgbox {Ошибка при инициации процесса: docMain Is Nothing}, 48, ERR_MSG_TITLE
+			Else
+				docMain.form = "tps.contragent"
+				docMain.domain = DOMAIN_TPS_CONTRAGENTS_CONTRAGENT
+				docMain.id = docMain.UniversalID
+				docMain.CustomID = docMain.UniversalID
+				
+				Set createNew = Me.getDocObject( docMain )
+			End If
+		End If
+		
+		Call Me.log.exit( "</" & Typename( Me ) & "." & Getthreadinfo(1) & ">" )
+		Exit Function
+		
+error_point:
+		On Error Goto 0
+		Error Err, Typename( Me ) & "." & Getthreadinfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Function
+
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Private Function getActualDoc(in_doc As NotesDocument) As NotesDocument
+		On Error GoTo error_point
+		Call Me.log.enter( "<" & TypeName( Me ) & "." & GetThreadInfo(1) & ">" )
+		
+		Dim docActual As NotesDocument, ID As String
+		If ( in_doc.Hasitem("MarkUpdate") Or in_doc.Hasitem("MarkIsDuplicate") ) Then
+			
+			If in_doc.Hasitem("MarkIsDuplicate") Then '\\ этот документ является дубликатом существующего 
+				If in_doc.Hasitem("ParentRef") Then
+					ID = in_doc.Getitemvalue("ParentRef")(0)
+				End If
+				If ( ID <> "" ) Then
+					'-------------------------------------------------------
+					On Error 4091 Resume Next 'bad unid
+					Set docActual = Me.db.Getdocumentbyunid( ID )
+					If ( docActual Is Nothing ) Then
+						Error 1001, "Актуальный контрагент по документу '" & in_doc.Universalid & "' не найден"
+					End If
+					
+					'\\ проверка нет ли обновления
+					Set docActual = Me.getActualDoc(docActual)
+					'-------------------------------------------------------				
+				Else
+					Error 1001, "Нет информации по актуальному контрагенту в документе '" & in_doc.Universalid & "'"
+				End If
+				
+			ElseIf in_doc.Hasitem("MarkUpdate") Then '\\ для этого документа есть заявка на обновление 
+				If in_doc.Hasitem("UpdaterRef") Then
+					ID = in_doc.Getitemvalue("UpdaterRef")(0)
+					If ( ID <> "" ) Then
+						'-------------------------------------------------------
+						On Error 4091 Resume Next 'bad unid
+						Set docActual = Me.db.Getdocumentbyunid( ID )
+						If ( docActual Is Nothing ) Then
+							Error 1001, "Актуальный контрагент по документу '" & in_doc.Universalid & "' не найден"
+						End If
+						
+						'\\ проверка нет ли обновления
+						Set docActual = Me.getActualDoc(docActual)
+						'-------------------------------------------------------
+					Else
+						Error 1001, "Нет информации по актуальному контрагенту в документе '" & in_doc.Universalid & "'"
+					End If
+				Else '\\ заявка на обновление не утверждена 
+					Set docActual = in_doc
+				End If
+				
+			End If
+
+		Else
+			Set docActual = in_doc
+		End If
+		Set getActualDoc = docActual
+
+		Call Me.log.exit( "</" & TypeName( Me ) & "." & GetThreadInfo(1) & ">" )
+		Exit Function
+		
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Function	
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Function getAccounts( in_contragent As Variant ) As MixCollection
+		On Error GoTo error_point
+		Call Me.log.enter( TypeName( Me ) & "." & GetThreadInfo(1))
+		
+		Dim result As New MixCollection, vw As NotesView, dc As NotesDocumentCollection
+		Set getAccounts = result
+		
+		Set vw = Me.db.getView( "tps.contragent.account.byContragent_id")
+		Call vw.Refresh
+		Set dc = vw.GetAllDocumentsByKey( in_contragent.id, True )
+		If ( dc.Count > 0 ) Then
+			Dim doc As NotesDocument
+			Set doc = dc.GetFirstDocument
+			Do While Not ( doc Is Nothing )
+				Dim account As Variant
+				Set account = Me.getDocObject( doc )
+				Call result.Append( account )
+				Set doc = dc.GetNextDocument( doc )
+			Loop
+		End If
+		
+		Call Me.log.traceObject( "result", getAccounts )
+		Call Me.log.exit( TypeName( Me ) & "." & GetThreadInfo(1))
+		Exit Function
+		
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Function
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Function getAccountsByTypeValuta( in_contragent_id As String, in_owner_type As String, in_valuta As String ) As MixCollection
+		On Error GoTo error_point
+		Call Me.log.enter( TypeName( Me ) & "." & GetThreadInfo(1))
+		
+		Dim result As New MixCollection, vw As NotesView, dc As NotesDocumentCollection, key As String
+		Set getAccountsByTypeValuta = result
+		
+		Set vw = Me.db.getView( "tps.contragent.account.byContragent_id~type~valuta" )
+		Call vw.Refresh
+		key  = in_contragent_id & "~" & in_owner_type & "~" & in_valuta
+		Set dc = vw.GetAllDocumentsByKey( key , True )
+		If ( dc.Count > 0 ) Then
+			Dim doc As NotesDocument
+			Set doc = dc.GetFirstDocument
+			Do While Not ( doc Is Nothing )
+				Dim account As Variant
+				Set account = Me.getDocObject( doc )
+				Call result.Append( account )
+				Set doc = dc.GetNextDocument( doc )
+			Loop
+		End If
+		
+		Call Me.log.traceObject( "result", getAccountsByTypeValuta )
+		Call Me.log.exit( TypeName( Me ) & "." & GetThreadInfo(1))
+		Exit Function
+		
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Function
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------	
+	Function dialogSelectCompanyGroup( in_isMult As Boolean ) As MixCollection
+		On Error GoTo error_point
+		Call Me.log.enter( "<" & TypeName( Me ) & "." & GetThreadInfo(1) & ">" )
+		Call Me.log.parameter( "in_isMult", in_isMult )
+		
+		Dim mxResult As New MixCollection
+		Set dialogSelectCompanyGroup = mxResult
+		
+		Dim vw As NotesView
+		Set vw = Me.db.getView( "tps.companygroup.bytitle" )
+		If ( vw Is Nothing ) Then
+			Error 1001, "View 'tps.companygroup.bytitle' is not exist"
+		End If		
+		
+		Dim ws As New NotesUIWorkspace, dc As NotesDocumentCollection
+		Set dc = ws.PickListCollection( 3, in_isMult, Me.db.Server, Me.db.FilePath, vw.Name, "Список контрагентов", "Выберите документ(ы) и нажмите  OK" )
+		If ( dc.Count > 0 ) Then
+			Dim doc As NotesDocument
+			Set doc = dc.GetFirstDocument
+			Do While Not ( doc Is Nothing )
+				Dim c As Variant
+				Set c = Me.getDocObject(doc)
+				Call mxResult.Append( c )
+				Set doc = dc.GetNextDocument( doc )
+			Loop
+		End If
+		
+		Call Me.log.exit( "</" & TypeName( Me ) & "." & GetThreadInfo(1) & ">" )
+		Exit Function
+		
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Function
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------	
+	Function createFileDocument (in_doc As NotesDocument) As NotesDocument
+		On Error GoTo error_point
+		Call Me.log.enter( "<" & TypeName( Me ) & "." & GetThreadInfo(1) & ">" )
+		
+		Dim newDoc As New NotesDocument (Me.db)
+		'Set newDoc = Me.db.Createdocument()
+		
+		Call newDoc.Replaceitemvalue("Form", "tps.contragent.document")
+		Call newDoc.Replaceitemvalue("domain", "")
+		Call newDoc.Replaceitemvalue("id", newDoc.Universalid )
+		Call newDoc.Replaceitemvalue("CustomID", newDoc.Universalid )
+		
+		Dim contragent As New TPS_Contragents_Contragent (in_doc, Me.Me_variant)
+		Call newDoc.Replaceitemvalue("Contragent_id", contragent.Id)
+		Call newDoc.Replaceitemvalue("Contragent_title", contragent.Title)
+		Call newDoc.Replaceitemvalue("Contragent_domain", contragent.Domain)
+		
+		Call newDoc.Replaceitemvalue("docKind", "ExtraDoc")
+		
+		If (Not in_doc Is Nothing ) Then
+			Dim item As NotesItem
+			Set item = in_doc.Getfirstitem("DWF$Authors")
+			If ( Not item Is Nothing ) Then
+				Call item.Copyitemtodocument( newDoc, item.Name )
+			End If
+			Set item = in_doc.Getfirstitem("DWF$Readers")
+			If ( Not item Is Nothing ) Then
+				Call item.Copyitemtodocument( newDoc, item.Name )
+			End If
+			Set item = in_doc.Getfirstitem("DWF$Server")
+			If ( Not item Is Nothing ) Then
+				Call item.Copyitemtodocument( newDoc, item.Name )
+			End If
+		End If
+		
+		Set Me.createFileDocument = newDoc
+		
+		Call Me.log.exit( "</" & TypeName( Me ) & "." & GetThreadInfo(1) & ">" )
+		Exit Function
+		
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Function
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Function getContragentById1c( in_key As Variant ) As Variant
+		On Error GoTo error_point
+		Call Me.log.enter( TypeName( Me ) & "." & GetThreadInfo(1))
+		'Modified by DB		
+		'		Dim id As String, col As NotesDocumentCollection, doc As NotesDocument
+		'		id = Me.getId( in_key )
+		'		Dim vw As NotesView,viewname As String
+		'		viewname = "tps.contragent.byId1c" '"(byId1c)"
+		'		Set vw = Me.db.Getview(viewname)
+		'		If ( vw Is Nothing ) Then
+		'			Error 1001, {Не найдено представление "} & viewname & {"}
+		'		End If
+		'		Call vw.Refresh()
+		'		Set col = vw.Getalldocumentsbykey( id, True )
+		'		If ( col.Count > 1 ) Then
+		'			Error 1001, "In database '" & Me.db.Title & "' ( path: " & Me.db.FilePath & " ) found more then one ( " & CStr( col.Count ) & " ) document by key '" & id & "'"
+		'		ElseIf ( col.Count = 1 ) Then
+		'			Set doc = col.Getfirstdocument()
+		'			Set getContragentById1c = Me.getDocObject( doc )
+		'		Else
+		'			Set getContragentById1c = Nothing
+		'		End If
+
+		Set getContragentById1c = getContragentByKey(in_key, "tps.contragent.byId1c")
+		
+		Call Me.log.exit( TypeName( Me ) & "." & GetThreadInfo(1))
+		Exit Function
+		
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Function
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Function getContragentByINN( in_key As Variant) As Variant
+		'Added by DB
+		On Error GoTo error_point
+		Call Me.log.enter( TypeName( Me ) & "." & GetThreadInfo(1))
+		
+		Set getContragentByINN = getContragentByKey(in_key, "Contragents.Active.ByInnKpp")
+		
+		Call Me.log.exit( TypeName( Me ) & "." & GetThreadInfo(1))
+		Exit Function
+		
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Function
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Function getContragentByKey( in_key As Variant, viewName As String ) As Variant
+		'Added by DB
+		On Error GoTo error_point
+		Call Me.log.enter( TypeName( Me ) & "." & GetThreadInfo(1))
+		
+		Dim id As String, col As NotesDocumentCollection, doc As NotesDocument
+		id = Me.getId( in_key )
+		Dim vw As NotesView
+		Set vw = Me.db.Getview(viewname)
+		If ( vw Is Nothing ) Then
+			Error 1001, {Не найдено представление "} & viewname & {"}
+		End If
+		Call vw.Refresh()
+		Set col = vw.Getalldocumentsbykey( id, True )
+		If ( col.Count > 1 ) Then
+			Error 1001, "In database '" & Me.db.Title & "' ( path: " & Me.db.FilePath & " ) found more then one ( " & CStr( col.Count ) & " ) document by key '" & id & "'"
+		ElseIf ( col.Count = 1 ) Then
+			Set doc = col.Getfirstdocument()
+			Set getContragentByKey = Me.getDocObject( doc )
+		Else
+			Set getContragentByKey = Nothing
+		End If
+		
+		Call Me.log.exit( TypeName( Me ) & "." & GetThreadInfo(1))
+		Exit Function
+		
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Function
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Function getContragentPerson( in_key As Variant ) As Variant
+		On Error GoTo error_point
+		Call Me.log.enter( TypeName( Me ) & "." & GetThreadInfo(1))
+				
+		Dim id As String, doc As NotesDocument
+		id = Me.getId( in_key )
+		Set doc = Me.db.Getdocumentbyunid( id )
+		Set getContragentPerson = Me.getDocObject( doc )
+		
+		
+		Call Me.log.exit( TypeName( Me ) & "." & GetThreadInfo(1))
+		Exit Function
+		
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$ 
+	End Function
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------	
+	Function dialogSelectContragentPerson( in_key As String, in_isMult As Boolean ) As MixCollection
+		On Error GoTo error_point
+		Call Me.log.enter( "<" & TypeName( Me ) & "." & GetThreadInfo(1) & ">" )
+		Call Me.log.parameter( "in_isMult", in_isMult )
+		
+		Dim mxResult As New MixCollection
+		Set dialogSelectContragentPerson = mxResult
+		
+		Dim vw As NotesView
+		Set vw = Me.db.getView( "tps.contragent.person.byContragent_id" )
+		If ( vw Is Nothing ) Then
+			Error 1001, "View 'tps.contragent.person.byContragent_id' is not exist"	
+		End If
+		
+		Dim ws As New NotesUIWorkspace, dc As NotesDocumentCollection
+		Set dc = ws.PickListCollection( 3, in_isMult, Me.db.Server, Me.db.FilePath, vw.Name, "Список контактных лиц", "Выберите документ(ы) и нажмите  OK", in_key )
+		If ( dc.Count > 0 ) Then
+			Dim doc As NotesDocument
+			Set doc = dc.GetFirstDocument
+			Do While Not ( doc Is Nothing )
+				Dim p As Variant
+				Set p = Me.getDocObject(doc)
+				Call mxResult.Append( p )
+				Set doc = dc.GetNextDocument( doc )
+			Loop
+		End If
+		
+		Call Me.log.exit( "</" & TypeName( Me ) & "." & GetThreadInfo(1) & ">" )
+		Exit Function
+		
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Function
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Function getContragentPersons( in_contragent As Variant ) As MixCollection
+		On Error GoTo error_point
+		Call Me.log.enter( TypeName( Me ) & "." & GetThreadInfo(1))
+		
+		Dim result As New MixCollection
+		Set getContragentPersons = result
+		
+		Dim s As New NotesSession, cdb As NotesDatabase, vw As NotesView, dc As NotesDocumentCollection
+		Set cdb = s.CurrentDatabase
+		Set vw = Me.db.Getview( "tps.contragent.person.byContragent_id" )
+		Call vw.Refresh
+		Set dc = vw.GetAllDocumentsByKey( in_contragent.id, True )
+		If ( dc.Count > 0 ) Then
+			Dim doc As NotesDocument
+			Set doc = dc.GetFirstDocument
+			Do While Not ( doc Is Nothing )
+				Dim spec As Variant
+				Set spec = Me.getDocObject( doc )
+				Call result.Append( spec )
+				Set doc = dc.GetNextDocument( doc )
+			Loop
+		End If
+		
+		Call Me.log.traceObject( "result", getContragentPersons )
+		Call Me.log.exit( TypeName( Me ) & "." & GetThreadInfo(1))
+		Exit Function
+		
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Function
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Function getContragentParents( in_contragent As Variant, mxResult As Variant )
+		On Error GoTo error_point
+		Call Me.log.enter( TypeName( Me ) & "." & GetThreadInfo(1))
+		
+		If in_contragent.nd.HasItem("ParentRef") Then
+			Dim docParent As NotesDocument, id As String
+			id = in_contragent.nd.Getitemvalue("ParentRef")(0)
+			If ( id <> "" ) Then
+				On Error 4091 Resume Next 'bad unid
+				Set docParent = Me.db.Getdocumentbyunid( id )
+				If ( Not docParent Is Nothing ) Then
+					Dim contragentParent As Variant
+					Set contragentParent = New TPS_Contragents_Contragent( docParent, Me.Me_variant )
+					
+					Call Me.getContragentParents( contragentParent, mxResult )
+					
+					Call mxResult.Append( contragentParent )
+				Else
+					Error 1001, {Не удалось найти родительский документ по unid: } & id & {. Контрагент: } & in_contragent.title & { ( id: } & in_contragent.id & { )}
+				End If
+			Else
+				Error 1001, {Unid родительского документо пустой. Контрагент: } & in_contragent.title & { ( id: } & in_contragent.id & { )}
+			End If
+			
+		End If
+		
+		Call Me.log.exit( TypeName( Me ) & "." & GetThreadInfo(1))
+		Exit Function
+		
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Function
+	
+End Class
+
+'======================================================================================================================================
+'	CLASS TPS_Contragents_Contragent
+'======================================================================================================================================
+Public Class TPS_Contragents_Contragent As FBase_Abstract_Object_Doc
+	
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	'	PUBLIC:
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Sub New( in_doc As NotesDocument, in_ps As Variant )
+	End Sub
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Property Get id As String
+		On Error Goto error_point
+		
+		'<TLD-5290 Нет договоров в списке выбора.>
+		'Dim doc As NotesDocument db As NotesDatabase
+		'Set db = m_doc.Parentdatabase
+		'Set doc = m_doc
+		'While CStr(doc.parentref(0)) <> ""
+		'	Set doc = db.Getdocumentbyunid(CStr(doc.parentref(0)))
+		'Wend
+		'</TLD-5290>
+		
+		If ( m_doc.HasItem( "id" )) Then
+			id = m_doc.id(0)
+		Else
+			id = m_doc.UniversalID
+		End If
+		Exit Property
+		
+error_point:
+		On Error Goto 0
+		Error Err, Typename( Me ) & "." & Getthreadinfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Property
+	'-----------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Property Get domain As String
+		On Error GoTo error_point
+		domain = DOMAIN_TPS_CONTRAGENTS_CONTRAGENT
+		Exit Property
+		
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Property
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Property Get title As String
+		On Error Goto error_point
+		If ( m_doc.HasItem( "title" )) Then
+			title = m_doc.title(0)
+		Else
+			title = m_doc.Name(0)
+		End If
+		Exit Property
+		
+error_point:
+		On Error Goto 0
+		Error Err, Typename( Me ) & "." & Getthreadinfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Property
+	'-----------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Property Set title As String
+		On Error Goto error_point
+		Call m_doc.Replaceitemvalue( "title", title )
+		Exit Property
+		
+error_point:
+		On Error Goto 0
+		Error Err, Typename( Me ) & "." & Getthreadinfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Property
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Property Get title_full As String
+		On Error Goto error_point
+		If m_doc.HasItem( "title_full" ) Then
+			title_full = m_doc.title_full(0)
+		End If
+		
+		Exit Property 
+error_point:
+		On Error Goto 0
+		Error Err, Typename( Me ) & "." & Getthreadinfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Property
+	'-----------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Property Set title_full As String
+		On Error Goto error_point
+		Call m_doc.Replaceitemvalue("title_full", title_full) 		
+		Exit Property 
+error_point:
+		On Error Goto 0
+		Error Err, Typename( Me ) & "." & Getthreadinfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Property
+	'-----------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Property Get title_extra As String
+		On Error GoTo error_point
+		If m_doc.HasItem( "title_extra" ) Then
+			title_extra = m_doc.title_extra(0)
+		End If
+		
+		Exit Property 
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Property	
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Property Set title_extra As String
+		On Error GoTo error_point
+		Call m_doc.Replaceitemvalue("title_extra", title_extra) 		
+		Exit Property 
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Property
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Property Get inn As String
+		On Error Goto error_point
+		inn = Cstr( m_doc.INN(0))
+		Exit Property 
+		
+error_point:
+		On Error Goto 0
+		Error Err, Typename( Me ) & "." & Getthreadinfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Property
+	'-----------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Property Set inn As String
+		On Error Goto error_point
+		Call m_doc.Replaceitemvalue( "inn", inn )
+		Exit Property
+		
+error_point:
+		On Error Goto 0
+		Error Err, Typename( Me ) & "." & Getthreadinfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Property
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Property Get KPP As String
+		On Error Goto error_point
+		If m_doc.HasItem( "KPP" ) Then
+			KPP = Cstr( m_doc.KPP(0))
+		End If
+		Exit Property 
+		
+error_point:
+		On Error Goto 0
+		Error Err, Typename( Me ) & "." & Getthreadinfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Property
+	'-----------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Property Set KPP As String
+		On Error Goto error_point
+		Call m_doc.Replaceitemvalue("KPP", KPP) 		
+		Exit Property 
+error_point:
+		On Error Goto 0
+		Error Err, Typename( Me ) & "." & Getthreadinfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Property
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Property Get comment As String
+		On Error Goto error_point
+		If m_doc.HasItem( "comment" ) Then
+			comment = m_doc.comment(0)
+		End If
+		
+		Exit Property 
+error_point:
+		On Error Goto 0
+		Error Err, Typename( Me ) & "." & Getthreadinfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Property
+	'-----------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Property Set comment As String
+		On Error Goto error_point
+		Call m_doc.Replaceitemvalue("comment", comment) 		
+		Exit Property 
+error_point:
+		On Error Goto 0
+		Error Err, Typename( Me ) & "." & Getthreadinfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Property
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Property Get mark_delete As String
+		On Error Goto error_point
+		If m_doc.HasItem( "mark_delete" ) Then
+			mark_delete = m_doc.mark_delete(0)
+		End If
+		
+		Exit Property 
+error_point:
+		On Error Goto 0
+		Error Err, Typename( Me ) & "." & Getthreadinfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Property
+	'-----------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Property Set mark_delete As String
+		On Error Goto error_point
+		Call m_doc.Replaceitemvalue("mark_delete", mark_delete) 		
+		Exit Property 
+error_point:
+		On Error Goto 0
+		Error Err, Typename( Me ) & "." & Getthreadinfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Property
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Property Get contragent_type As String
+		On Error Goto error_point
+		If m_doc.HasItem( "contragent_type" ) Then
+			contragent_type = m_doc.contragent_type(0)
+		End If
+		
+		Exit Property 
+error_point:
+		On Error Goto 0
+		Error Err, Typename( Me ) & "." & Getthreadinfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Property
+	'-----------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Property Set contragent_type As String
+		On Error Goto error_point
+		Call m_doc.Replaceitemvalue("contragent_type", contragent_type) 		
+		Exit Property 
+error_point:
+		On Error Goto 0
+		Error Err, Typename( Me ) & "." & Getthreadinfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Property
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Property Get subject_type As String
+		On Error Goto error_point
+		If m_doc.HasItem( "subject_type" ) Then
+			subject_type = m_doc.subject_type(0)
+		End If
+		
+		Exit Property 
+error_point:
+		On Error Goto 0
+		Error Err, Typename( Me ) & "." & Getthreadinfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Property
+	'-----------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Property Set subject_type As String
+		On Error Goto error_point
+		Call m_doc.Replaceitemvalue("subject_type", subject_type) 		
+		Exit Property 
+error_point:
+		On Error Goto 0
+		Error Err, Typename( Me ) & "." & Getthreadinfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Property
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Property Get country As String
+		On Error Goto error_point
+		If m_doc.HasItem( "country" ) Then
+			country = m_doc.country(0)
+		End If
+		
+		Exit Property 
+error_point:
+		On Error Goto 0
+		Error Err, Typename( Me ) & "." & Getthreadinfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Property
+	'-----------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Property Set country As String
+		On Error Goto error_point
+		Call m_doc.Replaceitemvalue("country", country) 		
+		Exit Property 
+error_point:
+		On Error Goto 0
+		Error Err, Typename( Me ) & "." & Getthreadinfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Property
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Property Get birthday As Variant
+		On Error Goto error_point
+		If m_doc.HasItem( "birthday" ) Then
+			birthday = m_doc.birthday(0)
+		End If
+		
+		Exit Property 
+error_point:
+		On Error Goto 0
+		Error Err, Typename( Me ) & "." & Getthreadinfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Property
+	'-----------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Property Set birthday As Variant
+		On Error Goto error_point
+		Call m_doc.Replaceitemvalue("birthday", birthday) 		
+		Exit Property 
+error_point:
+		On Error Goto 0
+		Error Err, Typename( Me ) & "." & Getthreadinfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Property
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Property Get address_juridical As String
+		On Error Goto error_point
+		If m_doc.HasItem( "address_juridical" ) Then
+			address_juridical = m_doc.address_juridical(0)
+		End If
+		
+		Exit Property 
+error_point:
+		On Error Goto 0
+		Error Err, Typename( Me ) & "." & Getthreadinfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Property
+	'-----------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Property Set address_juridical As String
+		On Error Goto error_point
+		Call m_doc.Replaceitemvalue("address_juridical", address_juridical) 		
+		Exit Property 
+error_point:
+		On Error Goto 0
+		Error Err, Typename( Me ) & "." & Getthreadinfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Property
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Property Get address_physical As String
+		On Error Goto error_point
+		If m_doc.HasItem( "address_physical" ) Then
+			address_physical = m_doc.address_physical(0)
+		End If
+		
+		Exit Property 
+error_point:
+		On Error Goto 0
+		Error Err, Typename( Me ) & "." & Getthreadinfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Property
+	'-----------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Property Set address_physical As String
+		On Error Goto error_point
+		Call m_doc.Replaceitemvalue("address_physical", address_physical) 		
+		Exit Property 
+error_point:
+		On Error Goto 0
+		Error Err, Typename( Me ) & "." & Getthreadinfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Property
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------	
+	Property Get info1C As Variant
+		Set info1C = New TPS_Contragents_Contragent_1CInfo( Me.nd, Me.ps )
+	End Property
+	
+	
+	
+End Class
+
+
+
+'======================================================================================================================================
+'	CLASS TPS_Contragents_Contragent_1CInfo
+'======================================================================================================================================
+Class TPS_Contragents_Contragent_1CInfo As FBase_Abstract_Object_Doc
+	
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	'	PUBLIC:
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Sub New( in_doc As NotesDocument, in_ps As Variant )
+	End Sub
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Property Get isExported As Boolean
+		On Error Goto error_point
+		isExported = ( Me.nd.Export_1C(0) = "1" )
+		Exit Property 
+		
+error_point:
+		On Error Goto 0
+		Error Err, Typename( Me ) & "." & Getthreadinfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Property
+		'-----------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Property Set isExported As Boolean
+		On Error Goto error_point
+		If ( isExported ) Then
+			Call Me.nd.ReplaceItemValue( "Export_1C", "1" )
+		Else
+			Call Me.nd.ReplaceItemValue( "Export_1C", "0" )
+		End If
+		Exit Property
+		
+error_point:
+		On Error Goto 0
+		Error Err, Typename( Me ) & "." & Getthreadinfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Property
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Property Get code As String
+		On Error Goto error_point
+		code = Me.nd.code_1C(0)
+		Exit Property 
+		
+error_point:
+		On Error Goto 0
+		Error Err, Typename( Me ) & "." & Getthreadinfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Property
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Property Get code_ukr As String
+		On Error GoTo error_point
+		code_ukr = Me.nd.getItemValue("code_1C_ukr")(0)
+		Exit Property 
+		
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Property
+	'-----------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Property Set code As String
+		On Error Goto error_point
+		Call Me.nd.ReplaceItemValue( "code_1C", code )
+		Exit Property
+		
+error_point:
+		On Error Goto 0
+		Error Err, Typename( Me ) & "." & Getthreadinfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Property
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Property Get id_ukr As String
+		On Error GoTo error_point
+		id_ukr = Me.nd.getItemValue("ID1C_ukr")(0)
+		Exit Property 
+		
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Property
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Property Get id As String
+		On Error Goto error_point
+		id = Me.nd.ID1C(0)
+		Exit Property 
+		
+error_point:
+		On Error Goto 0
+		Error Err, Typename( Me ) & "." & Getthreadinfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Property
+	'-----------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Property Set id As String
+		On Error Goto error_point
+		Call Me.nd.ReplaceItemValue( "ID1C", id )
+		Exit Property
+		
+error_point:
+		On Error Goto 0
+		Error Err, Typename( Me ) & "." & Getthreadinfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Property
+	'-----------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Property Get isGroupCompany As Boolean
+		On Error GoTo error_point
+		isGroupCompany = ( Me.nd.group_company(0) = "1" )
+		
+		Exit Property 
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Property
+	'-----------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Property Set isGroupCompany As Boolean
+		On Error GoTo error_point
+		If ( isGroupCompany ) Then
+			Call Me.nd.ReplaceItemValue( "group_company", "1" )
+		Else
+			Call Me.nd.ReplaceItemValue( "group_company", "0" )
+		End If
+		Exit Property 
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Property
+	'-----------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Property Get idGroupCompany As String
+		On Error GoTo error_point
+		idGroupCompany = Me.nd.group_company_ID1C(0)
+		
+		Exit Property 
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Property
+	'-----------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Property Set idGroupCompany As String
+		On Error GoTo error_point
+		Call Me.nd.ReplaceItemValue( "group_company_ID1C", idGroupCompany )
+		
+		Exit Property 
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Property
+	'-----------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Property Get codeGroupCompany As String
+		On Error GoTo error_point
+		codeGroupCompany = Me.nd.group_company_code_1C(0)
+		
+		Exit Property 
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Property
+	'-----------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Property Set codeGroupCompany As String
+		On Error GoTo error_point
+		Call Me.nd.ReplaceItemValue( "group_company_code_1C", codeGroupCompany )
+		
+		Exit Property 
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Property
+	'-----------------------------------------------------------------------------------------------------------------------------------------------------------------
+End Class
+
+
+
+'======================================================================================================================================
+'	CLASS TPS_Contragents_Contragent_InitObj
+'======================================================================================================================================
+Class TPS_Contragents_Contragent_InitObj As Fbase_abstract_service
+	Private m_processID As String
+	Private m_initPositionID As String
+	Private m_initObjID As String
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	'	PUBLIC:
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Sub New( in_ps As Variant )
+	End Sub
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Property Get processID As String
+		On Error Goto error_point
+		processID = m_processID
+		Exit Property 
+error_point:
+		On Error Goto 0
+		Error Err, Typename( Me ) & "." & Getthreadinfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Property
+		'-----------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Property Set processID As String
+		On Error Goto error_point
+		m_processID = processID
+		Exit Property 
+error_point:
+		On Error Goto 0
+		Error Err, Typename( Me ) & "." & Getthreadinfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Property
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Property Get initPositionID As String
+		On Error Goto error_point
+		initPositionID = m_initPositionID
+		Exit Property 
+error_point:
+		On Error Goto 0
+		Error Err, Typename( Me ) & "." & Getthreadinfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Property
+	'-----------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Property Set initPositionID As String
+		On Error Goto error_point
+		m_initPositionID = initPositionID
+		Exit Property 
+error_point:
+		On Error Goto 0
+		Error Err, Typename( Me ) & "." & Getthreadinfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Property
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Property Get initObjID As String
+		On Error Goto error_point
+		initObjID = m_initObjID
+		Exit Property 
+error_point:
+		On Error Goto 0
+		Error Err, Typename( Me ) & "." & Getthreadinfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Property
+	'-----------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Property Set initObjID As String
+		On Error Goto error_point
+		m_initObjID = initObjID
+		Exit Property 
+error_point:
+		On Error Goto 0
+		Error Err, Typename( Me ) & "." & Getthreadinfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Property
+End Class
+'======================================================================================================================================
+'	TPS_Contragents_Contragent_Person
+'======================================================================================================================================
+Public Class TPS_Contragents_Contragent_Person As FBase_Abstract_Object_Doc
+	
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	'	PUBLIC:
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Sub New( in_doc As NotesDocument, in_ps As Variant )
+	End Sub
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Property Get id As String
+		On Error GoTo error_point
+		If ( m_doc.HasItem( "id" )) Then
+			id = m_doc.id(0)
+		Else
+			id = m_doc.UniversalID
+		End If
+		Exit Property
+		
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Property
+	'-----------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Property Get domain As String
+		On Error GoTo error_point
+		domain = DOMAIN_TPS_CONTRAGENTS_CONTRAGENT_PERSON
+		Exit Property
+		
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Property
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Property Get title As String
+		On Error GoTo error_point
+		
+		title = m_doc.FullName(0)
+		
+		Exit Property
+		
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Property
+	'-----------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Property Set title As String
+		On Error GoTo error_point
+		Call m_doc.Replaceitemvalue( "FullName", title )
+		Exit Property
+		
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Property
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Property Get position As String
+		On Error GoTo error_point
+		If m_doc.HasItem( "position" ) Then
+			position = m_doc.position(0)
+		End If
+		
+		Exit Property 
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Property
+	'-----------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Property Set position As String
+		On Error GoTo error_point
+		Call m_doc.Replaceitemvalue("position", position ) 		
+		Exit Property 
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Property
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Property Get birthday As Variant
+		On Error GoTo error_point
+		If m_doc.HasItem( "birthday" ) Then
+			birthday = m_doc.birthday(0)
+		End If
+		
+		Exit Property 
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Property
+	'-----------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Property Set birthday As Variant
+		On Error GoTo error_point
+		Call m_doc.Replaceitemvalue("birthday", birthday) 		
+		Exit Property 
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Property
+	
+	
+	
+	
+End Class
+
+
+
+'======================================================================================================================================
+'	TPS_Contragents_Unit
+'======================================================================================================================================
+Public Class TPS_Contragents_Unit As FBase_Abstract_Object_Doc
+	
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	'	PUBLIC:
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Sub New( in_doc As NotesDocument, in_ps As Variant )
+	End Sub
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Property Get id As String
+		On Error GoTo error_point
+		If ( m_doc.HasItem( "id" )) Then
+			id = m_doc.id(0)
+		Else
+			id = m_doc.UniversalID
+		End If
+		Exit Property
+		
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Property
+	'-----------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Property Get domain As String
+		On Error GoTo error_point
+		domain = DOMAIN_TPS_CONTRAGENTS_UNIT
+		Exit Property
+		
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Property
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Property Get title As String
+		On Error GoTo error_point
+		
+		title = m_Doc.contragent_title(0) &  "\" & m_doc.title(0)
+		
+		Exit Property
+		
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Property
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+End Class

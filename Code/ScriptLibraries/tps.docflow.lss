@@ -1,0 +1,101 @@
+'++LotusScript Development Environment:2:5:(Options):0:74
+Option Public
+Option Declare
+
+Use "fbyte"
+Use "fbyte.base"
+
+
+'++LotusScript Development Environment:2:5:(Forward):0:1
+Declare Class TPS_Docflow_Service As FBase_Abstract_Service
+
+'++LotusScript Development Environment:2:5:(Declarations):0:10
+
+Class TPS_Docflow_Service As FBase_Abstract_Service
+	
+	'----------------------------------------------------------------------------------------------------------------------------------
+	Sub New( in_parentService As Variant )
+	End Sub
+	'----------------------------------------------------------------------------------------------------------------------------------
+	Sub send( in_doc As NotesDocument, in_recipient As Variant, in_method As String )
+		
+		On Error GoTo error_point
+		
+		Dim fCore As Fcoreservice, fCoreSettings As Fcore_settingsmanager
+		
+		Set fCoreSettings = fCore.Settings(Nothing)
+		
+		'// Если тип объекта in_recipient = TPS_Corresp_Company, то
+		'// Если тип объекта НЕ TPS_Corresp_Company, то ошибка "Работа с объетом не поддерживается"
+		If Not TypeName( in_recipient ) = "TPS_Corresp_Company" Then Error 1001, "Работа с объектом не поддерживается."
+		
+		'// Если в in_recipient не указана система МШ, то  выдать ошибку "Система МШ не указана. Обратитесь к Администратору"
+		'// Если в in_recipient указана система МШ, то 
+		If in_recipient.system Is Nothing Then Error 1001, "Межсистемный Шлюз не указан."
+		
+		Dim gwService, gwSystem
+		
+		Set gwService = Me.ps.gateway
+		
+		'// Получаем ссылку на систему, указанную в объекте in_recipient.system
+		Set gwSystem = gwService.getSystem( in_recipient.system.id )
+		
+		'// Получаем по ссылке объект системы через сервис tps.gateway.service
+		'// Если система не найдена, то выдаем сообщение "Система 'систем.title' ( id: система.id) не найдет"
+		'// Если система найдена, то
+		'// Создаем копию документа in_doc
+		'//	Дописываем в копию in_doc Principal id основной системы
+		'//	Дописываем копию in_doc поля шлюза	
+		'docMail.gw_corr_sys_id = in_address.system.id
+		'docMail.gw_corr_sys_title = in_address.system.title
+		'docMail.gw_transport_type = in_transport
+		'//	Получаем внутренний адрес МШ из глобальной сервисной настройки
+		'//	Отправляем копию in_doc на внутренний адрес МШ
+		
+		If gwSystem Is Nothing Then Error 1001, "Система корреспондента '" + in_recipient.system.title + " ( " + in_recipient.system.id + " ) не найдена."
+		
+		Dim s As New NotesSession, docMail As New NotesDocument( s.CurrentDatabase )
+		
+		Call in_Doc.CopyAllItems( docMail, True )
+		
+		'//	Дописываем Principal
+		Dim gwBase
+		
+		Set gwBase = gwService.baseSystem
+		
+		If gwBase Is Nothing Then Error 1001, "В Межсетевом Шлюзе не определена базовая система."
+		
+		docMail.principal = gwBase.id
+		
+		'//	Дописываем поля шлюза	
+		docMail.gw_corr_sys_id = in_recipient.system.id
+		docMail.gw_corr_sys_title = in_recipient.system.title
+		docMail.gw_transport_type = in_method
+		
+		Dim gwSetting
+		
+		Dim fsm As Servicesmanager, fBase As Fbaseservice, fBaseDatabases As Fbase_databasesservice, fBaseDatabase As Fbase_databasesetting
+		Set fsm = Me.ps.ps
+		Set fBase = fsm.Base
+		Set fBaseDatabases = fBase.Databases
+		Set fBaseDatabase = fBaseDatabases.Getsetting( "tps.gateway" )
+
+		Dim fEmails As Variant
+		Set fEmails = fBaseDatabase.Emails
+		'fEmails.db
+		
+		'		Set gwSetting = Me.ParentService.DBManager.getSetting( "db_gateway" )		
+		If gwSetting Is Nothing Then Error 1001, "Настройка 'db_gateway' в конфигураторе не найдена."
+		
+		If gwSetting.mailbox = "" Then Error 1001, "У настойки 'db_gateway' не определен почтовый адрес."
+		
+		Call docMail.Send( False, gwSetting.mailbox )
+		
+		Delete docMail
+		Exit Sub
+		
+error_point:
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Sub
+	
+End Class

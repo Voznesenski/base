@@ -1,0 +1,816 @@
+'++LotusScript Development Environment:2:5:(Options):0:74
+Option Public
+Option Declare
+
+Use "fbyte"
+Use "tps.hr.timemanagment.approval"
+Use "tps.hr.changerequests"
+
+'++LotusScript Development Environment:2:5:(Forward):0:1
+Declare Public Class TPS_HRService As FBase_Abstract_Service
+Declare Public Class ABSTACT_TPS_HR_UNIT As FBase_Abstract_Object_Doc
+Declare Public Class TPS_HR_Organization As ABSTACT_TPS_HR_UNIT
+Declare Public Class TPS_HR_Department As ABSTACT_TPS_HR_UNIT
+Declare Public Class TPS_HR_PositionNoSalary As ABSTACT_TPS_HR_UNIT
+Declare Public Class TPS_HR_Person As ABSTACT_TPS_HR_UNIT
+Declare Public Class TPS_HR_Position As TPS_HR_PositionNoSalary
+Declare Class TPS_HR_Prj_Department As ABSTACT_TPS_HR_UNIT
+Declare Class TPS_HR_Prj_Organization As ABSTACT_TPS_HR_UNIT
+Declare Class TPS_HR_Prj_Position As ABSTACT_TPS_HR_UNIT
+Declare Class TPS_HR_Prj_PositionNoSalary As ABSTACT_TPS_HR_UNIT
+
+'++LotusScript Development Environment:2:5:(Declarations):0:10
+
+Private Const DATABASE_KEY = "tps.hr"
+
+Const DOMAIN_TYPE_TPS_HR_ORGANIZATION = "tps.hr.organization"
+Const DOMAIN_TYPE_TPS_HR_DEPARTMENT = "tps.hr.department"
+Const DOMAIN_TYPE_TPS_HR_POSITIONNOSALARY = "tps.hr.positionnosalary"
+Const DOMAIN_TYPE_TPS_HR_POSITION = "tps.hr.position"
+Const DOMAIN_TYPE_TPS_HR_PERSON = "tps.hr.person"
+
+Const DOMAIN_TYPE_TPS_HR_PRJ_ORGANIZATION = "tps.hr.prj.organization"
+Const DOMAIN_TYPE_TPS_HR_PRJ_DEPARTMENT = "tps.hr.prj.department"
+Const DOMAIN_TYPE_TPS_HR_PRJ_POSITIONNOSALARY = "tps.hr.prj.positionnosalary"
+Const DOMAIN_TYPE_TPS_HR_PRJ_POSITION = "tps.hr.prj.position"
+
+
+'======================================================================================================================================
+'	CLASS TPS_HRService
+'======================================================================================================================================
+Public Class TPS_HRService As FBase_Abstract_Service
+	Private m_db As NotesDatabase
+	Private m_tmapproval As Variant
+	Private m_changerequests As Variant
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Private Function getId( in_key As Variant ) As String
+		On Error GoTo error_point
+		Call Me.log.enter( TypeName( Me ) & "." & GetThreadInfo(1))
+		
+		Dim key As String
+		If ( LCase( TypeName( in_key )) = "objectlink" ) Then
+			key = in_key.id 
+		ElseIf IsScalar( in_key ) Then 
+			key = in_key
+		Else
+			Error 1001, "The type of data of parameter 'in_key' is '" & TypeName( in_key ) & "'. It is not supported"
+		End If
+		
+		getId = key
+		
+		Call Me.log.trace( "result: " & getId )
+		Call Me.log.exit( TypeName( Me ) & "." & GetThreadInfo(1))
+		Exit Function
+		
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Function
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	'	PUBLIC:
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Sub New( in_ps As Variant )
+	End Sub
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Property Get db As NotesDatabase
+		On Error GoTo error_point
+		Call Me.log.enter( TypeName( Me ) & "." & GetThreadInfo(1))
+		
+		If ( m_db Is Nothing )Then
+			Set m_db = Me.sm.base.databases.get( DATABASE_KEY )
+			If ( m_db Is Nothing )Then
+				Set m_db = Me.sm.base.databases.get( "tps.hr.staff" )
+			End If
+		End If
+		Set db = m_db
+		
+		Call Me.log.traceObject( "result", db )		
+		Call Me.log.exit( TypeName( Me ) & "." & GetThreadInfo(1))
+		Exit Property
+		
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Property
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Property Get tmapproval As Variant
+		On Error GoTo error_point
+		
+		If IsEmpty(m_tmapproval)Then
+			Set m_tmapproval = New TPS_HR_TimemanagmentApprovalService( Me.Me_Variant )
+		End If
+		Set tmapproval = m_tmapproval
+		Exit Property
+		
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Property
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Property Get changerequests As Variant
+		On Error GoTo error_point
+		
+		If IsEmpty(m_changerequests)Then
+			Set m_changerequests = New THR_ChangerequestsService( Me.Me_Variant )
+		End If
+		Set changerequests = m_changerequests
+		Exit Property
+		
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Property
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Function getObject( in_link As Variant ) As Variant
+		On Error GoTo error_point
+		Call Me.log.enter( TypeName( Me ) & "." & GetThreadInfo(1))
+		Call Me.log.parameter( "in_link", in_link )
+		
+		Select Case in_link.domain
+			Case DOMAIN_TYPE_TPS_HR_ORGANIZATION:
+				Set getObject = Me.getOrganization( in_link )
+			Case DOMAIN_TYPE_TPS_HR_DEPARTMENT:
+				Set getObject = Me.getDepartment( in_link )
+			Case DOMAIN_TYPE_TPS_HR_POSITIONNOSALARY:
+				Set getObject = Me.getPositionNoSalary( in_link )
+			Case DOMAIN_TYPE_TPS_HR_POSITION:
+				Set getObject = Me.getPosition( in_link )
+			Case DOMAIN_TYPE_TPS_HR_PERSON:
+				Set getObject = Me.getPerson( in_link )
+			Case DOMAIN_TYPE_TPS_HR_Prj_ORGANIZATION:
+				Set getObject = Me.getByKey( in_link )
+			Case DOMAIN_TYPE_TPS_HR_Prj_DEPARTMENT:
+				Set getObject = Me.getByKey( in_link )
+			Case DOMAIN_TYPE_TPS_HR_Prj_POSITIONNOSALARY:
+				Set getObject = Me.getByKey( in_link )
+			Case DOMAIN_TYPE_TPS_HR_Prj_POSITION:
+				Set getObject = Me.getByKey( in_link )
+			Case Else
+				Error 1001, "The data of type '" & in_link.domain & "' of parameter 'in_link.domain' is not supported"
+		End Select
+					
+		Call Me.log.traceObject( "result", getObject )
+		Call Me.log.exit( TypeName( Me ) & "." & GetThreadInfo(1))
+		Exit Function
+		
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Function
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Sub removeObject( in_object As Variant )
+		On Error GoTo error_point
+		Call Me.log.enter( GetThreadInfo(0))
+		
+		Dim fLinkedDoc As Objectlink
+		Dim LinkedDoc As Variant
+		
+		If CStr(in_object.nd.Delete(0)) = "1" Then Exit Sub								' Уже удалено
+		Select Case in_object.domain
+			Case DOMAIN_TYPE_TPS_HR_POSITIONNOSALARY:
+				Call in_object.nd.Replaceitemvalue( "Delete", "1" )
+				Call in_object.nd.Save(True, True)
+				
+				Set fLinkedDoc = in_object.SalaryPos
+				If Not ( fLinkedDoc Is Nothing ) Then
+					Set LinkedDoc = getObject( fLinkedDoc )
+					If LinkedDoc Is Nothing Then Error 1002, "Рассинхронизация данных. LinkedRef " & fLinkedDoc.ID & " документ не наден."
+					Call removeObject( LinkedDoc )
+				End If					
+			Case DOMAIN_TYPE_TPS_HR_POSITION:
+				Call in_object.nd.Replaceitemvalue( "Delete", "1" )
+				Call in_object.nd.Save(True, True)
+
+				Set fLinkedDoc = in_object.noSalaryPos
+				If Not ( fLinkedDoc Is Nothing ) Then
+					Set LinkedDoc = getObject( fLinkedDoc )
+					If LinkedDoc Is Nothing Then Error 1002, "Рассинхронизация данных. LinkedRef " & fLinkedDoc.ID & " документ не наден."
+					Call removeObject( LinkedDoc )
+				End If
+			Case DOMAIN_TYPE_TPS_HR_PRJ_ORGANIZATION,_
+				DOMAIN_TYPE_TPS_HR_PRJ_DEPARTMENT,_
+				DOMAIN_TYPE_TPS_HR_PRJ_POSITIONNOSALARY,_
+				DOMAIN_TYPE_TPS_HR_PRJ_POSITION:
+				MsgBox "Удаление документов возможно только по нажатию кнопки из панели действий", 16 , "Ошибка"				
+			Case Else
+				Error 1001, "The data of type '" & in_object.domain & "' of parameter 'in_object.domain' is not supported"
+		End Select
+					
+		Call Me.log.exit( GetThreadInfo(0))
+		Exit Sub
+		
+error_point:
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Sub
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Function getByKey( in_key As Variant ) As Variant
+		On Error GoTo error_point
+		Call Me.log.enter( TypeName( Me ) & "." & GetThreadInfo(1))
+		Call Me.log.parameter( "in_key", in_key )
+		
+		Dim key As String, vw As NotesView, dc As NotesDocumentCollection
+		key = Me.getId( in_key )
+		Set vw = Me.sm.core.cache.getView( "(CustomID)", Me.db )
+		Set dc = vw.GetAllDocumentsByKey( key, True )
+		If ( dc.Count = 0 ) Then
+			Set getByKey = Nothing
+		ElseIf ( dc.Count > 1 ) Then
+			Error 1001, "In database '" & Me.db.Title & "' ( path: " & Me.db.FilePath & " ) found more than one document by key '" & in_key & "' ( count: " & CStr( dc.Count ) & " )"
+		Else
+			Set getByKey = Me.getDocObject( dc.GetFirstDocument )
+		End If
+		
+		Call Me.log.traceObject( "result", getByKey )
+		Call Me.log.exit( TypeName( Me ) & "." & GetThreadInfo(1))
+		Exit Function
+		
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$ 
+	End Function
+	
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Function getDocObject( in_doc As NotesDocument ) As Variant
+		On Error GoTo error_point
+		Call Me.log.enter( TypeName( Me ) & "." & GetThreadInfo(1))
+		Call Me.log.parameter( "in_doc", in_doc )
+		
+		Select Case LCase( in_doc.form(0))
+			Case "org":
+				Set getDocObject = New TPS_HR_Organization( in_doc, Me.Me_Variant )
+			Case "dep":
+				Set getDocObject = New TPS_HR_Department( in_doc, Me.Me_Variant )
+			Case "pos"
+				Set getDocObject = New TPS_HR_Position( in_doc, Me.Me_Variant )
+			Case "posnosalary":
+				Set getDocObject = New TPS_HR_PositionNoSalary( in_doc, Me.Me_Variant )
+			Case "person":
+				Set getDocObject = New TPS_HR_Person( in_doc, Me.Me_Variant )
+			Case "orgp":
+				Set getDocObject = New TPS_HR_Prj_Organization( in_doc, Me.Me_Variant )
+			Case "depp":
+				Set getDocObject = New TPS_HR_Prj_Department( in_doc, Me.Me_Variant )
+			Case "posp"
+				Set getDocObject = New TPS_HR_Prj_Position( in_doc, Me.Me_Variant )
+			Case "posnosalaryp":
+				Set getDocObject = New TPS_HR_Prj_PositionNoSalary( in_doc, Me.Me_Variant )
+			Case Else:
+				Error 1001, "Форма '" & in_doc.form(0) & "' не поддерживается"
+		End Select
+		
+		Call Me.log.traceObject( "result", getDocObject )
+		Call Me.log.exit( TypeName( Me ) & "." & GetThreadInfo(1))
+		Exit Function
+		
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Function
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Function getOrganization( in_key As Variant ) As Variant
+		On Error GoTo error_point
+		Call Me.log.enter( TypeName( Me ) & "." & GetThreadInfo(1))
+		Call Me.log.parameter( "in_key", in_key )
+		
+		Const VIEW_NAME = "(CustomID)"
+		
+		Dim key As String, vw As NotesView, dc As NotesDocumentCollection
+		key = Me.getId( in_key )
+		Set vw = Me.sm.core.cache.getView( VIEW_NAME, Me.db )
+		Set dc = vw.GetAllDocumentsByKey( key, True )
+		If ( dc.Count = 0 ) Then
+			Set Me.getOrganization = Nothing
+		ElseIf ( dc.Count > 1 ) Then
+			Error 1001, "In database '" & Me.db.Title & "' ( path: " & Me.db.FilePath & " ) founded more than one organization by key '" & in_key & "' ( count: " & CStr( dc.Count ) & " )"
+		Else
+			Set Me.getOrganization = Me.getDocObject( dc.GetFirstDocument )
+		End If
+		
+		Call Me.log.traceObject( "result", getOrganization )
+		Call Me.log.exit( TypeName( Me ) & "." & GetThreadInfo(1))
+		Exit Function
+		
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$ 
+	End Function
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Function getDepartment( in_key As Variant ) As Variant
+		On Error GoTo error_point
+		Call Me.log.enter( TypeName( Me ) & "." & GetThreadInfo(1))
+		Call Me.log.parameter( "in_key", in_key )
+		
+		
+		Dim key As String, vw As NotesView, VIEW_NAME As String, dc As NotesDocumentCollection
+		VIEW_NAME = "(CustomID)"
+		key = Me.getId( in_key )
+		Set vw = Me.sm.core.cache.getView( VIEW_NAME, Me.db )
+		Set dc = vw.GetAllDocumentsByKey( key, True )
+		If ( dc.Count = 0 ) Then
+			
+			'<patch by Tambiev 2014.08.08; reason: get doc by ID 1C>
+			VIEW_NAME = "(AllByID1Ckey)"
+			Set vw = Me.sm.core.cache.getView( VIEW_NAME, Me.db )
+			If Not ( vw Is Nothing) Then
+				Set dc = vw.GetAllDocumentsByKey( key, True )
+				If ( dc.Count = 0 ) Then
+					Set Me.getDepartment = Nothing
+				ElseIf ( dc.Count > 1 ) Then
+					Error 1001, "In database '" & Me.db.Title & "' ( path: " & Me.db.FilePath & " ) founded more than one department by key '" & in_key & "' ( count: " & CStr( dc.Count ) & " )"
+				Else
+					Set Me.getDepartment = Me.getDocObject( dc.GetFirstDocument )	
+				End If
+			Else
+				Set Me.getDepartment = Nothing
+			End If
+			'<patch>
+			
+		ElseIf ( dc.Count > 1 ) Then
+			Error 1001, "In database '" & Me.db.Title & "' ( path: " & Me.db.FilePath & " ) founded more than one department by key '" & in_key & "' ( count: " & CStr( dc.Count ) & " )"
+		Else
+			Set Me.getDepartment = Me.getDocObject( dc.GetFirstDocument )
+		End If
+		
+		Call Me.log.traceObject( "result", getDepartment )
+		Call Me.log.exit( TypeName( Me ) & "." & GetThreadInfo(1))
+		Exit Function
+		
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$ 
+	End Function
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Function getPosition( in_key As Variant ) As Variant
+		On Error GoTo error_point
+		Call Me.log.enter( TypeName( Me ) & "." & GetThreadInfo(1))
+		Call Me.log.parameter( "in_key", in_key )
+		
+		Const VIEW_NAME = "(CustomID)"
+		
+		Dim key As String, vw As NotesView, dc As NotesDocumentCollection
+		key = Me.getId( in_key )
+		Set vw = Me.sm.core.cache.getView( VIEW_NAME, Me.db )
+		Set dc = vw.GetAllDocumentsByKey( key, True )
+		If ( dc.Count = 0 ) Then
+			Set Me.getPosition = Nothing
+		ElseIf ( dc.Count > 1 ) Then
+			Error 1001, "In database '" & Me.db.Title & "' ( path: " & Me.db.FilePath & " ) founded more than one position by key '" & in_key & "' ( count: " & CStr( dc.Count ) & " )"
+		Else
+			Set Me.getPosition = Me.getDocObject( dc.GetFirstDocument )
+		End If
+		
+		Call Me.log.traceObject( "result", getPosition )
+		Call Me.log.exit( TypeName( Me ) & "." & GetThreadInfo(1))
+		Exit Function
+		
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$ 
+	End Function
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Function getPositionNoSalary( in_key As Variant ) As Variant
+		On Error GoTo error_point
+		Call Me.log.enter( GetThreadInfo(0))
+		
+		Const VIEW_NAME = "(CustomID)"
+		
+		Dim key As String, vw As NotesView, dc As NotesDocumentCollection
+		key = Me.getId( in_key )
+		Set vw = Me.sm.core.cache.getView( VIEW_NAME, Me.db )
+		Set dc = vw.GetAllDocumentsByKey( key, True )
+		If ( dc.Count = 0 ) Then
+			Set Me.getPositionNoSalary = Nothing
+		ElseIf ( dc.Count > 1 ) Then
+			Error 1001, "В БД '" & Me.db.Title & "' (" & Me.db.FilePath & ") по CUSTOMID ключу " & in_key & " найдено " & CStr( dc.Count ) & " документов"
+		Else
+			Set Me.getPositionNoSalary = Me.getDocObject( dc.GetFirstDocument )
+		End If
+		
+		Call Me.log.exit( GetThreadInfo(0))
+		Exit Function
+
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$ 
+	End Function
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Function getPerson( in_key As Variant ) As Variant
+		On Error GoTo error_point
+		Call Me.log.enter( TypeName( Me ) & "." & GetThreadInfo(1))
+		Call Me.log.parameter( "in_key", in_key )
+		
+		Const VIEW_NAME = "(CustomID)"
+		
+		Dim key As String, vw As NotesView, dc As NotesDocumentCollection
+		key = Me.getId( in_key )
+		Set vw = Me.sm.core.cache.getView( VIEW_NAME, Me.db )
+		Set dc = vw.GetAllDocumentsByKey( key, True )
+		If ( dc.Count = 0 ) Then
+			Set Me.getPerson = Nothing
+		ElseIf ( dc.Count > 1 ) Then
+			Error 1001, "In database '" & Me.db.Title & "' ( path: " & Me.db.FilePath & " ) founded more than one person by key '" & in_key & "' ( count: " & CStr( dc.Count ) & " )"
+		Else
+			Set Me.getPerson = Me.getDocObject( dc.GetFirstDocument )
+		End If
+		
+		Call Me.log.traceObject( "result", getPerson )
+		Call Me.log.exit( TypeName( Me ) & "." & GetThreadInfo(1))
+		Exit Function
+		
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$ 
+	End Function
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------	
+	Function dialogSelectPersons ( in_isMult As Boolean ) As MixCollection
+		On Error GoTo error_point
+		Call Me.log.enter( "<" & TypeName( Me ) & "." & GetThreadInfo(1) & ">" )
+		Call Me.log.parameter( "in_isMult", in_isMult )
+		
+		Dim mxResult As New MixCollection
+		Set dialogSelectPersons = mxResult
+		
+		Dim ws As New NotesUIWorkspace, dc As NotesDocumentCollection
+		Set dc = ws.PickListCollection( 3, in_isMult, Me.db.Server, Me.db.FilePath, "Person", Me.db.Title, "Выберите сотрудника" )
+		If ( dc.Count > 0 ) Then
+			Dim docSelect As NotesDocument
+			Set docSelect = dc.GetFirstDocument
+			Do While Not ( docSelect Is Nothing )
+				Dim obj As Variant
+				Set obj = Me.getDocObject( docSelect )
+				Call mxResult.Append( obj )
+				Set docSelect = dc.GetNextDocument( docSelect )
+			Loop
+		End If
+		
+		Call Me.log.exit( "</" & TypeName( Me ) & "." & GetThreadInfo(1) & ">" )
+		Exit Function
+		
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Function
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------	
+	Function dialogSelectStructure( in_isMult As Boolean ) As MixCollection
+		On Error GoTo error_point
+		Call Me.log.enter( "<" & TypeName( Me ) & "." & GetThreadInfo(1) & ">" )
+		Call Me.log.parameter( "in_isMult", in_isMult )
+		
+		Dim mxResult As New MixCollection
+		Set dialogSelectStructure = mxResult
+		
+		Dim ws As New NotesUIWorkspace, dc As NotesDocumentCollection
+		Set dc = ws.PickListCollection( 3, in_isMult, Me.db.Server, Me.db.FilePath, "StructureDep", Me.db.Title, "Выберите подразделение" )
+		If ( dc.Count > 0 ) Then
+			Dim docSelect As NotesDocument
+			Set docSelect = dc.GetFirstDocument
+			Do While Not ( docSelect Is Nothing )
+				Dim obj As Variant
+				Set obj = Me.getDocObject( docSelect )
+				Call mxResult.Append( obj )
+				Set docSelect = dc.GetNextDocument( docSelect )
+			Loop
+		End If
+		
+		Call Me.log.exit( "</" & TypeName( Me ) & "." & GetThreadInfo(1) & ">" )
+		Exit Function
+		
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Function
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------	
+	Function dialogSelectPositionsByPersonname( in_isMult As Boolean ) As MixCollection
+		On Error GoTo error_point
+		Call Me.log.enter( "<" & TypeName( Me ) & "." & GetThreadInfo(1) & ">" )
+		Call Me.log.parameter( "in_isMult", in_isMult )
+		
+		Dim mxResult As New MixCollection
+		Set dialogSelectPositionsByPersonname = mxResult
+		
+		Dim ws As New NotesUIWorkspace, dc As NotesDocumentCollection
+		Set dc = ws.PickListCollection( 3, in_isMult, Me.db.Server, Me.db.FilePath, "tps.positions.byPersonname", Me.db.Title, "Выберите сотрудника" )
+		If ( dc.Count > 0 ) Then
+			Dim docSelect As NotesDocument
+			Set docSelect = dc.GetFirstDocument
+			Do While Not ( docSelect Is Nothing )
+				Dim obj As Variant
+				Set obj = Me.getDocObject( docSelect )
+				Call mxResult.Append( obj )
+				Set docSelect = dc.GetNextDocument( docSelect )
+			Loop
+		End If
+		
+		Call Me.log.exit( "</" & TypeName( Me ) & "." & GetThreadInfo(1) & ">" )
+		Exit Function
+		
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Function
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Function dialogSelectPosition( in_isMult As Boolean ) As MixCollection
+		On Error GoTo error_point
+		
+		Dim mxResult As New MixCollection
+		Set dialogSelectPosition = mxResult
+
+		Dim ws As New NotesUIWorkspace, dc As NotesDocumentCollection
+		Set dc = ws.PickListCollection( 3, in_isMult, Me.db.Server, Me.db.FilePath, "StafflistNoSalary", Me.db.Title, "Выберите должность" )
+		If ( dc.Count > 0 ) Then
+			Dim docSelect As NotesDocument
+			Set docSelect = dc.GetFirstDocument
+			Do While Not ( docSelect Is Nothing )
+				Dim obj As Variant
+				Set obj = Me.getDocObject( docSelect )
+				Call mxResult.Append( obj )
+				Set docSelect = dc.GetNextDocument( docSelect )
+			Loop
+		End If
+
+
+
+		Exit Function
+		
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+		
+	End Function
+	
+	
+End Class
+
+
+'======================================================================================================================================
+'	CLASS ABSTACT_TPS_HR_UNIT
+'======================================================================================================================================
+Public Class ABSTACT_TPS_HR_UNIT As FBase_Abstract_Object_Doc
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	'	PUBLIC:
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Sub New( in_doc As NotesDocument, in_ps As Variant )
+	End Sub
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Property Get id As String
+		On Error GoTo error_point
+		id = Me.nd.CUSTOMID(0)
+		Exit Property
+		
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Property
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Property Get title As String
+		On Error GoTo error_point
+		title = Me.nd.Name(0)
+		Exit Property
+		
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Property
+End Class
+
+
+'======================================================================================================================================
+'	CLASS TPS_HR_Organization
+'======================================================================================================================================
+Public Class TPS_HR_Organization As ABSTACT_TPS_HR_UNIT
+	
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	'	PUBLIC:
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Sub New( in_doc As NotesDocument, in_ps As Variant )
+	End Sub
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Property Get domain As String
+		On Error GoTo error_point
+		domain = DOMAIN_TYPE_TPS_HR_ORGANIZATION
+		Exit Property
+		
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Property
+End Class
+
+
+'======================================================================================================================================
+'	CLASS TPS_HR_Department
+'======================================================================================================================================
+Public Class TPS_HR_Department As ABSTACT_TPS_HR_UNIT
+	
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	'	PUBLIC:
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Sub New( in_doc As NotesDocument, in_ps As Variant )
+	End Sub
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Property Get domain As String
+		On Error GoTo error_point
+		domain = DOMAIN_TYPE_TPS_HR_DEPARTMENT
+		Exit Property
+		
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Property
+End Class
+'======================================================================================================================================
+'	CLASS TPS_HR_Position
+'======================================================================================================================================
+Public Class TPS_HR_PositionNoSalary As ABSTACT_TPS_HR_UNIT
+	
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	'	PUBLIC:
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Sub New( in_doc As NotesDocument, in_ps As Variant )
+	End Sub
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Property Get domain As String
+		On Error GoTo error_point
+		domain = DOMAIN_TYPE_TPS_HR_POSITIONNOSALARY
+		Exit Property
+		
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Property
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Property Get SalaryPos As Objectlink	' 2019/02/04 Томнов - http://jira.tpsgroup.ru/browse/TLD-426 - свойство отсутствовало
+		On Error GoTo error_point
+		Call Me.log.enter( GetThreadInfo(0))
+		
+		If ( Me.nd.LinkedRef(0) <> "" ) Then
+			Set SalaryPos = New Objectlink( Me.nd.LinkedRef(0), "", DOMAIN_TYPE_TPS_HR_POSITION )	
+		End If
+		
+		Call Me.log.exit( GetThreadInfo(0))
+		Exit Property
+		
+error_point:
+		Call Me.log.fatal()
+	End Property
+End Class
+
+
+'======================================================================================================================================
+'	CLASS TPS_HR_Person
+'======================================================================================================================================
+Public Class TPS_HR_Person As ABSTACT_TPS_HR_UNIT
+	
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	'	PUBLIC:
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Sub New( in_doc As NotesDocument, in_ps As Variant )
+	End Sub
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Property Get domain As String
+		On Error GoTo error_point
+		domain = DOMAIN_TYPE_TPS_HR_PERSON
+		Exit Property
+		
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Property
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Property Get title As String
+		On Error GoTo error_point
+		title = Me.nd.FULLNAME(0)
+		Exit Property
+		
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Property
+End Class
+
+Public Class TPS_HR_Position As TPS_HR_PositionNoSalary
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Sub New( in_doc As NotesDocument, in_ps As Variant )
+	
+	End Sub
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Property Get domain As String
+		On Error GoTo error_point
+		domain = DOMAIN_TYPE_TPS_HR_POSITION
+		Exit Property
+		
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Property
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Property Get noSalaryPos As Objectlink
+		On Error GoTo error_point
+		Call Me.log.enter( GetThreadInfo(0))
+		
+		If ( Me.nd.LinkedRef(0) <> "" ) Then
+			Set noSalaryPos = New Objectlink( Me.nd.LinkedRef(0), "", DOMAIN_TYPE_TPS_HR_POSITIONNOSALARY )	
+		End If
+		
+		Call Me.log.exit( GetThreadInfo(0))
+		Exit Property
+		
+error_point:
+		Call Me.log.fatal()
+	End Property
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+End Class
+
+
+%REM
+	Class TPS_HR_Prj_Department
+	Description: Comments for Class
+%END REM
+Class TPS_HR_Prj_Department As ABSTACT_TPS_HR_UNIT
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	'	PUBLIC:
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Sub New( in_doc As NotesDocument, in_ps As Variant )
+	End Sub
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Property Get domain As String
+		On Error GoTo error_point
+		domain = DOMAIN_TYPE_TPS_HR_PRJ_DEPARTMENT
+		Exit Property
+		
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Property
+End Class
+
+
+
+%REM
+	Class TPS_HR_Prj_Organization
+	Description: Comments for Class
+%END REM
+Class TPS_HR_Prj_Organization As ABSTACT_TPS_HR_UNIT
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	'	PUBLIC:
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Sub New( in_doc As NotesDocument, in_ps As Variant )
+	End Sub
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Property Get domain As String
+		On Error GoTo error_point
+		domain = DOMAIN_TYPE_TPS_HR_PRJ_ORGANIZATION
+		Exit Property
+		
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Property
+End Class
+
+
+%REM
+	Class TPS_HR_Prj_Position
+	Description: Comments for Class
+%END REM
+Class TPS_HR_Prj_Position As ABSTACT_TPS_HR_UNIT
+'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	'	PUBLIC:
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Sub New( in_doc As NotesDocument, in_ps As Variant )
+	End Sub
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Property Get domain As String
+		On Error GoTo error_point
+		domain = DOMAIN_TYPE_TPS_HR_PRJ_POSITION
+		Exit Property
+		
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Property
+End Class
+
+
+%REM
+	Class TPS_HR_Prj_PositionNoSalary
+	Description: Comments for Class
+%END REM
+Class TPS_HR_Prj_PositionNoSalary As ABSTACT_TPS_HR_UNIT
+'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	'	PUBLIC:
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Sub New( in_doc As NotesDocument, in_ps As Variant )
+	End Sub
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Property Get domain As String
+		On Error GoTo error_point
+		domain = DOMAIN_TYPE_TPS_HR_PRJ_POSITIONNOSALARY
+		Exit Property
+		
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Property
+End Class
+

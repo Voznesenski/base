@@ -1,0 +1,54 @@
+'++LotusScript Development Environment:2:5:(Options):0:74
+Option Public
+Option Declare
+
+Use "tps.storage.templates"
+
+'++LotusScript Development Environment:2:5:(Forward):0:1
+Declare Public Class TPS_StorageService As FBase_Abstract_Service
+
+'++LotusScript Development Environment:2:5:(Declarations):0:10
+'======================================================================================================================================
+'	CLASS TPS_PaytermsService
+'======================================================================================================================================
+Public Class TPS_StorageService As FBase_Abstract_Service
+	Private m_templates As Variant
+	
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	'	PUBLIC:
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Sub New(in_ps As Variant)
+	End Sub
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Function getObject( in_link As Variant ) As Variant
+		On Error GoTo error_point
+		
+		Set getObject = Nothing
+		If ( in_link.domain Like "tps.storage.templates.*" ) Then
+			Set getObject = Me.templates.getObject( in_link )
+		Else
+			Error 1001, "The package for object '" & in_link.domain & "' from parameter 'in_link.domain' is not registered"
+		End If
+		Exit Function
+		
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Function
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Property Get templates As Variant
+		On Error GoTo error_point
+		
+		If IsEmpty(m_templates)Then
+			Set m_templates = New TPS_Storage_TemplatesService( Me.Me_Variant )
+		End If
+		Set templates = m_templates
+		Exit Property
+		
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Property
+	
+	
+End Class

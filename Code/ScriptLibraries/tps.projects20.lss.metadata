@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8"?><note class="filter" maintenanceversion="1.0" replicaid="44257D5C002A4928" version="10.0" xmlns="http://www.lotus.com/dxl">
+<noteinfo noteid="1c7a" sequence="42" unid="5D2F0199F1F3F4E64325843100366BE6">
+<created><datetime>20190708T125425,66+03</datetime></created>
+<modified><datetime>20210418T115619,94+03</datetime></modified>
+<revised><datetime>20210212T142134,25+03</datetime></revised>
+<lastaccessed><datetime>20210418T115619,93+03</datetime></lastaccessed>
+<addedtofile><datetime>20210418T115619,93+03</datetime></addedtofile></noteinfo>
+<updatedby><name>CN=Aleksandr Galko/O=tps</name><name>CN=Salpagarov/O=tps</name><name>CN=Aleksandr Galko/O=tps</name><name>CN=Salpagarov/O=tps</name><name>CN=Nikolay Gorbunov/O=SVO</name><name>CN=Aleksandr Galko/O=tps</name><name>CN=Salpagarov/O=tps</name><name>CN=Igor V Tomnov/O=SVO</name><name>CN=Nikolay Gorbunov/O=SVO</name><name>CN=Salpagarov/O=tps</name><name>CN=Nikolay Gorbunov/O=SVO</name><name>CN=Igor V Tomnov/O=SVO</name></updatedby>
+<wassignedby><name>CN=Igor V Tomnov/O=SVO</name></wassignedby>
+<item name="$TITLE" sign="true"><text>tps.projects20</text></item>
+<item name="$Flags"><text>s34Q</text></item>
+<item name="$PublicAccess" sign="true"><text>1</text></item>
+<item name="$DesignerVersion"><text>8.5.3</text></item>
+
+
+
+<item name="$POID"><datetime>20210212T142134,25+03</datetime></item></note>

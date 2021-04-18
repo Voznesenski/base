@@ -1,0 +1,873 @@
+'++LotusScript Development Environment:2:5:(Options):0:74
+Option Public
+'++LotusScript Development Environment:2:5:(Forward):0:1
+Declare Function Arrays_InitArray (array As Variant) As Variant
+Declare Function Arrays_IsText (v As Variant)
+Declare Function Arrays_IsTime (v As Variant)
+Declare Function Arrays_IsNumber (v As Variant)
+Declare Function Arrays_IsCurrency (v As Variant)
+Declare Function Arrays_SetValue (param As Variant,value As Variant)
+Declare Function Arrays_IsMemberOfArray (array As Variant, element As Variant) As Variant
+Declare Function Arrays_PositionInArray (array As Variant, element As Variant) As Variant
+Declare Function Arrays_AppendElement(arr As Variant, element As Variant) As Variant
+Declare Function Arrays_AppendArray(array1 As Variant, array2 As Variant) As Variant
+Declare Function Arrays_InsertElement (arr As Variant, element As Variant, position As Variant) As Variant
+Declare Function Arrays_EqualArrays (arr1 As Variant, arr2 As Variant) As Variant
+Declare Function Arrays_ArrayToList(arr1 As Variant) As String
+Declare Function Arrays_Unique(array As Variant) As Variant
+Declare Function Arrays_CommonElements(array1 As Variant, array2 As Variant) As Variant
+Declare Function Arrays_TrimArray (array As Variant) As Variant
+Declare Function Arrays_Explode( SourceStr As Variant, Delimit As Variant) As Variant
+Declare Function Arrays_Implode (SourceArray As Variant, Delimiter As Variant) As String
+Declare Function Arrays_Sort (array As Variant, mode As Integer) As Variant
+Declare Private Function QuickSort (array As Variant, first As Integer, last As Integer, mode As Integer) As Variant
+Declare Function Arrays_RemoveElement (arr As Variant, pos As Variant)
+Declare Function Arrays_DifferentElements (array1 As Variant, array2 As Variant) As Variant
+Declare Function Arrays_ReplaceSubstring(Byval strSource As String, strFind As String, strReplace As String) As String
+Declare Function Arrays_RemoveAllElements(arr As Variant, element As Variant)
+Declare Function Arrays_RemoveArray (arr As Variant, arr2 As Variant) As Variant
+Declare Function Arrays_Entries (arr As Variant, element As Variant) As Variant
+Declare Function Arrays_ArrayReplace (array1 As Variant, array2 As Variant, array3 As Variant) As Variant
+Declare Sub Arrays_ArraySort(Source As Variant, Index As Variant, KindOfData As String, KindOfWork As Integer)
+Declare Function Arrays_Compare(Source1 As Variant, Source2 As Variant, KindOfWork As String) As Integer
+Declare Function Arrays_CompareText(Source1 As String, Source2 As String) As Integer
+Declare Function Arrays_CompareNumber(Source1 As Variant, Source2 As Variant) As Integer
+Declare Function Arrays_CompareDate(Source1 As Variant, Source2 As Variant)
+Declare Sub Arrays_RebuildArray(Source As Variant, Index As Variant)
+
+'++LotusScript Development Environment:2:5:(Declarations):0:10
+Private Const LibName="ArrayTools"
+'++LotusScript Development Environment:2:1:Arrays_InitArray:1:8
+Function Arrays_InitArray (array As Variant) As Variant
+'Если параметр - не массив, то возвращается массив с первым элементом, равным параметру
+'Иначе возвращается тот же самый массив
+	On Error Goto Handler
+	Dim FuncName As String
+	Dim ErrorString As String
+	FuncName="Arrays_InitArray"
+	If Isarray(array) Then
+		Arrays_InitArray=array
+		Exit Function
+	Elseif Not Isobject(array) Then
+		Redim v(0) As Variant
+		v(0)=array
+		Arrays_InitArray=v
+	Else
+		Redim v(0) As Variant
+		Set v(0)=array
+		Arrays_InitArray=v
+	End If
+	Goto endh
+handler:
+	ErrorString="("+LibName+") "+FuncName+", стр. "+Cstr(Erl)+Chr(10)+Error$
+	Error Err, ErrorString
+endh:
+End Function
+'++LotusScript Development Environment:2:1:Arrays_IsText:1:8
+Function Arrays_IsText (v As Variant)
+'Является ли переменная строкой
+	On Error Goto Handler
+	Dim FuncName As String
+	Dim ErrorString As String
+	FuncName="Arrays_IsText"
+	If Datatype(v)=8 Then Arrays_IsText=True Else Arrays_IsText=False
+	Goto endh
+handler:
+	ErrorString="("+LibName+") "+FuncName+", стр. "+Cstr(Erl)+Chr(10)+Error$
+	Error Err, ErrorString
+endh:
+End Function
+'++LotusScript Development Environment:2:1:Arrays_IsTime:1:8
+Function Arrays_IsTime (v As Variant)
+'является ли переменная переменной типа DateTime
+	On Error Goto Handler
+	Dim FuncName As String
+	Dim ErrorString As String
+	FuncName="Arrays_IsTime"
+	If Datatype(v)=7 Then Arrays_IsTime=True Else Arrays_IsTime=False
+	Goto endh
+handler:
+	ErrorString="("+LibName+") "+FuncName+", стр. "+Cstr(Erl)+Chr(10)+Error$
+	Error Err, ErrorString
+endh:
+End Function
+'++LotusScript Development Environment:2:1:Arrays_IsNumber:1:8
+Function Arrays_IsNumber (v As Variant)
+'является ли переменная числом
+	On Error Goto Handler
+	Dim FuncName As String
+	Dim ErrorString As String
+	FuncName="Arrays_IsNumber"
+	d=Datatype(v)
+	If d>=2 And d<=5 Then Arrays_IsNumber=True Else Arrays_IsNumber=False
+	Goto endh
+handler:
+	ErrorString="("+LibName+") "+FuncName+", стр. "+Cstr(Erl)+Chr(10)+Error$
+	Error Err, ErrorString
+endh:
+End Function
+'++LotusScript Development Environment:2:1:Arrays_IsCurrency:1:8
+Function Arrays_IsCurrency (v As Variant)
+'проверка на тип currency
+	On Error Goto Handler
+	Dim FuncName As String
+	Dim ErrorString As String
+	FuncName="Arrays_IsCurrency"
+	If Datatype(v)=6 Then Arrays_IsCurrency=True Else Arrays_IsCurrency=False
+	Goto endh
+handler:
+	ErrorString="("+LibName+") "+FuncName+", стр. "+Cstr(Erl)+Chr(10)+Error$
+	Error Err, ErrorString
+endh:
+End Function
+'++LotusScript Development Environment:2:1:Arrays_SetValue:1:8
+Function Arrays_SetValue (param As Variant,value As Variant)
+'присвоение переменной значения вне зависимости от того, является ли она объектом или нет
+	On Error Goto Handler
+	Dim FuncName As String
+	Dim ErrorString As String
+	FuncName="Arrays_SetValue"
+	If Isobject (value) Then
+		Set param=value
+	Else
+		param=value
+	End If
+	Goto endh
+handler:
+	ErrorString="("+LibName+") "+FuncName+", стр. "+Cstr(Erl)+Chr(10)+Error$
+	Error Err, ErrorString
+endh:
+End Function
+'++LotusScript Development Environment:2:1:Arrays_IsMemberOfArray:1:8
+Function Arrays_IsMemberOfArray (array As Variant, element As Variant) As Variant
+'входит ли элемент в массив
+	On Error Goto Handler
+	Dim FuncName As String
+	Dim ErrorString As String
+	FuncName="Arrays_IsMemberOfArray"
+	If Not Isnull (Arraygetindex(array, element)) Then Arrays_IsMemberOfArray=True Else Arrays_IsMemberOfArray=False
+	Goto endh
+handler:
+	ErrorString="("+LibName+") "+FuncName+", стр. "+Cstr(Erl)+Chr(10)+Error$
+	Error Err, ErrorString
+endh:
+End Function
+'++LotusScript Development Environment:2:1:Arrays_PositionInArray:1:8
+Function Arrays_PositionInArray (array As Variant, element As Variant) As Variant
+'Позиция в массиве. Используется ArrayGetIndex
+	On Error Goto Handler
+	Dim FuncName As String
+	Dim ErrorString As String
+	FuncName="Arrays_PositionInArray"
+	Arrays_PositionInArray=Arraygetindex(array, element)
+	Goto endh
+handler:
+	ErrorString="("+LibName+") "+FuncName+", стр. "+Cstr(Erl)+Chr(10)+Error$
+	Error Err, ErrorString
+endh:
+End Function
+'++LotusScript Development Environment:2:1:Arrays_AppendElement:1:8
+Function Arrays_AppendElement(arr As Variant, element As Variant) As Variant
+'добавить элемент в массив
+	On Error Goto Handler
+	Dim FuncName As String
+	Dim ErrorString As String
+	FuncName="Arrays_AppendElement"
+'	arr=InitArray(arr)
+	lb=Lbound(arr)
+	ub=Ubound(arr)
+	If lb=ub Then
+		If Isnull (arr(lb)) Then
+			Arrays_SetValue arr(lb), element
+			Arrays_AppendElement=arr
+			Exit Function
+		Elseif Arrays_IsText(arr(lb)) Then
+			If arr(lb)="" Then
+				Arrays_SetValue arr(lb), element
+				Arrays_AppendElement=arr
+				Exit Function
+			End If
+		End If
+	End If
+	Redim Preserve arr (lb To ub+1)
+	Arrays_SetValue arr(ub+1), element
+	Arrays_AppendElement=arr
+	Goto endh
+handler:
+	ErrorString="("+LibName+") "+FuncName+", стр. "+Cstr(Erl)+Chr(10)+Error$
+	Error Err, ErrorString
+endh:
+End Function
+'++LotusScript Development Environment:2:1:Arrays_AppendArray:1:8
+Function Arrays_AppendArray(array1 As Variant, array2 As Variant) As Variant
+'Добавляет один массив в конец другого. Не падает в отличие от ArrayAppend
+	On Error Goto Handler
+	Dim FuncName As String
+	Dim ErrorString As String
+	FuncName="Arrays_AppendArray"
+	array1=Arrays_InitArray(array1)
+	
+	lb=Lbound(array1)
+	ub=Ubound(array1)
+	If lb=ub Then
+		If Isnull (array1(lb)) Then
+			array1=Arrays_InitArray(array2)
+			Arrays_AppendArray=array1
+			Exit Function
+		Elseif Arrays_IsText(array1(lb)) Then
+			If array1(lb)="" Then
+				array1=Arrays_InitArray(array2)
+				Arrays_AppendArray=array1
+				Exit Function
+			End If
+		End If
+	End If
+	Forall x In Arrays_InitArray(array2)
+		Call Arrays_AppendElement(array1, x)
+	End Forall
+'	array1=Arrayappend(array1, InitArray(array2))
+	Arrays_AppendArray=array1
+	Goto endh
+handler:
+	ErrorString="("+LibName+") "+FuncName+", стр. "+Cstr(Erl)+Chr(10)+Error$
+	Error Err, ErrorString
+endh:
+End Function
+'++LotusScript Development Environment:2:1:Arrays_InsertElement:1:8
+Function Arrays_InsertElement (arr As Variant, element As Variant, position As Variant) As Variant
+'Вставка элемента в массив на указанную позицию
+	On Error Goto Handler
+	FuncName="Arrays_InsertElement"
+	lb=Lbound(arr)
+	ub=Ubound(arr)+1
+	Redim Preserve arr(lb To ub)
+	For i=ub-1 To position Step -1
+		Arrays_SetValue arr(i+1), arr(i)
+	Next i
+	Arrays_SetValue arr(position),element
+	If arr(ub)="" Then Call Arrays_RemoveElement(arr, ub)
+	Arrays_InsertElement=arr
+	Goto endh
+handler:
+	ErrorString="("+LibName+") "+FuncName+", стр. "+Cstr(Erl)+Chr(10)+Error$
+	Error Err, ErrorString
+endh:
+End Function
+'++LotusScript Development Environment:2:1:Arrays_EqualArrays:1:8
+Function Arrays_EqualArrays (arr1 As Variant, arr2 As Variant) As Variant
+'равны ли два массива
+	On Error Goto Handler
+	Dim FuncName As String
+	Dim ErrorString As String
+	FuncName="Arrays_EqualArrays"
+	On Error Goto handler1
+	Arrays_EqualArrays=False
+	
+	f1=Isarray(arr1)
+	f2=Isarray(arr2)
+	If f1 And Not f2 Then
+		Exit Function
+	Elseif f2 And Not f1 Then
+		Exit Function
+	Elseif Not f1 And Not f2 Then
+		If arr1<>arr2 Then
+			Exit Function
+		End If
+	Elseif f1 And f2 Then
+		lb1=Lbound(arr1)
+		lb2=Lbound(arr2)
+		ub1=Ubound(arr1)
+		ub2=Ubound(arr2)
+		If lb1<>lb2 Then
+			Exit Function
+		End If
+		If ub1<>ub2 Then
+			Exit Function
+		End If
+		For i=lb1 To ub1
+			If arr1(i)<>arr2(i) Then Exit Function
+		Next
+	End If
+	Arrays_EqualArrays=True
+	Exit Function
+handler1:
+	Goto endh
+handler:
+	ErrorString="("+LibName+") "+FuncName+", стр. "+Cstr(Erl)+Chr(10)+Error$
+	Error Err, ErrorString
+endh:
+End Function
+'++LotusScript Development Environment:2:1:Arrays_ArrayToList:1:8
+Function Arrays_ArrayToList(arr1 As Variant) As String
+'преобразование массива в строку-список для использования в @-формулах
+	On Error Goto Handler
+	Dim FuncName As String
+	Dim ErrorString As String
+	FuncName="Arrays_ArrayToList"
+	arr=Arrays_InitArray(arr1)
+	Forall x In arr
+		x=Arrays_ReplaceSubstring(x,{\},{\\})
+		x=Arrays_ReplaceSubstring(x,{"},{\"})
+	End Forall
+	
+	If Ubound(arr)>Lbound(arr) Then
+		v=Arrays_implode(arr,{":"})
+		v={"}+v+{"}
+		Arrays_ArrayToList=Cstr(v)
+	Else
+		Arrays_ArrayToList={"}+Cstr(arr(Lbound(arr)))+{"}
+	End If
+	
+	Goto endh
+handler:
+	ErrorString="("+LibName+") "+FuncName+", стр. "+Cstr(Erl)+Chr(10)+Error$
+	Error Err, ErrorString
+endh:
+End Function
+'++LotusScript Development Environment:2:1:Arrays_Unique:1:8
+Function Arrays_Unique(array As Variant) As Variant
+'аналог собаки
+	On Error Goto Handler
+	Dim FuncName As String
+	Dim ErrorString As String
+	FuncName="Arrays_Unique"
+%REM
+	v=implode(arr,""":""")
+	v=""""+v+""""
+	Unique=Evaluate(|@Unique(|+v+|)|)
+%END REM
+	arr=Arrays_InitArray(array)
+	ub=Ubound(arr)
+	lb=Lbound(arr)
+	For i=ub To lb Step -1
+		If Arraygetindex(arr, arr(i))<i Then
+			Call Arrays_RemoveElement(arr,i)
+		End If
+	Next
+	array=arr
+	Arrays_Unique=arr
+	Goto endh
+handler:
+	ErrorString="("+LibName+") "+FuncName+", стр. "+Cstr(Erl)+Chr(10)+Error$
+	Error Err, ErrorString
+endh:
+End Function
+'++LotusScript Development Environment:2:1:Arrays_CommonElements:1:8
+Function Arrays_CommonElements(array1 As Variant, array2 As Variant) As Variant
+'оставляет общие для двух массивов элементы
+	On Error Goto Handler
+	Dim FuncName As String
+	Dim ErrorString As String
+	FuncName="Arrays_CommonElements"
+'возвращает массив элементов первого массива, содержащихся во втором массиве
+%REM
+	v1=implode(arr1,""":""")
+	v2=implode(arr2,""":""")
+	v1=""""+v1+""""
+	v2=""""+v2+""""
+	s=|@Unique(@Trim(@Replace(|+v1+|;@Replace(|+v1+|;|+v2+|;"");"")))|
+	CommonElements=Evaluate(s)
+%END REM
+	arr1=Arrays_InitArray(array1)
+	arr2=Arrays_InitArray(array2)
+	Arrays_CommonElements=Arrays_TrimArray(Arrays_ArrayReplace(arr1, Arrays_ArrayReplace(arr1,arr2,""), ""))
+	Goto endh
+handler:
+	ErrorString="("+LibName+") "+FuncName+", стр. "+Cstr(Erl)+Chr(10)+Error$
+	Error Err, ErrorString
+endh:
+End Function
+
+'++LotusScript Development Environment:2:1:Arrays_TrimArray:1:8
+Function Arrays_TrimArray (array As Variant) As Variant
+'Fulltrim
+	On Error Goto Handler
+	Dim FuncName As String
+	Dim ErrorString As String
+	FuncName="Arrays_TrimArray"
+'	On Error Goto handler1
+	Call Arrays_RemoveAllElements (array, "")
+'	Call Arrays_RemoveAllElements (array, Null)
+	Arrays_TrimArray=array
+'	Exit Function
+'handler1:
+'	array=Arrays_InitArray(Null)
+'	Arrays_TrimArray=array
+'	Exit Function
+	Goto endh
+handler:
+	ErrorString="("+LibName+") "+FuncName+", стр. "+Cstr(Erl)+Chr(10)+Error$
+	Error Err, ErrorString
+endh:
+End Function
+'++LotusScript Development Environment:2:1:Arrays_Explode:1:8
+Function Arrays_Explode( SourceStr As Variant, Delimit As Variant) As Variant
+	On Error Goto Handler
+	Dim FuncName As String
+	Dim ErrorString As String
+	FuncName="Arrays_Explode"
+	Dim StartChar As Integer, EndChar As Integer, ScanChar As Integer
+	Dim ResultArr() As String, Finish As Integer
+	
+	Dim CharCount As Integer
+	Dim LastArrElement As Integer
+	If SourceStr="" Then
+		Redim ResultArr(0 To 0)
+		ResultArr(0)=""
+		Arrays_Explode=ResultArr
+		Exit Function
+	End If
+	StartChar = 1
+	EndChar = Len( SourceStr )
+	ScanChar = 0
+	
+	While StartChar <= EndChar And Not Finish
+		ScanChar = Instr( StartChar, SourceStr, Delimit )
+		
+		CharCount = ScanChar - StartChar
+		
+		If ScanChar = 0 Then
+			CharCount = EndChar - StartChar + Len(Delimit)
+			Finish = True
+		End If
+		
+		If CharCount >= 0 Then
+			Redim Preserve ResultArr( 0 To LastArrElement )
+			ResultArr( LastArrElement ) = Mid$( SourceStr, StartChar, CharCount )
+			LastArrElement = LastArrElement + 1
+		End If
+		StartChar = ScanChar + Len(Delimit)
+	Wend
+	
+	If LastArrElement > 0 Then Arrays_Explode = ResultArr
+	Goto endh
+handler:
+	ErrorString="("+LibName+") "+FuncName+", стр. "+Cstr(Erl)+Chr(10)+Error$
+	Error Err, ErrorString
+endh:
+End Function
+'++LotusScript Development Environment:2:1:Arrays_Implode:1:8
+Function Arrays_Implode (SourceArray As Variant, Delimiter As Variant) As String
+	On Error Goto Handler
+	Dim FuncName As String
+	Dim ErrorString As String
+	FuncName="Arrays_Implode"
+	If (Isarray(SourceArray)) Then
+		Forall TempStr In SourceArray
+			If ( Len(Arrays_Implode)=0) Then
+				Arrays_Implode=Cstr(TempStr)
+			Else
+				Arrays_Implode=Arrays_Implode+Delimiter+Cstr(TempStr)
+			End If
+		End Forall
+	Else
+		If (Len(Cstr(SourceArray))>0) Then
+			Arrays_Implode=SourceArray
+		Else
+			Arrays_Implode=""
+		End If
+	End If
+	Goto endh
+handler:
+	ErrorString="("+LibName+") "+FuncName+", стр. "+Cstr(Erl)+Chr(10)+Error$
+	Error Err, ErrorString
+endh:
+End Function
+'++LotusScript Development Environment:2:1:Arrays_Sort:1:8
+Function Arrays_Sort (array As Variant, mode As Integer) As Variant
+'быстрая сортировка массива. Работает намного быстрее обычной
+	On Error Goto Handler
+	Dim FuncName As String
+	Dim ErrorString As String
+	FuncName="Arrays_Sort"
+	Call QuickSort(array, Lbound(array), Ubound(array), mode)
+	Arrays_Sort=array
+	Goto endh
+handler:
+	ErrorString="("+LibName+") "+FuncName+", стр. "+Cstr(Erl)+Chr(10)+Error$
+	Error Err, ErrorString
+endh:
+End Function
+'++LotusScript Development Environment:2:1:QuickSort:1:8
+Private Function QuickSort (array As Variant, first As Integer, last As Integer, mode As Integer) As Variant
+	On Error Goto Handler
+	Dim FuncName As String
+	Dim ErrorString As String
+	FuncName="QuickSort"
+	Dim low As Integer, high As Integer, mdl As Integer
+	low=first
+	high=last
+	mdl=Cint((first+last)/2)
+	
+	Do
+		If mode=1 Then 
+			While array(low)<array(mdl)
+				low=low+1
+			Wend
+			While array(high)>array(mdl)
+				high=high-1
+			Wend
+		Elseif mode=2 Then
+			While array(low)>array(mdl)
+				low=low+1
+			Wend
+			While array(high)<array(mdl)
+				high=high-1
+			Wend
+		End If
+		If low<=high Then
+			tmp=array(low)
+			array(low)=array(high)
+			array(high)=tmp
+			
+			If mdl=high Then
+				mdl=low
+			Elseif mdl=low Then
+				mdl=high
+			End If
+			low=low+1
+			high=high-1
+		End If
+	Loop While low<=high
+	If first<high Then
+		Call QuickSort(array, first, high, mode)
+	End If
+	If low<last Then
+		Call QuickSort(array, low, last, mode)
+	End If
+	Goto endh
+handler:
+	ErrorString="("+LibName+") "+FuncName+", стр. "+Cstr(Erl)+Chr(10)+Error$
+	Error Err, ErrorString
+endh:
+End Function
+
+'++LotusScript Development Environment:2:1:Arrays_RemoveElement:1:8
+Function Arrays_RemoveElement (arr As Variant, pos As Variant)
+'удаляет элемент из массива
+	On Error Goto Handler
+	Dim FuncName As String
+	Dim ErrorString As String
+	FuncName="Arrays_RemoveElement"
+	ub=Ubound(arr)
+	lb=Lbound(arr)
+	If Isnull(pos) Then Exit Function
+	If pos>ub Then Exit Function
+	If ub=lb Then
+		arr(lb)=""
+	Elseif pos=ub Then
+		Redim Preserve arr(lb To ub-1)
+	Else
+		For i=pos+1 To ub
+			Arrays_SetValue arr(i-1),arr(i)
+		Next
+		Redim Preserve arr(lb To ub-1)
+	End If
+	Arrays_RemoveElement=arr
+	Goto endh
+handler:
+	ErrorString="("+LibName+") "+FuncName+", стр. "+Cstr(Erl)+Chr(10)+Error$
+	Error Err, ErrorString
+endh:
+End Function
+'++LotusScript Development Environment:2:1:Arrays_DifferentElements:1:8
+Function Arrays_DifferentElements (array1 As Variant, array2 As Variant) As Variant
+'возвращает массив элементов первого массива, не содержащихся во втором.
+'чем отличается от RemoveArray (см. далее), не помню. ;-)
+	On Error Goto Handler
+	Dim FuncName As String
+	Dim ErrorString As String
+	FuncName="Arrays_DifferentElements"
+	arr1=Arrays_InitArray(array1)
+	arr2=Arrays_InitArray(array2)
+	v1=Arrays_ArrayReplace(arr1,arr2,"")
+	Arrays_DifferentElements=Arrays_TrimArray(Arrays_ArrayReplace(arr1,arr2,""))
+	Goto endh
+handler:
+	ErrorString="("+LibName+") "+FuncName+", стр. "+Cstr(Erl)+Chr(10)+Error$
+	Error Err, ErrorString
+endh:
+End Function
+'++LotusScript Development Environment:2:1:Arrays_ReplaceSubstring:1:8
+Function Arrays_ReplaceSubstring(Byval strSource As String, strFind As String, strReplace As String) As String
+'аналог собаки
+	On Error Goto Handler
+	Dim FuncName As String
+	Dim ErrorString As String
+	FuncName="Arrays_ReplaceSubstring"
+	Arrays_ReplaceSubstring=""
+	Dim begin As Integer
+	Dim found As Integer
+	Dim strReplaceSource As String
+	begin = 1
+	
+	If Strcompare(strFind, "") = 0 Or Strcompare(strSource, "") = 0 Then Exit Function
+	Dim l As Long
+	l=Len(strReplace)
+	If l=0 Then l=1
+	
+	found = Instr(begin, strSource, strFind, 1) 
+	While (found > 0) 
+		begin = found + L
+'		strReplaceSource = Left$(strSource, (found - 1)) & strReplace & Right$(strSource, Len(strSource) - (found + (Len(strFind) - 1)))
+'		strSource = strReplaceSource
+		strSource = Left$(strSource, (found - 1)) & strReplace & Right$(strSource, Len(strSource) - (found + (Len(strFind) - 1)))
+		found = Instr(begin, strSource, strFind, 1)
+	Wend
+	
+	Arrays_ReplaceSubstring = strSource
+	Goto endh
+handler:
+	ErrorString="("+LibName+") "+FuncName+", стр. "+Cstr(Erl)+Chr(10)+Error$
+	Error Err, ErrorString
+endh:
+End Function
+'++LotusScript Development Environment:2:1:Arrays_RemoveAllElements:1:8
+Function Arrays_RemoveAllElements(arr As Variant, element As Variant)
+'удаляет все вхождения элемента в массив
+	On Error Goto Handler
+	Dim FuncName As String
+	Dim ErrorString As String
+	FuncName="Arrays_RemoveAllElements"	
+	p=Arraygetindex(arr,element)
+	lb=Lbound(arr)
+	ub=Ubound(arr)
+	Do While Not Isnull(p)
+		Call Arrays_RemoveElement(arr,p)
+		ub=ub-1
+		p=Arraygetindex(arr,element)
+		If p=lb And lb>=ub And element="" Then Exit Do
+	Loop
+	Arrays_RemoveAllElements=arr
+	Goto endh
+handler:
+	ErrorString="("+LibName+") "+FuncName+", стр. "+Cstr(Erl)+Chr(10)+Error$
+	Error Err, ErrorString
+endh:
+End Function
+
+'++LotusScript Development Environment:2:1:Arrays_RemoveArray:1:8
+Function Arrays_RemoveArray (arr As Variant, arr2 As Variant) As Variant
+'удаляет один массив из другого.
+	On Error Goto Handler
+	Dim FuncName As String
+	Dim ErrorString As String
+	FuncName="Arrays_RemoveArray"
+	array1=Arrays_InitArray(arr)
+	array2=Arrays_InitArray(arr2)
+	Forall x In array2
+		Call Arrays_RemoveAllElements(array1,x)
+	End Forall
+	arr=array1
+	Arrays_RemoveArray=array1
+	Goto endh
+handler:
+	ErrorString="("+LibName+") "+FuncName+", стр. "+Cstr(Erl)+Chr(10)+Error$
+	Error Err, ErrorString
+endh:
+End Function
+
+'++LotusScript Development Environment:2:1:Arrays_Entries:1:8
+Function Arrays_Entries (arr As Variant, element As Variant) As Variant
+'возвращает число вхождений элемента в массив
+	On Error Goto Handler
+	Dim FuncName As String
+	Dim ErrorString As String
+	FuncName="Arrays_Entries"
+	
+	array1=Arrays_InitArray(arr)
+	Call Arrays_RemoveAllElements(array1, element)
+	
+	Arrays_Entries=Ubound(arr)-Lbound(arr)-Ubound(array1)+Lbound(array1)
+	Goto endh
+handler:
+	ErrorString="("+LibName+") "+FuncName+", стр. "+Cstr(Erl)+Chr(10)+Error$
+	Error Err, ErrorString
+endh:
+End Function
+'++LotusScript Development Environment:2:1:Arrays_ArrayReplace:1:8
+Function Arrays_ArrayReplace (array1 As Variant, array2 As Variant, array3 As Variant) As Variant
+'замена стандартной функции
+	On Error Goto Handler
+	Dim FuncName As String
+	Dim ErrorString As String
+	FuncName="Arrays_ArrayReplace"
+	
+	arr=Arrays_InitArray(array1)	
+	arr2=Arrays_InitArray(array2)
+	arr3=Arrays_InitArray(array3)
+	lb=Lbound(arr3)
+	ub=Ubound(arr3)
+	Dim i As Long
+	i=Lbound(arr)
+	Forall x In arr
+		p=Arrays_PositionInArray(arr2, x)
+		If Not Isnull(p) Then
+			If p>ub Or p<lb Then
+				x=""
+			Else
+				Call Arrays_SetValue(x,arr3(p))
+			End If
+		End If
+		i=i+1
+	End Forall
+	Arrays_ArrayReplace=arr
+	
+	Goto endh
+handler:
+	ErrorString="("+LibName+") "+FuncName+", стр. "+Cstr(Erl)+Chr(10)+Error$
+	Error Err, ErrorString
+endh:
+End Function
+'++LotusScript Development Environment:2:2:Arrays_ArraySort:1:8
+Sub Arrays_ArraySort(Source As Variant, Index As Variant, KindOfData As String, KindOfWork As Integer)
+	Dim Max As Long, i As Long, j As Long
+	Dim Temp1 As Variant, Temp2 As Variant
+	Dim CurIndex As Long, CurTemp As Variant
+	Dim TempIndex As Long
+	Dim CompareResult As Integer
+	
+	Max = Ubound(Source)
+	Redim index(Max) As Long
+	For i = 0 To Max
+		Index(i) = i
+	Next
+	For i = 0 To Max -1
+		CurIndex = i
+		CurTemp = Source(i)
+		For j = i+1 To Max
+			CompareResult = Arrays_Compare(CurTemp, Source(j), KindOfData)*KindOfWork
+			If (CompareResult<0) Then
+				CurTemp = Source(j)
+				CurIndex = j
+			End If
+		Next
+		Temp2 = Source(i)
+		Source(i) = CurTemp
+		Source(CurIndex) = Temp2
+		
+		tempIndex = Index(CurIndex)
+		Index(CurIndex) = Index(i)
+		Index(i) = TempIndex
+	Next
+End Sub
+'++LotusScript Development Environment:2:1:Arrays_Compare:1:8
+Function Arrays_Compare(Source1 As Variant, Source2 As Variant, KindOfWork As String) As Integer
+	Select Case (KindOfWork)
+	Case "Text":
+		Arrays_Compare = Arrays_CompareText(Cstr(Source1), Cstr(Source2))
+	Case "Number":
+		Arrays_Compare = Arrays_CompareNumber(Source1, Source2)
+	Case "Date":
+		Arrays_Compare = Arrays_CompareDate(Source1, Source2)
+	End Select	
+End Function
+'++LotusScript Development Environment:2:1:Arrays_CompareText:1:8
+Function Arrays_CompareText(Source1 As String, Source2 As String) As Integer
+	Dim MaxLen As Long
+	Dim Pos As Long
+	Dim Temp1 As String, Temp2 As String
+	Dim Char1Uni As String, Char2Uni As String
+	If (Len(Source1) =0 And  Len(Source2)=0) Then
+		Arrays_CompareText = 0
+		Exit Function
+	End If
+	If (Len(Source1) = 0) Then
+		Arrays_CompareText = -1
+		Exit Function
+	End If
+	If (Len(Source2) = 0) Then
+		Arrays_CompareText = 1
+		Exit Function
+	End If
+	If (Len(Source1)>Len(Source2)) Then
+		MaxLen = Len(Source2)
+	Else
+		MaxLen = Len(Source1)
+	End If
+	Temp1 = Source1
+	Temp2 = Source2
+	For Pos = 1 To MaxLen
+		Char1Uni = Uni(Left(Temp1,1))
+		Char2Uni = Uni(Left(Temp2, 1))
+		If (Char1Uni<Char2Uni) Then
+			Arrays_CompareText = -1
+			Exit Function
+		Else
+			If (Char1Uni>Char2Uni) Then
+				Arrays_CompareText = 1
+				Exit Function
+			Else
+				Temp1 = Right(Temp1, Len(Temp1)-1)
+				Temp2 = Right(Temp2, Len(Temp2)-1)
+			End If
+		End If
+	Next
+	If (Len(Temp1)<Len(Temp2)) Then
+		Arrays_CompareText = -1
+		Exit Function	
+	Else
+		If (Len(Temp1)>Len(temp2)) Then
+			Arrays_CompareText = 1
+			Exit Function
+		End If
+	End If
+	Arrays_CompareText = 0
+End Function
+'++LotusScript Development Environment:2:1:Arrays_CompareNumber:1:8
+Function Arrays_CompareNumber(Source1 As Variant, Source2 As Variant) As Integer
+	Dim Test1 As Double, Test2 As Double
+	If (Not (Isnumeric(Source1)) And Not (Isnumeric(Source2))) Then
+		Arrays_CompareNumber = 0
+		Exit Function
+	End If
+	If (Not Isnumeric(Source1)) Then
+		Arrays_CompareNumber = -1
+		Exit Function
+	End If
+	If (Not (Isnumeric(Source2))) Then
+		Arrays_CompareNumber = 1
+		Exit Function
+	End If
+	Test1 = Cdbl(Source1)
+	Test2 = Cdbl(Source2)
+	If (Test1 -Test2 <Delta And Test2-Test1>-Delta) Then
+		Arrays_CompareNumber = -1
+		Exit Function
+	End If
+	If (Test2 -Test1<Delta And Test1 -Test2 >-Delta) Then
+		Arrays_CompareNumber = 1
+		Exit Function
+	End If
+	Arrays_CompareNumber = 0
+End Function
+'++LotusScript Development Environment:2:1:Arrays_CompareDate:1:8
+Function Arrays_CompareDate(Source1 As Variant, Source2 As Variant)
+	If (Not (Isdate(Source1)) And Not (Isdate(Source2))) Then
+		Arrays_CompareDate =  0
+		Exit Function
+	End If
+	If (Not (Isdate(Source1))) Then
+		Arrays_CompareDate = -1
+		Exit Function
+	End If
+	If ( Not ( Isdate(Source2))) Then
+		Arrays_CompareDate = 1
+		Exit Function
+	End If
+	Arrays_CompareDate = Arrays_CompareNumber(Cdbl(Cdat(Source1)), Cdbl(Cdat(Source2)))
+End Function
+'++LotusScript Development Environment:2:2:Arrays_RebuildArray:1:8
+Sub Arrays_RebuildArray(Source As Variant, Index As Variant)
+	Dim Temp As Variant
+	Dim i As Long, Max As Long
+	
+	Max = Ubound(Index)
+	Temp = Source
+	For i = 0 To Max
+		Temp(i) = Source(Index(i))
+	Next
+	For i = 0 To Max
+		Source(i) = Temp(i)
+	Next
+End Sub

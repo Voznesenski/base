@@ -1,0 +1,864 @@
+'++LotusScript Development Environment:2:5:(Options):0:74
+%REM
+	Library tps.core.directory
+	Description: Comments for Library
+%END REM
+Option Public
+Option Declare
+
+Use "fbyte"
+Use "GLDec"
+
+'++LotusScript Development Environment:2:5:(Forward):0:1
+Declare Public Class TPS_DirectoryService As FBase_Abstract_Service
+Declare Public Class TPS_Directory_Abstract_Object As FBase_Abstract_Object_Doc
+Declare Class TPS_Directory_Organization As TPS_Directory_Abstract_Object
+Declare Public Class TPS_Directory_Department As TPS_Directory_Abstract_Object
+Declare Class TPS_Directory_Position As TPS_Directory_Abstract_Object
+Declare Class TPS_Directory_Person  As TPS_Directory_Abstract_Object
+Declare Public Class TPS_Directory_Group As TPS_Directory_Abstract_Object
+Declare Sub Terminate
+
+'++LotusScript Development Environment:2:5:(Declarations):0:10
+Private Const DATABASE_KEY = "tps.core.directory"
+
+Private Const DOMAIN_TYPE_TPS_DIRECTORY_ORGANIZATION 	= "tps.core.directory.organization"
+Private Const DOMAIN_TYPE_TPS_DIRECTORY_DEPARTMENT 		= "tps.core.directory.department"
+Private Const DOMAIN_TYPE_TPS_DIRECTORY_POSITION 		= "tps.core.directory.position"
+Private Const DOMAIN_TYPE_TPS_DIRECTORY_EMPLOYEE		= "tps.core.directory.employee"
+Private Const DOMAIN_TYPE_TPS_DIRECTORY_GROUP 			= "tps.core.directory.group"
+
+
+
+%REM
+SUB snippet.selectAndWriteToDoc  	
+Sub Click(Source As Button)
+	On Error Goto errh
+	
+	Dim sm As Variant	
+	Set sm = getServicesManager()	
+	
+	Dim ws As New notesuiworkspace, uidoc As NotesUIDocument, doc As NotesDocument
+	Set uidoc = ws.currentdocument
+	Set doc = uidoc.Document
+	
+	Dim tDirectory As New TPS_DirectoryService(sm)
+	tDirectory.ChoosePostByHierarchy = True
+	
+	Dim mx As MixCollection
+	Set mx = tDirectory.dialogSelectPositions( True )
+	If ( mx.Count > 0 ) Then
+		Dim i As Integer
+		For i = 1 To mx.Count
+			Dim tObj As TPS_Directory_Abstract_Object
+			Set tObj = mx.element(i)
+			If tObj.getObjIndexInDocument( "App_To", doc) < 0 Then
+				Call tObj.appendObjToDocument( "App_To", doc )
+			End If
+		Next
+		Call uidoc.Refresh()
+	End If
+	
+	Exit Sub
+	
+errh:
+	Msgbox Error$ & {. Error # } & Cstr(Err) & { on line # } & Cstr(Erl)
+	Resume endh
+endh:
+End Sub
+%END REM
+
+%REM
+	Class TPS_DirectoryService
+	Description: Сервис для работы с орг. директорией
+%END REM
+
+Public Class TPS_DirectoryService As FBase_Abstract_Service
+	Private m_db As NotesDatabase
+	Private m_DWFODSelCategory As String 
+	Public choosePostByHierarchy As Boolean				' при выборе должности использовать представление с иерархией
+	Private m_IncludeVacancies As Boolean				' при выборе должности можно указывать вакантные
+
+
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Property Get db As NotesDatabase
+		On Error GoTo error_point
+		
+		If ( m_db Is Nothing )Then Set m_db = Me.sm.base.databases.get( DATABASE_KEY )
+		Set db = m_db
+		
+		Exit Property
+		
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Property
+
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Private Property Get DWFODSelCategory As String	' настройка из карточки ОД пользователя: фильтр выбора должностей из ОД (полный или только из указанной организации) 
+		On Error GoTo error_point
+		
+		If m_DWFODSelCategory = "" Then
+			Dim session As New NotesSession
+			Dim nn As New NotesName(session.Username)
+			Dim view As NotesView, doc As NotesDocument
+			
+			Set view = db.Getview("unid")
+			Set doc = view.Getdocumentbykey( nn.Canonical, True )
+			If ( doc Is Nothing ) Then
+				m_DWFODSelCategory = session.GetEnvironmentString("DWFODSelCategory")
+			Else
+				Select Case doc.SelectionSelect(0)
+				Case "0"
+					m_DWFODSelCategory = doc.UserServer(0) 
+				Case "1"
+					m_DWFODSelCategory = doc.SelectionSelectFrom(0)
+				Case "2"
+					m_DWFODSelCategory = "Full"
+			End Select
+			End If
+			
+		End If
+		
+		DWFODSelCategory = m_DWFODSelCategory		
+		Exit Property
+		
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Property
+	
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Sub new ( in_ps As Variant )
+		
+	End Sub
+
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------	
+	Private Function dialogSelectObjects( in_domain As String, in_isMult As Boolean ) As MixCollection
+		On Error GoTo error_point
+		Call Me.log.enter( "<" & TypeName( Me ) & "." & GetThreadInfo(1) & ">" )
+		Call Me.log.parameter( "in_domain", in_domain )
+		Call Me.log.parameter( "in_isMult", in_isMult )
+		
+		Dim mxResult As New MixCollection
+		Set dialogSelectObjects = mxResult
+		
+		Dim ws As New NotesUIWorkspace, dc As NotesDocumentCollection, ViewName As String, PromptTitle As String, Title As String
+		dim hasCategory As Boolean
+		
+		hasCategory = (DWFODSelCategory <> "Full") and (DWFODSelCategory <> "") 
+		Select Case in_domain
+			Case DOMAIN_TYPE_TPS_DIRECTORY_ORGANIZATION, DOMAIN_TYPE_TPS_DIRECTORY_DEPARTMENT:
+				Title = "Список подразделений"
+				PromptTitle = "Выберите подразделение(я)"  
+				ViewName = VIEW_OD_SELECT_DEP_BY_HRRCH
+				
+			Case DOMAIN_TYPE_TPS_DIRECTORY_POSITION:
+				Title = "Список должностей"
+				If m_IncludeVacancies Then
+				%REM <5492 - исправить ошибку отображения вакантных должностей в диалоге выбора.>
+					If hasCategory Then
+						If ChoosePostByHierarchy Then
+							ViewName = VIEW_OD_SELECT_CATEGORY_POS_VAC_BY_HRRCH
+						Else
+							ViewName = VIEW_OD_SELECT_CATEGORY_POS_BY_USER
+						End If
+					Else
+						If ChoosePostByHierarchy Then
+							ViewName = VIEW_OD_SELECT_POS_VAC_BY_HRRCH
+						Else
+							ViewName = VIEW_OD_SELECT_POS_VAC_BY_USER
+						End If
+					End If
+				%ENDREM
+					If hasCategory Then
+						ViewName = "SelectPositionByHirerarchyWithVacancies.Category"
+					else
+						ViewName = "SelectPositionByHirerarchyWithVacancies"
+					End If
+				'</5492>
+				Else
+					If hasCategory Then
+						If ChoosePostByHierarchy Then
+							ViewName = VIEW_OD_SELECT_CATEGORY_POS_BY_HRRCH
+						Else
+							ViewName = VIEW_OD_SELECT_CATEGORY_POS_BY_USER
+						End If
+					Else
+						If ChoosePostByHierarchy Then
+							ViewName = VIEW_OD_SELECT_POS_BY_HRRCH
+						Else
+							ViewName = VIEW_OD_SELECT_POS_BY_USER
+						End If
+					End If					
+				End If
+				PromptTitle = "Выберите должность(и)"
+				
+			Case DOMAIN_TYPE_TPS_DIRECTORY_EMPLOYEE:
+				Title = "Список сотрудников"
+				PromptTitle = "Выберите сотрудника(ов)"  
+				If hasCategory Then
+					ViewName = VIEW_OD_SELECT_CATEGORY_USER
+				Else
+					ViewName = VIEW_OD_SELECT_USER
+				End If
+				
+			Case DOMAIN_TYPE_TPS_DIRECTORY_GROUP:
+				Title = "Список функ. групп"
+				PromptTitle = "Выберите функциональную группу(ы)"  
+				ViewName = VIEW_OD_SELECT_GROUP
+
+			Case "FrequentlyUsed":
+				Title = "Список часто используемых"
+				PromptTitle = "Выберите часто используемые"  
+				ViewName = "FrequentlyUsed"
+				Call Me.getFrequentlyUsed()
+				
+			Case Else
+				Error 1002, "in_domain '" & in_domain & "' не поддерживается"
+		End Select
+		
+		If hasCategory Then
+			Set dc = ws.PickListCollection(PICKLIST_CUSTOM, in_isMult, db.Server, db.FilePath, ViewName, Title, PromptTitle, DWFODSelCategory)
+		Else
+			Set dc = ws.PickListCollection(PICKLIST_CUSTOM, in_isMult, db.Server, db.FilePath, ViewName, Title, PromptTitle)	
+		End If
+		
+		If ( dc.Count > 0 ) Then
+			Dim docSelect As NotesDocument
+			Set docSelect = dc.GetFirstDocument
+			Do While Not ( docSelect Is Nothing )
+				Dim obj As Variant
+				Set obj = Me.getDocObject( docSelect )
+				Call mxResult.Append( obj )
+				Set docSelect = dc.GetNextDocument( docSelect )
+			Loop
+			
+			Call Me.setFrequentlyUsed(dc)
+			
+		End If
+		
+		Call Me.log.exit( "</" & TypeName( Me ) & "." & GetThreadInfo(1) & ">" )
+		Exit Function
+		
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Function
+
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Function getObject( in_link As Variant ) As Variant
+		On Error GoTo error_point
+		Call Me.log.enter( TypeName( Me ) & "." & GetThreadInfo(1))
+		Call Me.log.parameter( "in_link", in_link )
+		
+		Set getObject = Nothing		
+		Select Case in_link.domain
+			Case DOMAIN_TYPE_TPS_DIRECTORY_ORGANIZATION,_
+			DOMAIN_TYPE_TPS_DIRECTORY_DEPARTMENT,_
+			DOMAIN_TYPE_TPS_DIRECTORY_POSITION,_
+			DOMAIN_TYPE_TPS_DIRECTORY_EMPLOYEE,_
+DOMAIN_TYPE_TPS_DIRECTORY_GROUP:
+				
+				Dim vw As NotesView, dc As NotesDocumentCollection
+				Set vw = Me.sm.core.cache.getView( "(CustomID)", db )
+				Set dc = vw.GetAllDocumentsByKey( in_link.id, True )
+				If ( dc.Count > 1 ) Then
+					Error 1001, "In database '" & db.Title & "' ( path: " & db.FilePath & " ) found more than one document by key '" & in_link.id & "' ( count: " & CStr( dc.Count ) & " )"
+				Else
+					Set getObject = Me.getDocObject( dc.GetFirstDocument )
+				End If
+				
+				Call Me.log.traceObject( "result", getObject )
+				Call Me.log.exit( TypeName( Me ) & "." & GetThreadInfo(1))
+				Exit Function
+				
+			Case Else
+				Error 1001, "The data of type '" & in_link.domain & "' of parameter 'in_link.domain' is not supported"
+		End Select
+		
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Function
+
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Function getDocObject( in_doc As NotesDocument ) As Variant
+		On Error GoTo error_point
+		Call Me.log.enter( TypeName( Me ) & "." & GetThreadInfo(1))
+		Call Me.log.parameter( "in_doc", in_doc )
+		
+		Select Case in_doc.form(0)
+			Case "DWF01":	Set getDocObject = New TPS_Directory_Organization( in_doc, Me.Me_Variant )
+			Case "DWF02":	Set getDocObject = New TPS_Directory_Department( in_doc, Me.Me_Variant )
+			Case "DWF03":	Set getDocObject = New TPS_Directory_Position( in_doc, Me.Me_Variant )
+			Case "DWF04":	Set getDocObject = New TPS_Directory_Person( in_doc, Me.Me_Variant )
+			Case "DWF05":	Set getDocObject = New TPS_Directory_Group( in_doc, Me.Me_Variant )
+			Case Else:
+				Error 1001, "Форма '" & in_doc.form(0) & "' не поддерживается"
+		End Select
+		
+		Call Me.log.traceObject( "result", getDocObject )
+		Call Me.log.exit( TypeName( Me ) & "." & GetThreadInfo(1))
+		Exit Function
+		
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Function
+
+	'----------------------------------------------------------------------------------------------------------------------------------
+	Function getFrequentlyUsed() As Integer
+		On Error GoTo error_point
+		Call Me.log.enter(TypeName( Me ) & "." & GetThreadInfo(0))
+		
+		On Error 4091 Resume Next
+		
+		Dim s As New NotesSession, key As String
+		
+		If (Not Me.db Is Nothing ) Then
+			Dim viewF As NotesView, docF As NotesDocument
+			Set viewF = Me.db.Getview("frequentlyUsedByUser")
+			
+			If (Not viewF Is Nothing) Then
+				key = s.userName
+				Set docF = viewF.Getdocumentbykey(key, True)
+				
+				If (Not docF Is Nothing) Then
+					Dim elements As Long, i As Long
+					elements = UBound(docF.frequentlyUsedID)
+					
+					If (docF.frequentlyUsedID(0) <> "") Then
+						Dim viewFUsed As NotesView
+						Set viewFUsed = Me.db.Getview("FrequentlyUsed")
+						
+						If (Not viewFUsed Is Nothing) Then
+							If (Not IsEmpty(viewFUsed.readers)) Then
+								Dim nve As NotesViewEntryCollection
+								Set nve = viewFUsed.Allentries
+								Call nve.Removeallfromfolder("FrequentlyUsed")
+								
+								Dim col As NotesDocumentCollection
+								Set col = Me.db.createDocumentCollection()
+								Dim docOD As NotesDocument
+								
+								For i = 0 To elements
+									Set docOD = Me.db.Getdocumentbyunid(docF.frequentlyUsedID(i))
+
+									If (Not docOD Is Nothing) Then
+										Call col.Adddocument(docOD)
+										Delete docOD
+									End If
+								Next i
+								
+								Call col.Putallinfolder("FrequentlyUsed")
+								
+							End If
+						End If
+						
+					End If
+					
+				End If
+			End If
+		End If
+		
+		Call Me.log.traceObject( "result", getFrequentlyUsed )
+		Call Me.log.exit( TypeName( Me ) & "." & GetThreadInfo(1))
+		Exit Function
+		
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Function
+	
+	'----------------------------------------------------------------------------------------------------------------------------------	
+	Function setFrequentlyUsed(col As NotesDocumentCollection) As Integer
+		On Error GoTo error_point
+		Call Me.log.enter(TypeName( Me ) & "." & GetThreadInfo(0))
+		Call Me.log.parameter("col", col)
+		
+		Const RESET_TIME = 2592000
+		Const LIST_SIZE = 50
+		
+		Dim s As New NotesSession, key As String
+		
+		If (Not me.db Is Nothing ) Then
+			
+			Dim viewF As NotesView, docF As NotesDocument, i As Integer
+			Set viewF = me.db.Getview("frequentlyUsedByUser")
+			
+			If (Not viewF Is Nothing) Then
+				key = s.Username
+				Set docF = viewF.Getdocumentbykey(key, True)
+				
+				If (docF Is Nothing) Then
+					If ((me.db.QueryAccessPrivileges(s.UserName) And DBACL_WRITE_PUBLIC_DOCUMENTS) > 0) Then
+						Set docF = me.db.Createdocument()
+						Call docF.ReplaceItemValue("Form", "FrequentlyUsed")
+						Call docF.ReplaceItemValue("id", docF.Universalid)
+						Call docF.ReplaceItemValue("domain", "tps.core.directory.frequentlyused")
+						Call docF.ReplaceItemValue("User", s.Username)
+						Call docF.Replaceitemvalue("DWF$Authors", Split("[Admin]," & s.Username & "," & me.db.Server , ","))
+						Call docF.Computewithform(False, False)
+						Call docF.Save(True, False)
+					End If
+				End If
+				
+				If (Not docF Is Nothing) Then
+					Dim doc As NotesDocument, nowDate As Variant, nowDT As NotesDateTime, fUsedDT As NotesDateTime
+					nowDate = Now()
+					Set nowDT = New NotesDateTime(nowDAte)
+					
+					Dim minPos As Long, minCount As Long, minDate As Variant, elements As Long
+					elements = UBound(docF.frequentlyUsedID)
+					
+					ReDim fUsedID(elements) As String
+					ReDim fUsedCount(elements) As Long
+					ReDim fUsedDate(elements) As Variant
+					
+					If (docF.frequentlyUsedID(0) <> "") Then
+						minPos = 0
+						minCount = docF.frequentlyUsedCount(0)
+						minDate = docF.frequentlyUsedDate(0)
+						
+						For i = 0 To elements
+							If (docF.frequentlyUsedID(i) <> "") Then	
+								fUsedID(i) = docF.frequentlyUsedID(i)
+								fUsedDate(i) = docF.frequentlyUsedDate(i)
+								
+								Set fUsedDT = New NotesDateTime(fUsedDate(i))
+								
+								If (nowDT.Timedifference(fUsedDT) > RESET_TIME) Then
+									fUsedCount(i) = 1
+								Else
+									fUsedCount(i) = docF.frequentlyUsedCount(i)
+								End If
+								
+								If (fUsedCount(i) < minCount) Then
+									minCount = fUsedCount(i)
+									minDate = fUsedDate(i)
+									minPos = i
+								ElseIf (fUsedCount(i) = minCount) Then
+									
+									If (minDate > fUsedDate(i)) Then
+										minCount = fUsedCount(i)
+										minDate = fUsedDate(i)
+										minPos = i
+									End If
+									
+								End If
+							End If
+						Next i
+					End If
+					
+					Set doc = col.Getfirstdocument()
+					While (Not doc Is Nothing) 
+						Dim pos As Variant
+						pos = ArrayGetIndex(fUsedID, doc.customid(0))
+						
+						If (Not IsNull(pos)) Then
+							fUsedCount(pos) = fUsedCount(pos) + 1
+							fUsedDate(pos) = nowDate
+						Else
+							If (elements < (LIST_SIZE - 1)) Then
+								If (fUsedID(elements) <> "") Then
+									elements = elements + 1
+									ReDim Preserve fUsedID(elements)
+									ReDim Preserve fUsedCount(elements)
+									ReDim Preserve fUsedDate(elements)
+								End If
+								
+								fUsedID(elements) = doc.customid(0)
+								fUsedCount(elements) = 1
+								fUsedDate(elements) = nowDate
+							Else
+								fUsedID(minPos) = doc.customid(0)
+								fUsedCount(minPos) = 1
+								fUsedDate(minPos) = nowDate
+							End If
+						End If	
+						
+						Set doc = col.Getnextdocument(doc)
+					Wend
+					
+					Call docF.Replaceitemvalue("frequentlyUsedID", fUsedID)
+					Call docF.Replaceitemvalue("frequentlyUsedCount", fUsedCount)
+					Call docF.Replaceitemvalue("frequentlyUsedDate", fUsedDate)
+					
+					Call docF.Save(True, False)
+					
+				End If
+			End If
+			
+		End If
+		
+		Call Me.log.traceObject( "result", setFrequentlyUsed )
+		Call Me.log.exit( TypeName( Me ) & "." & GetThreadInfo(1))
+		Exit Function
+		
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Function
+
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Public Function dialogSelectDepartments( in_isMult As Boolean ) As MixCollection
+		Set dialogSelectDepartments = dialogSelectObjects(DOMAIN_TYPE_TPS_DIRECTORY_DEPARTMENT, in_isMult) 
+	End Function
+
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Public Function dialogSelectGroups( in_isMult As Boolean ) As MixCollection
+		Set dialogSelectGroups = dialogSelectObjects(DOMAIN_TYPE_TPS_DIRECTORY_GROUP, in_isMult) 
+	End Function
+
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Public Function dialogSelectPersons( in_isMult As Boolean ) As MixCollection
+		Set dialogSelectPersons = dialogSelectObjects(DOMAIN_TYPE_TPS_DIRECTORY_EMPLOYEE, in_isMult) 
+	End Function
+
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Public Function dialogSelectPositions( in_isMult As Boolean ) As MixCollection
+		m_IncludeVacancies = False
+		Set dialogSelectPositions = dialogSelectObjects(DOMAIN_TYPE_TPS_DIRECTORY_POSITION, in_isMult) 
+	End Function
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Public Function dialogSelectPositionsInclVac( in_isMult As Boolean ) As MixCollection	' Должности с вакансиями
+		m_IncludeVacancies = True
+		Set dialogSelectPositionsInclVac = dialogSelectObjects(DOMAIN_TYPE_TPS_DIRECTORY_POSITION, in_isMult) 
+	End Function
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Public Function dialogSelectFrequentlyUsed( in_isMult As Boolean ) As MixCollection
+		Set dialogSelectFrequentlyUsed = dialogSelectObjects("FrequentlyUsed", in_isMult) 
+	End Function
+	
+End Class
+	
+'======================================================================================================================================
+'	CLASS TPS_Directory_Abstract_Object
+'======================================================================================================================================
+Public Class TPS_Directory_Abstract_Object As FBase_Abstract_Object_Doc
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	'	PUBLIC:
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Public Sub new( in_doc As NotesDocument, in_ps As Variant )
+	End Sub
+
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Public Property Get objID As String
+		On Error GoTo error_point
+		
+		objID = Me.nd.CUSTOMID(0)
+		Exit Property
+		
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Property
+
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Public Property Get objPath As String
+		On Error GoTo error_point
+		
+		objPath = Join(Me.nd.FullPath, "/")
+		Exit Property
+		
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Property
+
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Public Property Get objAccess As String
+		On Error GoTo error_point
+		
+		objAccess = Me.nd.GroupName(0)
+		If objAccess = "" Then objAccess = "-"
+		
+		Exit Property
+		
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Property
+		
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Public Property Get objServer As String
+		On Error GoTo error_point
+		
+		objServer = Me.nd.UserServer(0)
+		If objServer = "" Then objServer = "-"
+		
+		Exit Property
+		
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Property
+	
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Public Property Get objName As String
+		On Error GoTo error_point
+		
+		objName = Me.nd.Name(0)
+		Exit Property
+		
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Property
+
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Public sub appendObjToDocument(in_ItemPrefix As String, in_doc As NotesDocument)
+		On Error GoTo error_point
+
+		Dim vID As Variant, item As NotesItem
+		
+		If in_doc.HasItem(in_ItemPrefix & "ObjID") Then
+			vID = in_doc.GetFirstItem(in_ItemPrefix & "ObjID").Values		
+			
+			Call in_doc.ReplaceItemValue(in_ItemPrefix & "ObjAccess", 	ArrayAppend(in_doc.GetFirstItem(in_ItemPrefix & "ObjAccess").Values, 	Me.ObjAccess))
+			Call in_doc.ReplaceItemValue(in_ItemPrefix & "ObjID", 		ArrayAppend(vID,												 		Me.ObjID))
+			Call in_doc.ReplaceItemValue(in_ItemPrefix & "ObjName", 	ArrayAppend(in_doc.GetFirstItem(in_ItemPrefix & "ObjName").Values,	 	Me.ObjName))
+			Call in_doc.ReplaceItemValue(in_ItemPrefix & "ObjPath", 	ArrayAppend(in_doc.GetFirstItem(in_ItemPrefix & "ObjPath").Values, 		Me.ObjPath))
+		Else
+			Call in_doc.ReplaceItemValue(in_ItemPrefix & "ObjAccess", 	Me.ObjAccess)
+			Call in_doc.ReplaceItemValue(in_ItemPrefix & "ObjID", 		Me.ObjID)
+			Call in_doc.ReplaceItemValue(in_ItemPrefix & "ObjName", 	Me.ObjName)
+			Call in_doc.ReplaceItemValue(in_ItemPrefix & "ObjPath", 	Me.ObjPath)			
+		End If
+		Exit Sub
+		
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Sub
+
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	' Function getObjIndexInDocument - вернуть позицию объекта в документе, -1 - когда не найден 
+	Public Function getObjIndexInDocument(in_ItemPrefix As String, in_doc As NotesDocument) As Integer
+		On Error GoTo error_point
+
+		Dim vID As Variant, item As NotesItem
+		Dim i As Integer
+		
+		If in_doc.HasItem(in_ItemPrefix & "ObjID") Then
+			vID = in_doc.GetFirstItem(in_ItemPrefix & "ObjID").Values
+			For i = 0 To UBound(vID)
+				If vID(i) = objID  Then
+					getObjIndexInDocument = i
+					Exit Function
+				End If
+			Next
+		End If
+		getObjIndexInDocument = -1
+		Exit Function
+		
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Function
+End Class
+
+
+
+Class TPS_Directory_Organization As TPS_Directory_Abstract_Object
+	
+	Sub new( in_doc As NotesDocument, in_ps As Variant )
+	End Sub
+
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Property Get domain As String
+		On Error GoTo error_point
+		domain = DOMAIN_TYPE_TPS_DIRECTORY_ORGANIZATION
+		Exit Property
+		
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Property
+
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Public Property Get objName As String
+		On Error GoTo error_point
+		
+		objName = {<Комп.> } & Me.nd.Name(0)
+		Exit Property
+		
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Property
+
+End Class
+
+Public Class TPS_Directory_Department As TPS_Directory_Abstract_Object
+	
+	Public Sub new( in_doc As NotesDocument, in_ps As Variant )
+	End Sub
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Public Property Get domain As String
+		On Error GoTo error_point
+		domain = DOMAIN_TYPE_TPS_DIRECTORY_DEPARTMENT 
+		Exit Property
+		
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Property
+
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Public Property Get objName As String
+		On Error GoTo error_point
+		
+		objName = {<Подр.> } & Me.nd.Name(0)
+		Exit Property
+		
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Property
+
+End Class
+
+Class TPS_Directory_Position As TPS_Directory_Abstract_Object
+	
+	Sub New( in_doc As NotesDocument, in_ps As Variant )
+	End Sub
+
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Property Get domain As String
+		On Error GoTo error_point
+		domain = DOMAIN_TYPE_TPS_DIRECTORY_POSITION 
+		Exit Property
+		
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Property
+
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Public Property Get objName As String
+		On Error GoTo error_point
+		
+		objName = {<Долж.> } & Me.nd.Name(0) & { (} & Me.nd.PersonName(0) & {)}
+		Exit Property
+		
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Property
+
+End Class
+
+Class TPS_Directory_Person  As TPS_Directory_Abstract_Object
+	
+	Sub New( in_doc As NotesDocument, in_ps As Variant )
+	End Sub
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Property Get domain As String
+		On Error GoTo error_point
+		domain = DOMAIN_TYPE_TPS_DIRECTORY_EMPLOYEE 
+		Exit Property
+		
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Property
+
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Public Property Get objAccess As String
+		On Error GoTo error_point
+		
+		objAccess = Me.nd.LotusAddress(0)
+		If objAccess = "" Then objAccess = "-"
+		
+		Exit Property
+		
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Property
+
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Public Property Get objName As String
+		On Error GoTo error_point
+		
+		objName = {<Польз.> } & Me.nd.FullName(0)
+		Exit Property
+		
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Property
+
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Public Property Get objPath As String
+		On Error GoTo error_point
+		
+		objPath = {<Польз.> } & Me.nd.FullName(0)
+		Exit Property
+		
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Property
+
+End Class
+
+Public Class TPS_Directory_Group As TPS_Directory_Abstract_Object
+	
+	Public Sub New( in_doc As NotesDocument, in_ps As Variant )
+	End Sub
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Property Get domain As String
+		On Error GoTo error_point
+		domain = DOMAIN_TYPE_TPS_DIRECTORY_GROUP 
+		Exit Property
+		
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Property
+
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Public Property Get objName As String
+		On Error GoTo error_point
+		
+		objName = {<Ф.гр.> } & Me.nd.FullName(0)
+		Exit Property
+		
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Property
+
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Public Property Get objPath As String
+		On Error GoTo error_point
+		
+		objPath = {<Ф.гр.> }  & Me.nd.FullName(0)
+		Exit Property
+		
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Property
+
+End Class
+'++LotusScript Development Environment:2:2:Terminate:1:10
+Sub Terminate
+	
+End Sub
+
+
+
+
+
+
+
+
+
+
+
+
+

@@ -1,0 +1,375 @@
+'++LotusScript Development Environment:2:5:(Options):0:74
+Option Public
+Option Declare
+
+Use "tps.timetables.approval"
+Use "tps.timetables.tasks"
+
+
+
+
+'++LotusScript Development Environment:2:5:(Forward):0:1
+Declare Public Class TPS_TimetablesService As FBase_Abstract_Service
+Declare Public Class TPS_Timetables_Timetable As FBase_Abstract_Object_Doc
+Declare Public Class TPS_Timetables_Timetables_file As Fbase_abstract_object_doc
+
+'++LotusScript Development Environment:2:5:(Declarations):0:10
+Private Const DATABASE_KEY = "tps.projects.timetables"
+
+Const DOMAIN_TPS_TIMETABLES_TIMETABLE = "tps.timetables.timetable"
+Const DOMAIN_TPS_TIMETABLES_TIMETABLE_FILE = "tps.timetables.timetable_file"
+'======================================================================================================================================
+'	CLASS TPS_TimetablesService
+'======================================================================================================================================
+Public Class TPS_TimetablesService As FBase_Abstract_Service
+	Private m_db As NotesDatabase
+	Private m_approval As Variant
+	Private m_tasks As Variant
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Private Function getId( in_key As Variant ) As String
+		On Error GoTo error_point
+		Call Me.log.enter( TypeName( Me ) & "." & GetThreadInfo(1))
+		
+		Dim key As String
+		If ( LCase( TypeName( in_key )) = "objectlink" ) Then
+			key = in_key.id 
+		ElseIf IsScalar( in_key ) Then 
+			key = in_key
+		Else
+			Error 1001, "The type of data of parameter 'in_key' is '" & TypeName( in_key ) & "'. It is not supported"
+		End If
+		
+		getId = key
+		
+		Call Me.log.trace( "result: " & getId )
+		Call Me.log.exit( TypeName( Me ) & "." & GetThreadInfo(1))
+		Exit Function
+		
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Function
+	
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	'	PUBLIC:
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Sub New(in_ps As Variant)
+	End Sub
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Property Get db As NotesDatabase
+		On Error GoTo error_point
+		Call Me.log.enter( TypeName( Me ) & "." & GetThreadInfo(1))
+		
+		If ( m_db Is Nothing )Then
+			Set m_db = Me.sm.base.databases.get( DATABASE_KEY )
+		End If
+		Set db = m_db
+		
+		Call Me.log.traceObject( "result", db )		
+		Call Me.log.exit( TypeName( Me ) & "." & GetThreadInfo(1))
+		Exit Property
+		
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Property
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Function getObject( in_link As Variant ) As Variant
+		On Error Goto error_point
+		
+		Set getObject = Nothing
+		If ( in_link.domain Like "tps.timetables.approval.*" ) Then
+			Set getObject = Me.approval.getObject( in_link )
+		ElseIf ( in_link.domain Like "tps.projects.timetables.approval.*" ) Then
+			Set getObject = Me.approval.getObject( in_link )
+		Else
+			Select Case in_link.domain
+			Case DOMAIN_TPS_TIMETABLES_TIMETABLE:
+				Set getObject = getTimeTable( in_link )
+			Case DOMAIN_TPS_TIMETABLES_TIMETABLE_FILE:
+				Set getObject = getTimeTableFile( in_link )	
+			Case Else
+				Error 1001, "The data of type '" & in_link.domain & "' of parameter 'in_link.domain' is not supported"
+			End Select
+			
+		End If
+		
+		Exit Function
+		
+error_point:
+		On Error Goto 0
+		Error Err, Typename( Me ) & "." & Getthreadinfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Function
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Property Get approval As Variant
+		On Error Goto error_point
+		
+		If Isempty(m_approval)Then
+			Set m_approval = New TPS_Timetables_ApprovalService( Me.Me_Variant )
+		End If
+		Set approval = m_approval
+		Exit Property
+		
+error_point:
+		On Error Goto 0
+		Error Err, Typename( Me ) & "." & Getthreadinfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Property
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Function getDocObject( in_doc As NotesDocument ) As Variant
+		On Error GoTo error_point
+		Call Me.log.enter( TypeName( Me ) & "." & GetThreadInfo(1))
+		Call Me.log.parameter( "in_doc", in_doc )
+		
+		Select Case LCase( in_doc.form(0))
+			Case "f01":
+				Set getDocObject = New TPS_Timetables_Timetable( in_doc, Me.Me_variant )
+			Case "f02":
+				Set getDocObject = New TPS_Timetables_Timetables_file( in_doc, Me.Me_variant )	
+			Case Else:
+				Error 1001, "Форма '" & in_doc.form(0) & "' не поддерживается"
+		End Select
+		
+		Call Me.log.traceObject( "result", getDocObject )
+		Call Me.log.exit( TypeName( Me ) & "." & GetThreadInfo(1))
+		Exit Function
+		
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Function
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Function getTimeTable( in_key As Variant ) As Variant
+		On Error GoTo error_point
+		Call Me.log.enter( TypeName( Me ) & "." & GetThreadInfo(1))
+				
+		Dim id As String, doc As NotesDocument
+		id = Me.getId( in_key )
+		Dim vw As NotesView,viewname As String
+		viewname = {(UNID)}
+		Set vw = Me.db.Getview(viewname)
+		If ( vw Is Nothing ) Then
+			Error 4001, {Не найдено представление "} & viewname & {"}
+		End If
+		Call vw.Refresh()
+		Set doc = vw.Getdocumentbykey( id, True )
+		If ( Not ( doc Is Nothing ) ) Then
+			Set getTimeTable = Me.getDocObject( doc )	
+		Else
+			Error 4001, {ПГ не найден. Ключ: } & id
+		End If 
+		
+		Call Me.log.exit( TypeName( Me ) & "." & GetThreadInfo(1))
+		Exit Function
+		
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$ 
+	End Function
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Function getTimeTableFile( in_key As Variant ) As Variant
+		On Error GoTo error_point
+		Call Me.log.enter( TypeName( Me ) & "." & GetThreadInfo(1))
+		
+		Dim id As String, doc As NotesDocument
+		id = Me.getId( in_key )
+		Dim vw As NotesView,viewname As String
+		viewname = {(UNID)}
+		Set vw = Me.db.Getview(viewname)
+		If ( vw Is Nothing ) Then
+			Error 4001, {Не найдено представление "} & viewname & {"}
+		End If
+		Call vw.Refresh()
+		Set doc = vw.Getdocumentbykey( id, True )
+		If ( Not ( doc Is Nothing ) ) Then
+			Set getTimeTableFile = Me.getDocObject( doc )	
+		Else
+			Error 4001, {ПГ не найден. Ключ: } & id
+		End If 
+		
+		Call Me.log.exit( TypeName( Me ) & "." & GetThreadInfo(1))
+		Exit Function
+		
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Function
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------	
+	Function dialogSelectTimetables( in_isMult As Boolean ) As MixCollection
+		On Error GoTo error_point
+		Call Me.log.enter( "<" & TypeName( Me ) & "." & GetThreadInfo(1) & ">" )
+		Call Me.log.parameter( "in_isMult", in_isMult )
+		
+		Dim mxResult As New MixCollection
+		Set dialogSelectTimetables = mxResult
+		
+		Dim vw As NotesView
+		Set vw = Me.db.getView( "App.F01.StageCount20" )
+		If ( vw Is Nothing ) Then
+			Error 1001, "View 'App.F01.StageCount20' is not exist"
+		End If
+		
+		Dim ws As New NotesUIWorkspace, dc As NotesDocumentCollection
+		Set dc = ws.PickListCollection( 3, in_isMult, Me.db.Server, Me.db.FilePath, vw.Name, "Список План-графиков", "Выберите документ(ы) и нажмите  OK" )
+		If ( dc.Count > 0 ) Then
+			Dim doc As NotesDocument
+			Set doc = dc.GetFirstDocument
+			Do While Not ( doc Is Nothing )
+				Dim c As Variant
+				Set c = Me.getDocObject(doc)
+				Call mxResult.Append( c )
+				Set doc = dc.GetNextDocument( doc )
+			Loop
+		End If
+		
+		Call Me.log.exit( "</" & TypeName( Me ) & "." & GetThreadInfo(1) & ">" )
+		Exit Function
+		
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Function
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------	
+	Function getTimeTableFile_approved( in_link As Variant ) As Variant
+		On Error GoTo error_point
+		Call Me.log.enter( "<" & TypeName( Me ) & "." & GetThreadInfo(1) & ">" )
+		
+		If ( in_link.domain = DOMAIN_TPS_TIMETABLES_TIMETABLE ) Then
+			Set getTimeTableFile_approved = Nothing
+
+			Dim vw As NotesView, dc As NotesDocumentCollection, viewname As String
+			viewname = "(App.F02.ByParentRef.StageCount20)"
+			Set vw = Me.db.Getview( viewname )
+			If ( Not vw Is Nothing ) Then
+				Call vw.Refresh()
+				vw.Autoupdate = False
+				Set dc = vw.Getalldocumentsbykey( in_link.id )
+				If ( dc.Count = 1 ) Then
+					Dim doc As NotesDocument
+					Set doc = dc.Getfirstdocument()
+					While Not ( doc Is Nothing )
+						Dim TimeTableFile As Variant
+						Set TimeTableFile = Me.getDocObject( doc )
+						If Not ( TimeTableFile Is Nothing ) Then
+							'---------------------------------------------------------
+							Set getTimeTableFile_approved = TimeTableFile
+							'---------------------------------------------------------	
+						End If
+						Set doc = dc.Getnextdocument(doc)
+					Wend
+				ElseIf	( dc.Count > 1 ) Then
+					Error 1001, "Find more then one current approved timetamble files. Count:" & CStr( dc.Count )
+				End If
+			Else
+				Error 1001, "View '" & viewname & "' is not exist"
+			End If
+		Else
+			Error 1001, "The data of type '" & in_link.domain & "' of parameter 'in_link.domain' is wrong"
+		End If
+		
+		Call Me.log.exit( "</" & TypeName( Me ) & "." & GetThreadInfo(1) & ">" )
+		Exit Function
+		
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Function
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Property Get tasks As Variant
+		On Error GoTo error_point
+		
+		If IsEmpty(m_tasks)Then
+			Set m_tasks = New TPS_Timetables_TasksService( Me.Me_Variant )
+		End If
+		Set tasks = m_tasks
+		Exit Property
+		
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Property
+	
+End Class
+'======================================================================================================================================
+'	CLASS TPS_Timetables_Timetable
+'======================================================================================================================================
+Public Class TPS_Timetables_Timetable As FBase_Abstract_Object_Doc
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Sub New( in_doc As NotesDocument, in_ps As Variant )
+	End Sub
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Property Get id As String
+		On Error GoTo error_point
+		If (m_doc.HasItem( "id" )) Then
+			id = m_doc.id(0)
+		Else
+			id = m_doc.UniversalID
+		End If
+		Exit Property 
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Property
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Property Get domain As String
+		On Error GoTo error_point
+		domain = DOMAIN_TPS_TIMETABLES_TIMETABLE
+		Exit Property 
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Property
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Property Get title As String
+		On Error GoTo error_point
+		If m_doc.Hasitem("Name") Then
+			title = m_doc.Name(0)	
+		End If
+		
+		Exit Property 
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Property
+End Class
+'======================================================================================================================================
+'	CLASS TPS_Timetables_Timetables_file
+'======================================================================================================================================
+Public Class TPS_Timetables_Timetables_file As Fbase_abstract_object_doc
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Sub New( in_doc As NotesDocument, in_ps As Variant )
+	End Sub
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Property Get id As String
+		On Error GoTo error_point
+		If (m_doc.HasItem( "id" )) Then
+			id = m_doc.id(0)
+		Else
+			id = m_doc.UniversalID
+		End If
+		Exit Property 
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Property
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Property Get domain As String
+		On Error GoTo error_point
+		domain = DOMAIN_TPS_TIMETABLES_TIMETABLE_FILE
+		Exit Property 
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Property
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Property Get title As String
+		On Error GoTo error_point
+		If m_doc.Hasitem("Name") Then
+			title = m_doc.Name(0)	
+		End If
+		
+		Exit Property 
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Property
+End Class

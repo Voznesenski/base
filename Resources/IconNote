@@ -1,0 +1,63 @@
+<?xml version='1.0' encoding='utf-8'?>
+<note default='true' class='icon' xmlns='http://www.lotus.com/dxl' version='10.0'
+ maintenanceversion='1.0' replicaid='44257D5C002A4928'>
+<noteinfo noteid='126' unid='1BD8C14795EF32B0C325770B002D6CD7' sequence='1414'>
+<created><datetime dst='true'>20100420T121609,83+04</datetime></created>
+<modified><datetime>20210418T115548,46+03</datetime></modified>
+<revised><datetime>20210417T010222,19+03</datetime></revised>
+<lastaccessed><datetime>20210418T115548,45+03</datetime></lastaccessed>
+<addedtofile><datetime>20210418T115548,45+03</datetime></addedtofile></noteinfo>
+<updatedby><name>CN=Tambiev/O=tps</name><name>CN=zeos/O=tps</name><name>CN=Tambiev/O=tps</name><name
+>CN=zeos/O=tps</name><name>CN=Roman Moiseenko/O=VIPInt</name><name>CN=zeos/O=tps</name><name
+>CN=Grechkina/O=tps</name><name>CN=zeos/O=tps</name><name>CN=Salpagarov/O=tps</name><name
+>CN=Tambiev/O=tps</name><name>CN=Salpagarov/O=tps</name><name>CN=develop/O=tps</name><name
+>CN=Salpagarov/O=tps</name><name>CN=develop/O=tps</name><name>CN=Salpagarov/O=tps</name><name
+>CN=develop/O=tps</name><name>CN=Tambiev/O=tps</name><name>CN=Aleksandr Galko/O=tps</name><name
+>CN=Salpagarov/O=tps</name><name>CN=Aleksandr Galko/O=tps</name><name>CN=Roman Moiseenko/O=VIPInt</name><name
+>CN=Salpagarov/O=tps</name><name>CN=develop/O=tps</name><name>CN=Aleksandr Galko/O=tps</name><name
+>CN=develop/O=tps</name><name>CN=Aleksandr Galko/O=tps</name><name>CN=develop/O=tps</name><name
+>CN=Aleksandr Galko/O=tps</name><name>CN=develop/O=tps</name><name>CN=Salpagarov/O=tps</name><name
+>CN=develop/O=tps</name><name>CN=Salpagarov/O=tps</name><name>CN=develop/O=tps</name><name
+>CN=Salpagarov/O=tps</name><name>CN=develop/O=tps</name><name>CN=Salpagarov/O=tps</name><name
+>CN=develop/O=tps</name><name>CN=Salpagarov/O=tps</name><name>CN=develop/O=tps</name><name
+>CN=Salpagarov/O=tps</name><name>CN=develop/O=tps</name><name>CN=Igor V Tomnov/O=SVO</name><name
+>CN=develop/O=tps</name><name>CN=Igor V Tomnov/O=SVO</name><name>CN=develop/O=tps</name><name
+>CN=Igor V Tomnov/O=SVO</name><name>CN=develop/O=tps</name><name>CN=Igor V Tomnov/O=SVO</name><name
+>CN=develop/O=tps</name><name>CN=Salpagarov/O=tps</name><name>CN=develop/O=tps</name><name
+>CN=Igor V Tomnov/O=SVO</name><name>CN=develop/O=tps</name><name>CN=Igor V Tomnov/O=SVO</name><name
+>CN=develop/O=tps</name><name>CN=Igor V Tomnov/O=SVO</name><name>CN=develop/O=tps</name><name
+>CN=Igor V Tomnov/O=SVO</name><name>CN=develop/O=tps</name><name>CN=Igor V Tomnov/O=SVO</name><name
+>CN=develop/O=tps</name><name>CN=Igor V Tomnov/O=SVO</name><name>CN=develop/O=tps</name><name
+>CN=Aleksei Petrov/O=tps</name><name>CN=develop/O=tps</name><name>CN=Aleksei Petrov/O=tps</name><name
+>CN=develop/O=tps</name><name>CN=Aleksey V Shcherbakov/O=SVO</name><name>CN=develop/O=tps</name></updatedby>
+<item name='$DefaultWebFrameset' sign='true'><text>Main</text></item>
+<item name='$DefaultFrameset' sign='true'><text>main</text></item>
+<item name='IconBitmap' summary='true' sign='true'>
+<rawitemdata type='6'>
+AiAgAQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+AAAAAAAAAAAAAAAAAAAAAAAAAAAREREREREREREREREREREREREREf//////8RERH//xEREREREi
+Lu7u4iERESzu7hERERERIiIiIiLxERIiIiLhERERESIiIiIiERHyIiIi4REREREiIiIiIvER8iIi
+IsERERERIiIiIiLxEeIiIiIhERERESIiIiIiIuIiIiIiwREREREiIiIiIiIiIiIiIhERH//xIiIi
+IiIiIiIiIREREe//7iIiIiIiIiIiIh8RER///+4iIiIiIiIiIiIREREe///+IiIiIiIiIiIiERER
+H/////IiIiIiIiIiIvER/xH/////IiIiIiIiIiIi4iIRERER7+IiIiIiIiIiIiIiEREREe/iIiIi
+IiIiIiIiIhERERHv/iIiIiIiIiIiIi4RERER7//iIiIiIiIiIiIuEREREe///iIiIiIiIiIiLxER
+ERHv///iIiIiIiIiIi8RERER7////iIiIiIiIiIvEREREe//////IiIiIiIiLhERERH+7u7u//Iu
+//7/7u8RERERERERER/yLhEREREREREREREREREf8i7xERERERERERERERER//4i4RERERERERER
+EREREf//4uERERERERERERERERH////xERERERERERERERERH///8RERERERERERERERERH//xER
+EREREREREREREREREREREREREQ==
+</rawitemdata></item>
+<item name='$LaunchXPageRunOnServer' sign='true'><text>0</text></item>
+<item name='$FlagsNoRefresh' sign='true'><text/></item>
+<item name='$TITLE'><text>[dev] Методики
+tps/workflow
+#1dev.tps.workflow.methodics
+#2dev.tps.application</text></item>
+<item name='$TemplateModTime'><datetime>20210412T131005,34+03</datetime></item>
+<item name='$TemplateServerName'><text>CN=develop/O=tps</text></item>
+<item name='$TemplateFileName'><text>C:\IBM\Domino\data\tps\application.nsf</text></item>
+<item name='$LargeSummary'><text>0</text></item>
+<item name='$Flags'><text>JFS7</text></item>
+<item name='$PIRCRefreshModTime'><datetime>20210417T010220,30+03</datetime></item>
+<item name='$Daos'><text>0</text></item></note>
+

@@ -1,0 +1,230 @@
+'++LotusScript Development Environment:2:5:(Options):0:74
+Option Public
+Option Declare
+'++LotusScript Development Environment:2:5:(Forward):0:1
+Declare Function BitShiftLeftI( Byval x As Integer, Byval bits As Integer) As Integer
+Declare Function BitShiftRightI( Byval x As Integer, Byval bits As Integer) As Integer
+Declare Sub initGlobals
+Declare Sub Initialize
+Declare Function AddL( Byval a As Long, Byval b As Long) As Long
+Declare Function AddI( Byval a As Integer, Byval b As Integer) As Integer
+Declare Function BitShiftRightL( Byval x As Long, Byval bits As Integer) As Long
+Declare Function BitShiftLeftL( Byval x As Long, Byval bits As Integer) As Long
+Declare Function BitRotRightI( Byval x As Integer, Byval bits As Integer) As Integer
+Declare Function BitRotRightL( Byval x As Long, Byval bits As Integer) As Long
+Declare Function BitRotLeftI( Byval x As Integer, Byval bits As Integer) As Integer
+Declare Function BitRotLeftL( Byval x As Long, Byval bits As Integer) As Long
+
+'++LotusScript Development Environment:2:5:(Declarations):0:10
+
+%REM
+'******* Bit Operations Library ********
+'** This is a library that allows Bitwise operations that are not natively supported
+'** in LotusScript
+'** Version .5, Dec. 13, 1999
+'** Written by Damien Katz of Iris Associates
+'** This code may be freely distributed.
+
+
+This library contains functions for doing integer BitOperations that are not supplied 
+natively in the LotusScript language.
+
+All functions in this library contain an integer and a long version.  The functions names are
+appended with a L for Long versions, and and I for Integer versions.
+
+All bit shift and rotations operations are unsigned.  That is to say that the sign bit is treated 
+no differently than any other bit when performingt he operations.
+
+%END REM
+Dim twotothe(0 To 31) As Long
+'Each nth value in this array is equivelent to (2^nth)
+
+Dim mask(0 To 31) As Long
+
+
+
+'++LotusScript Development Environment:2:1:BitShiftLeftI:2:8
+'Each nth value in this array is equivelent to ((2^nth) - 1)
+Function BitShiftLeftI( Byval x As Integer, Byval bits As Integer) As Integer
+	'Shifts the bits in a integer left by the number specified
+	'Note: bits must be positive
+	Const maxbits = 16
+	If bits > 0 And bits < maxbits Then
+		If x And twotothe( maxbits -1 - bits) Then
+			BitShiftLeftI = (((x Xor twotothe( maxbits - 1- bits)) And mask(maxbits - bits)) *  twotothe( bits)) Or &h8000
+		Else
+			BitShiftLeftI = ((x And mask(maxbits - bits)) *  twotothe( bits))
+		End If
+	Elseif bits = 0 Then
+		BitShiftLeftI = x
+	End If
+End Function
+'++LotusScript Development Environment:2:1:BitShiftRightI:1:8
+Function BitShiftRightI( Byval x As Integer, Byval bits As Integer) As Integer
+	'** Shifts the bits in an integer right by the number specified
+	'Note: bits must be positive
+	Const maxbits = 16
+	If bits > 0 And bits < maxbits Then		
+		If x And &h8000 Then
+			BitShiftRightI = ((x And &h7FFF) \twotothe( bits)) Or twotothe( maxbits- bits -1)
+		Else
+			BitShiftRightI = ((x) \twotothe( bits))
+		End If
+	Elseif bits = 0 Then
+		BitShiftRightI = x
+	End If
+End Function
+'++LotusScript Development Environment:2:2:initGlobals:1:8
+Sub initGlobals
+	Dim i As Integer
+	For i = 0 To 30
+		twotothe(i) = 2^i
+		mask(i) = twotothe(i) - 1
+	Next
+	twotothe( 31) = &h80000000&
+	mask( 31) = &h7FFFFFFF&
+End Sub
+'++LotusScript Development Environment:2:2:Initialize:1:10
+Sub Initialize
+	Call initGlobals()
+	'testOutInts
+End Sub
+'++LotusScript Development Environment:2:1:AddL:1:8
+Function AddL( Byval a As Long, Byval b As Long) As Long
+	'** Performs 2's complement addition on long values.
+	'** The number are treated as unsigned numbers and 
+	'** overflow is allowed
+	
+	If ((a Eqv b) And &h80000000&) Then
+		AddL = ((&h80000000& Xor a) + b) Xor &h80000000&
+	Else
+		AddL = a + b		
+	End If
+	
+End Function
+'++LotusScript Development Environment:2:1:AddI:1:8
+Function AddI( Byval a As Integer, Byval b As Integer) As Integer
+	'** Performs 2's complement addition on integer values.
+	'** The number are treated as unsigned numbers and 
+	'** overflow is allowed
+	
+	If (a Eqv b) And &h8000 Then
+		AddI = ((&h8000 Xor a) + b) Xor &h8000
+	Else
+		AddI = a + b 
+	End If
+End Function
+'++LotusScript Development Environment:2:1:BitShiftRightL:1:8
+Function BitShiftRightL( Byval x As Long, Byval bits As Integer) As Long
+	'Shifts the bits in a long right by the number specified
+	'Note: bits must be positive
+	Const maxbits = 32
+	If bits > 0 And bits < maxbits Then
+		If x And &h80000000& Then
+			BitShiftRightL = (x And &h7FFFFFFF&) \twotothe( bits)  Or twotothe( maxbits- bits -1)
+		Else
+			BitShiftRightL = ((x) \twotothe( bits))
+		End If
+	Elseif bits = 0 Then
+		BitShiftRightL = x
+	End If
+End Function
+'++LotusScript Development Environment:2:1:BitShiftLeftL:1:8
+Function BitShiftLeftL( Byval x As Long, Byval bits As Integer) As Long
+	'Shifts the bits in a long left by the number specified
+	'Note: bits must be positive
+	Const maxbits = 32
+	If bits > 0 And bits < maxbits Then
+		If x And twotothe( maxbits -1 - bits) Then
+			BitShiftLeftL = ((( x Xor twotothe( maxbits - 1- bits)) And mask(maxbits - bits)) *  twotothe( bits)) Or &h80000000&
+		Else
+			BitShiftLeftL = (( x And mask(maxbits - bits)) *  twotothe( bits))
+		End If
+	Elseif bits = 0 Then
+		BitShiftLeftL = x
+	End If
+End Function
+'++LotusScript Development Environment:2:1:BitRotRightI:1:8
+Function BitRotRightI( Byval x As Integer, Byval bits As Integer) As Integer
+	'Rotates the bits in an integer right by the number specified
+	'Note: bits must be positive
+	Const maxbits = 16
+	bits = bits Mod maxbits
+	If bits Then
+		Dim overflowmask As Integer
+		If x And twotothe(bits - 1) Then
+			overflowmask = &h8000
+			x= x Xor twotothe( bits - 1)
+		End If
+		If x And &h8000 Then
+			BitRotRightI = ((x And mask( bits)) *  twotothe( maxbits - bits)) Or overflowmask Or ((x And &h7FFF) \twotothe( bits)) Or twotothe( maxbits- bits -1)
+		Else
+			BitRotRightI = ((x And mask( bits)) *  twotothe( maxbits - bits)) Or overflowmask Or ((x) \twotothe( bits))
+		End If
+	Else
+		BitRotRightI = x
+	End If
+End Function
+'++LotusScript Development Environment:2:1:BitRotRightL:1:8
+Function BitRotRightL( Byval x As Long, Byval bits As Integer) As Long
+	'Rotates the bits in a long right by the number specified
+	'Note: bits must be positive
+	Const maxbits = 32
+	bits = bits Mod maxbits
+	If bits Then		
+		Dim overflowmask As Long
+		If x And twotothe(bits - 1) Then
+			overflowmask = &h80000000&
+			x= x Xor twotothe( bits - 1)
+		End If
+		If x And &h80000000& Then
+			BitRotRightL = ((x And mask( bits)) *  twotothe( maxbits - bits)) Or overflowmask Or ((x And &h7FFFFFFF&) \twotothe( bits)) Or twotothe( maxbits- bits -1)
+		Else
+			BitRotRightL = ((x And mask( bits)) *  twotothe( maxbits - bits)) Or overflowmask Or ((x) \twotothe( bits))
+		End If
+	Else
+		BitRotRightL = x
+	End If
+End Function
+'++LotusScript Development Environment:2:1:BitRotLeftI:1:8
+Function BitRotLeftI( Byval x As Integer, Byval bits As Integer) As Integer
+	'Rotates the bits in a integer left by the number specified
+	'Note: bits must be positive
+	Const maxbits = 16
+	bits = bits Mod maxbits
+	If bits Then
+		Dim overflowmask As Integer
+		If x And twotothe( maxbits -1 - bits) Then
+			overflowmask = &h8000
+			x= x Xor twotothe( maxbits - 1- bits)
+		End If
+		If x And &h8000 Then
+			BitRotLeftI = ((x And mask(maxbits - bits)) *  twotothe( bits)) Or overflowmask Or ((x And &h7FFF) \twotothe( maxbits - bits)) Or twotothe( bits -1)
+		Else
+			BitRotLeftI = ((x And mask(maxbits - bits)) *  twotothe( bits)) Or overflowmask Or ((x) \twotothe( maxbits - bits))
+		End If
+	Else
+		BitRotLeftI = x
+	End If
+End Function
+'++LotusScript Development Environment:2:1:BitRotLeftL:1:8
+Function BitRotLeftL( Byval x As Long, Byval bits As Integer) As Long
+	'Rotates the bits in a long left by the number specified
+	'Note: bits must be positive
+	Const maxbits = 32
+	bits = bits Mod maxbits
+	If bits Then
+		Dim overflowmask As Long
+		If x And twotothe( maxbits -1 - bits) Then
+			overflowmask = &h80000000&
+			x= x Xor twotothe( maxbits - 1- bits)
+		End If
+		If x And &h80000000& Then
+			BitRotLeftL = ((x And mask(maxbits - bits)) *  twotothe( bits)) Or overflowmask Or ((x And &h7FFFFFFF&) \twotothe( maxbits - bits)) Or twotothe( bits -1)
+		Else
+			BitRotLeftL = ((x And mask(maxbits - bits)) *  twotothe( bits)) Or overflowmask Or ((x) \twotothe( maxbits - bits))
+		End If
+	Else
+		BitRotLeftL = x
+	End If
+End Function

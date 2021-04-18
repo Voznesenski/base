@@ -1,0 +1,1588 @@
+'++LotusScript Development Environment:2:5:(Options):0:74
+Option Public
+Option Declare
+
+Use "DWFODLib"
+Use "VersionAdapter"  '"fbyte"
+Use "CustomView_Interface_UI"
+
+'++LotusScript Development Environment:2:5:(Forward):0:1
+Declare Class ODStoreUI As ODStore
+Declare Public Class Person As ODObj
+Declare Public Class PositionObj As ODObj
+
+'++LotusScript Development Environment:2:5:(Declarations):0:10
+Class ODStoreUI As ODStore
+	Private ws As NotesUIWorkspace
+	
+	Sub new(dbInfo As String, ErrorStr As String)
+		ErrorStr = ""
+		Set ws = New NotesUIWorkspace
+	End Sub
+	
+	Function PickObject(ObjType As String, multi As Boolean, Title As String, col As NotesDocumentCollection, ErrorStr As String) As Integer
+		On Error Goto errh
+		
+		Dim View As NotesView
+		Dim ViewName As String
+		Dim Promt As String
+		
+		Dim s As New NotesSession, DWFODSelCategory As String, hasCategory As Integer
+		ErrorStr = ""
+		
+		'<patch author="Ramazan Salpagarov" date="21.04.2016">
+		' переделал, чтобы пользователь каждый раз лазил в базу ОД, а не брал из notes.ini
+		
+		%REM <TLD-2831 Включить наследование элементов дизайна из версии 1> получение OD через VersionAdapter 
+		Dim sm As Servicesmanager, fBaseDatabases As Fbase_databasesservice, dbDirectory As NotesDatabase
+		Set sm = getServicesManager()
+		Set fBaseDatabases = sm.base.databases
+		Set dbDirectory = fBaseDatabases.get( "tps.core.directory" )
+		%ENDREM
+		Dim dbDirectory As NotesDatabase
+		Set dbDirectory = getODdb
+		'</TLD-2831>
+		
+		If ( dbDirectory Is Nothing ) Then
+			DWFODSelCategory = s.GetEnvironmentString("DWFODSelCategory")
+		Else
+			Dim nn As New NotesName( s.Username ), key As String
+			key = nn.Canonical
+			
+			Dim vwUsers As NotesView, docPerson As NotesDocument
+			Set vwUsers = dbDirectory.Getview( "unid" )
+			Set docPerson = vwUsers.Getdocumentbykey( key, True )
+			If ( docPerson Is Nothing ) Then
+				DWFODSelCategory = s.GetEnvironmentString("DWFODSelCategory")
+			Else
+				Dim ODSel As String, ODSelVal As String
+				ODSel = docPerson.SelectionSelect(0)
+				Select Case LCase(ODSel)
+				Case "0"
+					DWFODSelCategory = docPerson.UserServer(0) 
+				Case "1"
+					DWFODSelCategory = docPerson.SelectionSelectFrom(0)
+				Case "2"
+					DWFODSelCategory = "Full"
+			End Select
+			End If
+		End If
+		'</patch>
+		
+		Select Case ObjType
+			Case "User"
+				'ViewName = VIEW_OD_SELECT_USER
+				If ( DWFODSelCategory <> "" ) Then
+					If ( LCase(DWFODSelCategory) <> LCase("Full") ) Then
+						ViewName = VIEW_OD_SELECT_CATEGORY_USER
+						hasCategory = 1	
+					Else
+						ViewName = VIEW_OD_SELECT_USER
+					End If 
+				Else
+					ViewName = VIEW_OD_SELECT_USER		
+				End If
+				If (Title = "") Then
+					Title = "Список пользователей"	
+				End If
+				Promt = "Выберите пользователя(ей)"
+			Case "Pos"
+				'ViewName = VIEW_OD_SELECT_POS_BY_HRRCH
+				If ( DWFODSelCategory <> "" ) Then
+					If ( LCase(DWFODSelCategory) <> LCase("Full") ) Then
+						'ViewName = VIEW_OD_SELECT_CATEGORY_POS_BY_HRRCH
+						ViewName = VIEW_OD_SELECT_CATEGORY_POS_BY_USER 
+						hasCategory = 1
+					Else
+						'ViewName = VIEW_OD_SELECT_POS_BY_HRRCH
+						ViewName = VIEW_OD_SELECT_POS_BY_USER
+					End If
+				Else
+					'ViewName = VIEW_OD_SELECT_POS_BY_HRRCH
+					ViewName = VIEW_OD_SELECT_POS_BY_USER
+				End If
+				If (Title = "") Then
+					Title = "Список должностей"	
+				End If
+				Promt = "Выберите должность(и)"
+			Case "PosWithVac"
+				If ( DWFODSelCategory <> "" ) Then
+					If ( LCase(DWFODSelCategory) <> LCase("Full") ) Then
+						ViewName = "SelectPositionByHirerarchyWithVacancies.Category"	' VIEW_OD_SELECT_CATEGORY_POS_VAC_BY_HRRCH 
+						hasCategory = 1
+					Else
+						ViewName = "SelectPositionByUserNameWithVacancies"				' VIEW_OD_SELECT_POS_VAC_BY_HRRCH
+					End If
+				Else
+					ViewName = "SelectPositionByUserNameWithVacancies"					' VIEW_OD_SELECT_POS_VAC_BY_HRRCH
+				End If
+				If (Title = "") Then
+					Title = "Список должностей"	
+				End If
+				Promt = "Выберите должность(и)"
+			Case "Dep"
+				ViewName = VIEW_OD_SELECT_DEP_BY_HRRCH
+				If (Title = "") Then
+					Title = "Список подразделений"	
+				End If
+				Promt = "Выберите подразделение"
+			Case "Group"
+				ViewName = VIEW_OD_SELECT_GROUP
+				If (Title = "") Then
+					Title = "Список функ. групп"	
+				End If
+				Promt = "Выберите функ. группу"
+			Case "Frequently"
+				ViewName = "FrequentlyUsed"	
+				If (Title = "") Then
+					Title = "Список часто используемых"	
+				End If
+				Promt = "Выберите часто используемые"
+			
+				Call getFrequentlyUsed()
+				
+		End Select
+		
+		If me.db Is Nothing Then Print "1111111111111111"
+		
+		Set View = Me.db.GetView(ViewName)
+		If (View Is Nothing) Then
+			Msgbox {В базе "Орг. директории" не нейдено представление "} & ViewName & {"}, 16, ERR_MSG_TITLE
+			Exit Function
+		End If
+					
+		If (objType <> "Frequently") Then
+			Call View.Refresh
+			View.AutoUpdate = False
+		End If
+		
+		'Set col = ws.PickListCollection(PICKLIST_CUSTOM, multi, Me.db.Server, Me.db.FilePath, ViewName, Title, Promt)
+		If ( hasCategory = 1 ) Then
+			Set col = ws.PickListCollection(PICKLIST_CUSTOM, multi, Me.db.Server, Me.db.FilePath, ViewName, Title, Promt, DWFODSelCategory)
+		Else
+			Set col = ws.PickListCollection(PICKLIST_CUSTOM, multi, Me.db.Server, Me.db.FilePath, ViewName, Title, Promt)	
+		End If
+
+		If (col Is Nothing) Then
+			PickObject = 0
+			Exit Function
+		End If
+		If (col.Count = 0) Then
+			PickObject = 0
+			Exit Function
+		End If
+		
+		Call setFrequentlyUsed(col)
+		
+		PickObject = 1
+		
+		Exit Function
+errh:
+		ErrorStr = Error$ & {. Error # } & Cstr(Err) & { on line # } & Cstr(Erl) & { in (ODUIPickObject) "DWFODLib.UI" class}
+		Resume endh
+endh:
+	End Function
+	
+	
+	Function setFrequentlyUsed(col As NotesDocumentCollection) As Integer
+		On Error GoTo errh
+		
+		Const RESET_TIME = 2592000
+		Const LIST_SIZE = 50
+		
+		Dim s As New NotesSession, key As String
+		
+		Dim dbDirectory As NotesDatabase
+		Set dbDirectory = getODdb
+		
+		If (Not dbDirectory Is Nothing ) Then
+			
+			Dim viewF As NotesView, docF As NotesDocument
+			Set viewF = dbDirectory.Getview("frequentlyUsedByUser")
+			
+			If (Not viewF Is Nothing) Then
+				key = s.Username
+				Set docF = viewF.Getdocumentbykey(key, True)
+				
+				If (docF Is Nothing) Then
+					If ((dbDirectory.QueryAccessPrivileges(s.UserName) And DBACL_WRITE_PUBLIC_DOCUMENTS) > 0) Then
+						Set docF = dbDirectory.Createdocument()
+						Call docF.ReplaceItemValue("Form", "FrequentlyUsed")
+						Call docF.ReplaceItemValue("id", docF.Universalid)
+						Call docF.ReplaceItemValue("domain", "tps.core.directory.frequentlyused")
+						Call docF.ReplaceItemValue("User", s.Username)
+						Call docF.Replaceitemvalue("DWF$Authors", Split("[Admin]," & s.Username & "," & dbDirectory.Server , ","))
+						Call docF.Computewithform(False, False)
+						Call docF.Save(True, False)
+					End If
+				End If
+				
+				If (Not docF Is Nothing) Then
+					Dim doc As NotesDocument, nowDate As Variant, nowDT As NotesDateTime, fUsedDT As NotesDateTime
+					nowDate = Now()
+					Set nowDT = New NotesDateTime(nowDAte)
+					
+					Dim minPos As Long, minCount As Long, minDate As Variant
+					Dim elements As Long, i As Long
+					elements = UBound(docF.frequentlyUsedID)
+					
+					ReDim fUsedID(elements) As String
+					ReDim fUsedCount(elements) As Long
+					ReDim fUsedDate(elements) As Variant
+					
+					If (docF.frequentlyUsedID(0) <> "") Then
+						minPos = 0
+						minCount = docF.frequentlyUsedCount(0)
+						minDate = docF.frequentlyUsedDate(0)
+						
+						For i = 0 To elements
+							If (docF.frequentlyUsedID(i) <> "") Then	
+								fUsedID(i) = docF.frequentlyUsedID(i)
+								fUsedDate(i) = docF.frequentlyUsedDate(i)
+								
+								Set fUsedDT = New NotesDateTime(fUsedDate(i))
+								
+								If (nowDT.Timedifference(fUsedDT) > RESET_TIME) Then
+									fUsedCount(i) = 1
+								Else
+									fUsedCount(i) = docF.frequentlyUsedCount(i)
+								End If
+								
+								If (fUsedCount(i) < minCount) Then
+									minCount = fUsedCount(i)
+									minDate = fUsedDate(i)
+									minPos = i
+								ElseIf (fUsedCount(i) = minCount) Then
+									
+									If (minDate > fUsedDate(i)) Then
+										minCount = fUsedCount(i)
+										minDate = fUsedDate(i)
+										minPos = i
+									End If
+									
+								End If
+							End If
+						Next i
+						
+					End If
+					
+					
+					Set doc = col.Getfirstdocument()
+					While (Not doc Is Nothing) 
+						Dim pos As Variant
+						pos = ArrayGetIndex(fUsedID, doc.customid(0))
+						
+						If (Not IsNull(pos)) Then
+							fUsedCount(pos) = fUsedCount(pos) + 1
+							fUsedDate(pos) = nowDate
+						Else
+							If (elements < (LIST_SIZE - 1)) Then
+								If (fUsedID(elements) <> "") Then
+									elements = elements + 1
+									ReDim Preserve fUsedID(elements)
+									ReDim Preserve fUsedCount(elements)
+									ReDim Preserve fUsedDate(elements)
+								End If
+								
+								fUsedID(elements) = doc.customid(0)
+								fUsedCount(elements) = 1
+								fUsedDate(elements) = nowDate
+							Else
+								fUsedID(minPos) = doc.customid(0)
+								fUsedCount(minPos) = 1
+								fUsedDate(minPos) = nowDate
+							End If
+						End If	
+						
+						Set doc = col.Getnextdocument(doc)
+					Wend
+					
+					Call docF.Replaceitemvalue("frequentlyUsedID", fUsedID)
+					Call docF.Replaceitemvalue("frequentlyUsedCount", fUsedCount)
+					Call docF.Replaceitemvalue("frequentlyUsedDate", fUsedDate)
+					
+					Call docF.Save(True, False)
+					
+				End If
+			End If
+			
+		End If
+		
+		Exit Function
+errh:
+		MsgBox Error$ & {. Error # } & CStr(Err) & { on line # } & CStr(Erl) & { in (setFrequentlyUsed) "ODStoreUI" class}
+		Resume endh
+endh:
+	End Function
+	
+	
+	Function getFrequentlyUsed() As Integer
+		On Error GoTo errh
+		On Error 4091 Resume Next
+		
+		Dim s As New NotesSession, key As String
+		Dim dbDirectory As NotesDatabase
+		Set dbDirectory = getODdb
+		
+		If (Not dbDirectory Is Nothing ) Then
+			Dim viewF As NotesView, docF As NotesDocument
+			Set viewF = dbDirectory.Getview("frequentlyUsedByUser")
+			
+			If (Not viewF Is Nothing) Then
+				key = s.Username
+				Set docF = viewF.Getdocumentbykey(key, True)
+				
+				If (Not docF Is Nothing) Then
+					Dim elements As Long, i As Long
+					elements = UBound(docF.frequentlyUsedID)
+					
+					If (docF.frequentlyUsedID(0) <> "") Then
+						Dim viewFUsed As NotesView
+						Set viewFUsed = dbDirectory.Getview("FrequentlyUsed")
+						
+						If (Not viewFUsed Is Nothing) Then
+							If (Not IsEmpty(viewFUsed.readers)) Then
+								Dim nve As NotesViewEntryCollection
+								Set nve = viewFUsed.Allentries
+								Call nve.Removeallfromfolder("FrequentlyUsed")
+								
+								Dim col As NotesDocumentCollection
+								Set col = dbDirectory.createDocumentCollection()
+								Dim docOD As NotesDocument
+								
+								For i = 0 To elements
+									Set docOD = dbDirectory.Getdocumentbyunid(docF.frequentlyUsedID(i))
+
+									If (Not docOD Is Nothing) Then
+										Call col.Adddocument(docOD)
+										Delete docOD
+									End If
+								Next i
+								
+								Call col.Putallinfolder("FrequentlyUsed")
+								
+							End If
+						End If
+						
+					End If
+					
+				End If
+			End If
+		End If
+
+		
+		Exit Function
+errh:
+		MsgBox Error$ & {. Error # } & CStr(Err) & { on line # } & CStr(Erl) & { in (getFrequentlyUsed) "ODStoreUI" class}
+		Resume endh
+endh:
+	End Function
+	
+	
+	Function CheckItemIsReplace(doc As NotesDocument, ItemPrefix As String, ErrorStr As String) As Integer
+		On Error Goto errh
+		
+		Dim Item As NotesItem
+		Dim v As Variant
+		Dim answer As Integer
+		
+		ErrorStr = ""
+		Set Item = doc.GetFirstItem(ItemPrefix & "ObjID")
+		If Not (Item Is Nothing) Then
+			v = Item.Values
+			If (v(0) <> "") Then
+				answer = Msgbox({Заменить содержимое поля?}, 3+32, "Внимание!")
+				Select Case answer
+				Case 2 : 'cancel
+					CheckItemIsReplace = -1
+					Exit Function
+				Case 6 : 'yes
+					CheckItemIsReplace = 6
+				Case 7 : 'no
+					CheckItemIsReplace = 7
+			End Select			
+			End If
+		End If
+		
+		Exit Function
+errh:
+		ErrorStr = Error$ & {. Error # } & Cstr(Err) & { on line # } & Cstr(Erl) & { in (CheckItemIsReplace) "DWFODLib.UI" class }
+		Resume endh
+endh:
+	End Function
+	
+	
+	Function AddODObj(doc As NotesDocument, multi As Boolean, ItemPrefix As String, ErrorStr As String) As Integer
+		On Error Goto errh
+		
+		Dim db As NotesDatabase
+		Dim v As Variant
+		Dim docTemp As NotesDocument
+		Dim colOD As NotesDocumentCollection
+		Dim docOD As NotesDocument
+		Dim ODObj As ODObj
+		Dim i As Integer
+		
+		ErrorStr = ""
+		Set db = doc.ParentDatabase
+		Set docTemp = db.CreateDocument
+		If Not (ws.DialogBox("DWF103", True, True, False, False, False, False, db.Title, docTemp, True, False, True)) Then
+			Exit Function
+		End If
+		
+		If (Me.PickObject(Cstr(docTemp.List(0)), multi, "", colOD, ErrorStr) <>1) Then
+			Exit Function
+		End If
+		
+		v = Me.CheckItemIsReplace(doc, ItemPrefix, ErrorStr)
+		If (ErrorStr <> "") Then
+			Exit Function
+		End If
+		Select Case v
+			Case -1 : 'cancel
+				Exit Function
+			Case 6 : 'yes
+				If (Me.ClearItem(doc, ItemPrefix, ErrorStr) <> 1) Then
+					Exit Function
+				End If
+			Case 7 : 'no
+				'nothing
+		End Select
+		
+		Set docOD = colOD.GetFirstDocument
+		While (Not (docOD Is Nothing))
+			Set ODObj = New ODObj
+			If (ODObj.Init(docOD, ErrorStr) <>1) Then
+				Exit Function
+			End If
+			
+			If (ODObj.WriteInAppend(doc, ItemPrefix, ErrorStr) <>1) Then
+				Exit Function
+			End If
+			Set docOD = colOD.GetNextDocument(docOD)
+		Wend
+		
+		AddODObj = 1		
+		Exit Function
+errh:
+		Msgbox Error$ & {. Error # } & Cstr(Err) & { on line # } & Cstr(Erl) & { in (AddODObj) "ODStoreUI" class}
+		Resume endh
+endh:
+	End Function
+	
+	Function AddODObjBySetType(doc As NotesDocument, ODObjType As String, multi As Boolean, ItemPrefix As String, ErrorStr As String) As Integer
+		On Error Goto errh
+		
+		ErrorStr = ""
+
+		Dim v As Variant
+		Dim colOD As NotesDocumentCollection
+		Dim docOD As NotesDocument
+		Dim ODObj As ODObj
+		Dim i As Integer
+		Dim ODObjTypeList As Variant
+		Dim index As Variant
+		
+		
+		Redim ODObjTypeList(4) As Variant
+		ODObjTypeList(0) = "User"
+		ODObjTypeList(1) = "Pos"
+		ODObjTypeList(2) = "Dep"
+		ODObjTypeList(3) = "Group"
+		ODObjTypeList(4) = "PosWithVac"
+		index = Arraygetindex(ODObjTypeList, ODObjType)
+		If (Isnull(index)) Then
+			ErrorStr = {Неверный тип объекта Орг. директории}
+			Exit Function
+		End If
+		
+		If (Me.PickObject(ODObjType, multi, "", colOD, ErrorStr) <>1) Then
+			Exit Function
+		End If
+		
+		v = Me.CheckItemIsReplace(doc, ItemPrefix, ErrorStr)
+		If (ErrorStr <> "") Then
+			Exit Function
+		End If
+		Select Case v
+			Case -1 : 'cancel
+				Exit Function
+			Case 6 : 'yes
+				If (Me.ClearItem(doc, ItemPrefix, ErrorStr) <> 1) Then
+					Exit Function
+				End If
+			Case 7 : 'no
+				'nothing
+		End Select
+		
+		Set docOD = colOD.GetFirstDocument
+		While (Not (docOD Is Nothing))
+			Set ODObj = New ODObj
+			If (ODObj.Init(docOD, ErrorStr) <>1) Then
+				Exit Function
+			End If
+			
+			If (ODObj.WriteInAppend(doc, ItemPrefix, ErrorStr) <>1) Then
+				Exit Function
+			End If
+			Set docOD = colOD.GetNextDocument(docOD)
+		Wend
+		
+		
+		AddODObjBySetType = 1
+		
+		Exit Function
+errh:
+		Msgbox Error$ & {. Error # } & Cstr(Err) & { on line # } & Cstr(Erl) & { in (AddODObjBySetType) "ODStoreUI" class}
+		Resume endh
+endh:
+	End Function
+	
+	
+	Function AddODObjBySetTypes(doc As NotesDocument, OdObjTypes As Variant, multi As Boolean, ItemPrefix As String, ErrorStr As String) As Integer
+		On Error GoTo errh
+		
+		Dim db As NotesDatabase
+		Dim v As Variant
+		Dim docTemp As NotesDocument
+		Dim colOD As NotesDocumentCollection
+		Dim docOD As NotesDocument
+		Dim ODObj As ODObj
+		Dim i As Integer
+		
+		ErrorStr = ""
+		Set db = doc.ParentDatabase
+		Set docTemp = db.CreateDocument
+		Call docTemp.replaceItemValue("select_values", odObjTypes)
+		If Not (ws.DialogBox("DWF103", True, True, False, False, False, False, db.Title, docTemp, True, False, True)) Then
+			Exit Function
+		End If
+		
+		AddODObjBySetTypes = me.AddODObjBySetType(doc, docTemp.getItemValue("List")(0), Multi, Itemprefix, Errorstr)
+
+		
+		Exit Function
+errh:
+		MsgBox Error$ & {. Error # } & CStr(Err) & { on line # } & CStr(Erl) & { in (AddODObj) "ODStoreUI" class}
+		Resume endh
+endh:
+	End Function
+	
+	
+	Function RemoveODObj(doc As NotesDocument, multi As Boolean, ItemPrefix As String, ErrorStr As String) As Integer
+		On Error Goto errh
+		
+		Dim db As NotesDatabase
+		Dim v As Variant
+		Dim docTemp As NotesDocument
+		Dim ObjAccess As Variant, ObjID As Variant, ObjName As Variant, ObjPath As Variant
+		Dim i As Integer
+		Dim Form As String
+		
+		ErrorStr = ""
+		Set db = doc.ParentDatabase
+		v = Me.GetObjectValueByItem(doc, ItemPrefix, ObjAccess, ObjID, ObjName, ObjPath, ErrorStr)
+		If (ErrorStr <> "") Then
+			Msgbox ErrorStr, 48, ERR_MSG_TITLE
+			Exit Function
+		End If
+		If (v = 0) Then
+			Exit Function
+		End If
+		
+		If (Ubound(ObjID) = 0) Then
+			Call doc.ReplaceItemValue(ItemPrefix & "ObjAccess", 	"")
+			Call doc.ReplaceItemValue(ItemPrefix & "ObjID", 		"")
+			Call doc.ReplaceItemValue(ItemPrefix & "ObjName", 	"")
+			Call doc.ReplaceItemValue(ItemPrefix & "ObjPath", 	"")
+			RemoveODObj = 1
+			Exit Function
+		End If
+		
+		Set docTemp = db.CreateDocument
+		Redim v(0) As String
+		For i=0 To Ubound(ObjID)
+			If (v(0) <> "") Then
+				Redim Preserve v(Ubound(v)+1) As String
+			End If
+			v(Ubound(v)) = ObjName(i) & {|} & ObjID(i)
+		Next
+		docTemp.Members = v
+		docTemp.promt = "Выберите значение для удаления"
+		
+		If (multi = True) Then
+			Form = "DWF105"
+		Else
+			Form = "DWF104"
+		End If
+		
+		If Not (ws.DialogBox(Form, True, True, False, False, False, False, db.Title, docTemp, True, False, True)) Then
+			Exit Function
+		End If
+		If (docTemp.List(0) = "") Then
+			Exit Function
+		End If
+		
+		v = docTemp.List
+		Forall v1 In v
+			For i=0 To Ubound(ObjID)
+				If (Lcase(v1) = Lcase(ObjID(i))) Then
+					ObjAccess(i)	= ""
+					ObjID(i) 		= ""
+					ObjName(i) 	= ""
+					ObjPath(i) 	= ""
+				End If
+			Next
+		End Forall
+		ObjAccess	= Fulltrim(ObjAccess)
+		ObjID 	= Fulltrim(ObjID)
+		ObjName 	= Fulltrim(ObjName)
+		ObjPath 	= Fulltrim(ObjPath)
+		
+		If (Me.WriteInReplaceByObjValue(doc, ItemPrefix, ObjAccess, ObjID, ObjName, ObjPath, ErrorStr) <> 1) Then
+			If (ErrorStr <> "") Then
+				Msgbox ErrorStr, 48, ERR_MSG_TITLE
+			End If
+			Exit Function
+		End If
+		
+		
+		RemoveODObj = 1
+		
+		Exit Function
+errh:
+		Msgbox Error$ & {. Error # } & Cstr(Err) & { on line # } & Cstr(Erl) & { in (RemoveODObj) "ODStoreUI" class}
+		Resume endh
+endh:
+	End Function	
+	
+	
+	Function WriteInReplaceByObjValue(_
+		doc As NotesDocument,_
+		ItemPrefix As String,_
+		ObjAccess As Variant, ObjID As Variant, ObjName As Variant, ObjPath As Variant, ErrorStr As String) As Integer
+		On Error Goto errh
+		
+		ErrorStr = ""
+		Call doc.ReplaceItemValue(ItemPrefix & "ObjAccess", 	ObjAccess)
+		Call doc.ReplaceItemValue(ItemPrefix & "ObjID", 		ObjID)
+		Call doc.ReplaceItemValue(ItemPrefix & "ObjName", 	ObjName)
+		Call doc.ReplaceItemValue(ItemPrefix & "ObjPath", 	ObjPath)
+		
+		WriteInReplaceByObjValue = 1
+		
+		Exit Function
+errh:
+		ErrorStr = Error$ & {. Error # } & Cstr(Err) & { on line # } & Cstr(Erl) & { in (WriteInReplaceByObjValue) "UIProcessStore" class}
+		Resume endh
+endh:
+	End Function
+	
+	
+	Function GetObjectValueByItem(_
+		doc As NotesDocument,_
+		ItemPrefix As String,_
+		ObjAccess As Variant, ObjID As Variant, ObjName As Variant, ObjPath As Variant, ErrorStr As String) As Integer
+		On Error Goto errh
+		
+		Dim Item As NotesItem
+		Dim v As Variant
+		
+		ErrorStr = ""
+		If (ItemPrefix = "") Then
+			Print "Не задан префикс поля со значением"
+			GetObjectValueByItem = -1
+			Exit Function
+		End If
+		
+		Set Item = doc.GetFirstItem(ItemPrefix & "ObjAccess")
+		If Not (Item Is Nothing) Then
+			v = Item.Values
+			If (v(0) = "") Then
+				GetObjectValueByItem = 0
+				Exit Function
+			End If
+			ObjAccess = v
+		Else
+			GetObjectValueByItem = 0
+			Exit Function
+		End If
+		
+		Set Item = doc.GetFirstItem(ItemPrefix & "ObjID")
+		If Not (Item Is Nothing) Then
+			v = Item.Values
+			If (v(0) = "") Then
+				GetObjectValueByItem = 0
+				Exit Function
+			End If
+			ObjID = v
+		Else
+			GetObjectValueByItem = 0
+			Exit Function
+		End If
+		
+		Set Item = doc.GetFirstItem(ItemPrefix & "ObjName")
+		If Not (Item Is Nothing) Then
+			v = Item.Values
+			If (v(0) = "") Then
+				GetObjectValueByItem = 0
+				Exit Function
+			End If
+			ObjName = v
+		Else
+			GetObjectValueByItem = 0
+			Exit Function
+		End If
+		
+		Set Item = doc.GetFirstItem(ItemPrefix & "ObjPath")
+		If Not (Item Is Nothing) Then
+			v = Item.Values
+			If (v(0) = "") Then
+				GetObjectValueByItem = 0
+				Exit Function
+			End If
+			ObjPath = v
+		Else
+			GetObjectValueByItem = 0
+			Exit Function
+		End If
+		
+		
+		GetObjectValueByItem = 1
+		
+		Exit Function
+errh:
+		ErrorStr = Error$ & {. Error # } & Cstr(Err) & { on line # } & Cstr(Erl) & { in (GetObjectValueByItem) "ODStoreUI" class}
+		Resume endh
+endh:	
+	End Function
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Function AddODObjGetChiefs( doc As NotesDocument, multi As Boolean, ItemPrefix As String, ErrorStr As String, byCurrentUser As Boolean, SourceItemname As String ) As Integer
+		On Error GoTo error_point
+		
+		ErrorStr = ""
+		Dim s As New NotesSession
+		Dim ODObj As ODObj, Person As New Person, Position As ODObj
+		
+		If ( byCurrentUser ) Then
+			Set ODObj = Me.GetObjByValue( s.UserName, ErrorStr )	
+		Else
+			If ( SourceItemname <> "" ) Then
+				If ( doc.HasItem( SourceItemname ) ) Then
+					Dim sourceVal As Variant
+					sourceVal = doc.Getitemvalue( SourceItemname )(0)
+					If ( CStr(sourceVal) <> "" ) Then
+						Set ODObj = Me.GetObjByValue( CStr(sourceVal), ErrorStr )
+						If ( ErrorStr <> "" ) Then
+							Error 1001, {Не удалость получить объект Орг. директории: } & ErrorStr
+						End If
+					Else 
+						Error 1001, {Поле '} & SourceItemname & {' в текущем документе пустое}
+					End If
+				Else
+					Error 1001, {В текущем документе нет поля '} & SourceItemname & {'}
+				End If
+			Else
+				Error 1001, { Variable 'ItemSource' is empty }
+			End If
+		End If
+		
+		If Not IsEmpty( ODObj ) Then
+			If Not ( ODObj Is Nothing ) Then
+				If ( Person.Init( ODObj.doc, ErrorStr ) = 1) Then
+					If ( ErrorStr = "" ) Then
+						Set Position = Person.GetUserPosition( ErrorStr )
+						If ( ErrorStr <> "" ) Then
+							Error 1001, ErrorStr
+						End If
+					Else
+						Error 1001, ErrorStr		
+					End If
+				Else
+					Error 1001, {Не удалось инициировать объект 'Person' по документу ( unid: } & ODObj.doc.Universalid & {; db path: } & ODObj.doc.Parentdatabase.Filepath & { )}
+				End If
+			Else
+				Error 1001, {Не удалось получить объект Орг.директории, относительно которого вычислять руководителей}
+			End If
+		Else
+			Error 1001, {Не удалось получить объект Орг.директории, относительно которого вычислять руководителей}
+		End If
+		
+		If Not ( Position Is Nothing ) Then
+			Dim viewODName As String, PathItemName As String
+			PathItemName = {PathWithCode}
+			viewODName = "(PositionByHirerarchyOnlyChiefs)" '{PositionByHirerarchy}
+			
+			Dim ObjPath As Variant, v As Variant
+			If ( Position.doc.HasItem( PathItemName ) ) Then
+				ObjPath = Position.doc.GetFirstItem( PathItemName ).Values
+				If ( ObjPath(0) <> "" ) Then
+					
+					Dim ViewOD As NotesView
+					Set ViewOD = Me.db.GetView( viewODName )
+					If Not ( ViewOD Is Nothing ) Then
+						Call ViewOD.Refresh()
+						ViewOD.AutoUpdate = False
+						
+						Dim colOD As NotesDocumentCollection, docOD As NotesDocument, docTest As NotesDocument
+						Dim colODtemp As NotesDocumentCollection
+						Dim key As String
+						
+						v = Join(ObjPath, {\})
+						If (InStr(v, {\}) =0) Then
+							key = v & {\}
+						Else
+							key = v
+						End If	
+						
+						'------------------------------------
+						Set colOD = ViewOD.GetAllDocumentsByKey("xxx", True)
+						'------------------------------------
+						Call colOD.AddDocument( Position.doc )
+						
+						'руководители ветки
+						Do While (InStr(key, {\}) <> 0)
+							Set colODtemp = ViewOD.GetAllDocumentsByKey( key, True )
+							If ( colODtemp.Count <> 0 ) Then
+								Set docOD = colODtemp.GetFirstDocument
+								While (Not (docOD Is Nothing))
+									Set docTest = colOD.GetDocument(docOD)
+									If ( docTest Is Nothing ) Then
+										'------------------------------------
+										Call colOD.AddDocument(docOD)
+										'------------------------------------
+									End If
+									Set docOD = colODtemp.GetNextDocument(docOD)
+								Wend
+							End If
+							key = StrLeftBack(key, {\})
+						Loop
+						'------------------------------------------------------------------------
+						'функ. руководители
+						viewODName = {(FunctionallinksByFromObjAccess)}
+						Set ViewOD = Me.db.GetView( viewODName )
+						If Not ( ViewOD Is Nothing ) Then
+							Call ViewOD.Refresh()
+							ViewOD.AutoUpdate = False
+							
+							key = Position.ObjAccess
+							Set colODtemp = ViewOD.GetAllDocumentsByKey( key, True )		
+							If ( colODtemp.Count <> 0 ) Then
+								
+								Dim docFunctLink As NotesDocument
+								Set docFunctLink = colODtemp.GetFirstDocument
+								While (Not (docFunctLink Is Nothing))
+									
+									v = docFunctLink.Getitemvalue("ToObjAccess")
+									If ( v(0) <> "" ) Then
+										Set ODObj = Me.GetObjByValue( CStr(v(0)), ErrorStr )
+										If ( ErrorStr = "" ) Then
+											If ( Not ODObj Is Nothing ) Then 
+												Set docTest = colOD.GetDocument(ODObj.doc)
+												If ( docTest Is Nothing ) Then
+													'------------------------------------
+													Call colOD.AddDocument( ODObj.doc )
+													'------------------------------------
+												End If
+											End If
+										Else
+											Error 1001, ErrorStr
+										End If
+									End If
+									
+									v = docFunctLink.Getitemvalue("To_secondaryObjAccess")
+									If ( v(0) <> "" ) Then
+										ForAll xObjAccess In v
+											If ( xObjAccess <> "" ) Then
+												Set ODObj = Me.GetObjByValue( CStr(xObjAccess), ErrorStr )
+												If ( ErrorStr = "" ) Then
+													If ( Not ODObj Is Nothing ) Then 
+														Set docTest = colOD.GetDocument(ODObj.doc)
+														If ( docTest Is Nothing ) Then
+															'------------------------------------
+															Call colOD.AddDocument( ODObj.doc )
+															'------------------------------------
+														End If
+													End If 
+												Else
+													Error 1001, ErrorStr
+												End If	
+											End If
+										End ForAll
+									End If
+									
+									
+									Set docFunctLink = colODtemp.GetNextDocument(docFunctLink)
+								Wend
+							End If
+						End If
+						'------------------------------------------------------------------------
+						Dim coll_d As documentcollection
+						Set coll_d = CustomView_PickCollection(_
+						colOD, 0, multi, Me.db.Server, Me.db.FilePath, "PositionByHirerarchy", "Список руководителей", "Выберите руководителя", "")	
+						If ( Not coll_d Is Nothing ) Then
+							
+							v = Me.CheckItemIsReplace(doc, ItemPrefix, ErrorStr)
+							If ( ErrorStr <> "" ) Then
+								Exit Function
+							End If
+							Select Case v
+							Case -1 : 'cancel
+								Exit Function
+							Case 6 : 'yes
+								If ( Me.ClearItem( doc, ItemPrefix, ErrorStr ) <> 1 ) Then
+									Exit Function
+								End If
+							Case 7 : 'no
+								'nothing
+						End Select
+							
+							
+							Set docOD = coll_d.GetFirstDocument
+							While ( Not ( docOD Is Nothing ) )
+								
+								Set ODObj = New ODObj
+								If (ODObj.Init(docOD, ErrorStr) <>1) Then
+									Exit Function
+								End If
+								
+								If (ODObj.WriteInAppend(doc, ItemPrefix, ErrorStr) <>1) Then
+									Exit Function
+								End If
+
+								Set docOD = coll_d.GetNextDocument
+							Wend
+							
+							AddODObjGetChiefs = 1	
+							
+						End If
+					Else
+						ErrorStr = {В Орг. директории не найдено представление "} & ViewODName & {"}
+					End If
+				Else
+					Error 1001, {Пустое значение в поле "} & PathItemName & {" документа объекта Орг. директории "} & Position.ObjName & {"}
+				End If
+			Else
+				Error 1001, {В документе объекта Орг. директории "} & Position.ObjName & {" нет поля "} & PathItemName & {"}
+			End If
+		Else
+			Error 1001, {Не удалось получить объект 'Должность', относительно которого вычислять руководителей}
+		End If
+		
+		
+		Exit Function
+		
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Function
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Function AddODObjGetSubordinates( doc As NotesDocument, multi As Boolean, ItemPrefix As String, ErrorStr As String, byCurrentUser As Boolean, SourceItemname As String ) As Integer
+		On Error GoTo error_point
+		
+		ErrorStr = ""
+		Dim s As New NotesSession, ODObj As ODObj
+		Dim colOD As NotesDocumentCollection
+		Set colOD = Me.PickObjectGetSubordinates( doc, multi, Errorstr, Bycurrentuser, Sourceitemname )
+		If ( colOD.Count > 0 ) Then
+			
+			Dim coll_d As documentcollection
+			Set coll_d = CustomView_PickCollection(_
+			colOD, 0, multi, Me.db.Server, Me.db.FilePath, "PositionByHirerarchy", "Список должностей", "Выберите должность", "")	
+			If ( Not coll_d Is Nothing ) Then
+				
+				Dim v As Variant
+				v = Me.CheckItemIsReplace(doc, ItemPrefix, ErrorStr)
+				If ( ErrorStr <> "" ) Then
+					Exit Function
+				End If
+				Select Case v
+				Case -1 : 'cancel
+					Exit Function
+				Case 6 : 'yes
+					If ( Me.ClearItem( doc, ItemPrefix, ErrorStr ) <> 1 ) Then
+						Exit Function
+					End If
+				Case 7 : 'no
+					'nothing
+			End Select
+				
+				Dim docOD As NotesDocument
+				Set docOD = coll_d.GetFirstDocument
+				While ( Not ( docOD Is Nothing ) )
+					
+					Set ODObj = New ODObj
+					If (ODObj.Init(docOD, ErrorStr) <>1) Then
+						Exit Function
+					End If
+					
+					If (ODObj.WriteInAppend(doc, ItemPrefix, ErrorStr) <>1) Then
+						Exit Function
+					End If
+
+					Set docOD = coll_d.GetNextDocument
+				Wend
+				
+				AddODObjGetSubordinates = 1	
+				
+			End If
+		End If		
+		
+		Exit Function
+		
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Function
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Function PickObjectGetSubordinates_old( doc As NotesDocument, multi As Boolean, ErrorStr As String, byCurrentUser As Boolean, SourceItemname As String ) As NotesDocumentCollection
+		On Error GoTo error_point	
+		
+		Dim s As New NotesSession
+		Dim ODObj As ODObj, Person As New Person, Position As ODObj
+		
+		ErrorStr = ""
+		If ( byCurrentUser ) Then
+			Set ODObj = Me.GetObjByValue( s.UserName, ErrorStr )	
+		Else
+			If ( SourceItemname <> "" ) Then
+				If ( doc.HasItem( SourceItemname ) ) Then
+					Dim sourceVal As Variant
+					sourceVal = doc.Getitemvalue( SourceItemname )(0)
+					If ( CStr(sourceVal) <> "" ) Then
+						Set ODObj = Me.GetObjByValue( CStr(sourceVal), ErrorStr )
+						If ( ErrorStr <> "" ) Then
+							Error 1001, {Не удалость получить объект Орг. директории: } & ErrorStr
+						End If
+					Else 
+						Error 1001, {Поле '} & SourceItemname & {' в текущем документе пустое}
+					End If
+				Else
+					Error 1001, {В текущем документе нет поля '} & SourceItemname & {'}
+				End If
+			Else
+				Error 1001, { Variable 'ItemSource' is empty }
+			End If
+		End If
+		
+		If Not IsEmpty( ODObj ) Then
+			If Not ( ODObj Is Nothing ) Then
+				If ( Person.Init( ODObj.doc, ErrorStr ) = 1) Then
+					If ( ErrorStr = "" ) Then
+						Set Position = Person.GetUserPosition( ErrorStr )
+						If ( ErrorStr <> "" ) Then
+							Error 1001, ErrorStr
+						End If
+					Else
+						Error 1001, ErrorStr		
+					End If
+				Else
+					Error 1001, {Не удалось инициировать объект 'Person' по документу ( unid: } & ODObj.doc.Universalid & {; db path: } & ODObj.doc.Parentdatabase.Filepath & { )}
+				End If
+			Else
+				Error 1001, {Не удалось получить объект Орг.директории, относительно которого вычислять руководителей}
+			End If
+		Else
+			Error 1001, {Не удалось получить объект Орг.директории, относительно которого вычислять руководителей}
+		End If
+		
+		If Not ( Position Is Nothing ) Then
+			Dim viewODName As String, PathItemName As String
+			PathItemName = {PathWithCode}
+			viewODName = {(PositionByPathFull)}
+			
+			Dim ObjPath As Variant, v As Variant
+			If ( Position.doc.HasItem( PathItemName ) ) Then
+				ObjPath = Position.doc.GetFirstItem( PathItemName ).Values
+				If ( ObjPath(0) <> "" ) Then
+					
+					Dim ViewOD As NotesView
+					Set ViewOD = Me.db.GetView( viewODName )
+					If Not ( ViewOD Is Nothing ) Then
+						Call ViewOD.Refresh()
+						ViewOD.AutoUpdate = False
+						
+						Dim colOD As NotesDocumentCollection, docOD As NotesDocument, docTest As NotesDocument
+						Dim colODtemp As NotesDocumentCollection
+						Dim key As String
+						
+						'------------------------------------
+						Set colOD = ViewOD.GetAllDocumentsByKey("xxx", True)
+						'------------------------------------
+						Call colOD.AddDocument( Position.doc )
+						
+						If ( Position.doc.HasItem( "chief" ) ) Then
+							If ( Position.doc.Getitemvalue("chief")(0) = "1" ) Then ' если есть признак начальник
+								
+								'ищем в своем подразделении
+								key = Join( ObjPath, "-" )
+								Set colODtemp = ViewOD.GetAllDocumentsByKey( key )
+								Set docOD = colODtemp.Getfirstdocument()
+								While Not docOD Is Nothing
+									If ( docOD.Universalid <> Position.doc.Universalid ) Then
+										Set docTest = colOD.GetDocument(docOD)
+										If ( docTest Is Nothing ) Then
+											'------------------------------------
+											Call colOD.AddDocument(docOD)
+											'------------------------------------
+										End If
+									End If
+									Set docOD = colODtemp.Getnextdocument( docOD )
+								Wend
+								
+								'ищем ниже в подразделениях
+								key = key & "-"
+								Set colODtemp = ViewOD.GetAllDocumentsByKey( key )
+								Set docOD = colODtemp.Getfirstdocument()
+								While Not docOD Is Nothing 
+									If ( docOD.Universalid <> Position.doc.Universalid ) Then
+										Set docTest = colOD.GetDocument(docOD)
+										If ( docTest Is Nothing ) Then
+											'------------------------------------
+											Call colOD.AddDocument(docOD)
+											'------------------------------------
+										End If
+									End If
+									Set docOD = colODtemp.Getnextdocument( docOD )
+								Wend
+
+							End If
+						End If
+						'------------------------------------------------------------------------
+						'функ. подчиненные
+						viewODName = {(FunctionallinksByToAllObjAccess)}
+						Set ViewOD = Me.db.GetView( viewODName )
+						If Not ( ViewOD Is Nothing ) Then
+							Call ViewOD.Refresh()
+							ViewOD.AutoUpdate = False
+							
+							key = Position.ObjAccess
+							Set colODtemp = ViewOD.GetAllDocumentsByKey( key, True )		
+							If ( colODtemp.Count <> 0 ) Then
+								
+								Dim docFunctLink As NotesDocument
+								Set docFunctLink = colODtemp.GetFirstDocument
+								While (Not (docFunctLink Is Nothing))
+									
+									v = docFunctLink.Getitemvalue("FromObjAccess")
+									If ( v(0) <> "" ) Then
+										Set ODObj = Me.GetObjByValue( CStr(v(0)), ErrorStr )
+										If ( ErrorStr = "" ) Then
+											If ( Not ODObj Is Nothing ) Then 
+												Set docTest = colOD.GetDocument(ODObj.doc)
+												If ( docTest Is Nothing ) Then
+													'------------------------------------
+													Call colOD.AddDocument( ODObj.doc )
+													'------------------------------------
+												End If
+											End If
+										Else
+											Error 1001, ErrorStr
+										End If
+									End If
+									
+									Set docFunctLink = colODtemp.GetNextDocument(docFunctLink)
+								Wend
+							End If
+						End If
+						'------------------------------------------------------------------------
+						
+						
+						Set PickObjectGetSubordinates_old = colOD
+						
+						
+					Else
+						ErrorStr = {В Орг. директории не найдено представление "} & ViewODName & {"}
+					End If
+				Else
+					Error 1001, {Пустое значение в поле "} & PathItemName & {" документа объекта Орг. директории "} & Position.ObjName & {"}
+				End If
+			Else
+				Error 1001, {В документе объекта Орг. директории "} & Position.ObjName & {" нет поля "} & PathItemName & {"}
+			End If
+		Else
+			Error 1001, {Не удалось получить объект 'Должность', относительно которого вычислять руководителей}
+		End If
+		Exit Function
+		
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Function
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	' TPSRELD-56
+	' 12.11.2018	
+	Function PickObjectGetSubordinates( doc As NotesDocument, multi As Boolean, ErrorStr As String, byCurrentUser As Boolean, SourceItemname As String ) As NotesDocumentCollection
+		On Error GoTo error_point	
+		
+		Dim s As New NotesSession
+		Dim ODObj As ODObj, Person As New Person, Position As ODObj
+		
+		ErrorStr = ""
+		If ( byCurrentUser ) Then
+			Set ODObj = Me.GetObjByValue( s.UserName, ErrorStr )	
+		Else
+			If ( SourceItemname <> "" ) Then
+				If ( doc.HasItem( SourceItemname ) ) Then
+					Dim sourceVal As Variant
+					sourceVal = doc.Getitemvalue( SourceItemname )(0)
+					If ( CStr(sourceVal) <> "" ) Then
+						Set ODObj = Me.GetObjByValue( CStr(sourceVal), ErrorStr )
+						If ( ErrorStr <> "" ) Then
+							Error 1001, {Не удалость получить объект Орг. директории: } & ErrorStr
+						End If
+					Else 
+						Error 1001, {Поле '} & SourceItemname & {' в текущем документе пустое}
+					End If
+				Else
+					Error 1001, {В текущем документе нет поля '} & SourceItemname & {'}
+				End If
+			Else
+				Error 1001, { Variable 'ItemSource' is empty }
+			End If
+		End If
+		
+		If Not IsEmpty( ODObj ) Then
+			If Not ( ODObj Is Nothing ) Then
+				If ( Person.Init( ODObj.doc, ErrorStr ) = 1) Then
+					If ( ErrorStr = "" ) Then
+						If ODObj.myType <> "Pos" Then
+							Set Position = Person.GetUserPosition( ErrorStr )
+							If ( ErrorStr <> "" ) Then
+								Error 1001, ErrorStr
+							End If
+						Else
+							Set Position = 	ODObj
+						End If
+					Else
+						Error 1001, ErrorStr		
+					End If
+				Else
+					Error 1001, {Не удалось инициировать объект 'Person' по документу ( unid: } & ODObj.doc.Universalid & {; db path: } & ODObj.doc.Parentdatabase.Filepath & { )}
+				End If
+			Else
+				Error 1001, {Не удалось получить объект Орг.директории, относительно которого вычислять руководителей}
+			End If
+		Else
+			Error 1001, {Не удалось получить объект Орг.директории, относительно которого вычислять руководителей}
+		End If
+		
+		If Not ( Position Is Nothing ) Then
+			Dim viewODName As String, PathItemName As String
+			PathItemName = {PathWithCode}
+			viewODName = {(PositionByPathFull)}
+			
+			Dim ObjPath As Variant, v As Variant
+			If ( Position.doc.HasItem( PathItemName ) ) Then
+				ObjPath = Position.doc.GetFirstItem( PathItemName ).Values
+				If ( ObjPath(0) <> "" ) Then
+					
+					Dim ViewOD As NotesView
+					Set ViewOD = Me.db.GetView( viewODName )
+					If Not ( ViewOD Is Nothing ) Then
+						Call ViewOD.Refresh()
+						ViewOD.AutoUpdate = False
+						
+						Dim colOD As NotesDocumentCollection, docOD As NotesDocument, docTest As NotesDocument
+						Dim colODtemp As NotesDocumentCollection
+						Dim key As String
+						
+						'------------------------------------
+						Set colOD = ViewOD.GetAllDocumentsByKey("xxx", True)
+						'------------------------------------
+						Call colOD.AddDocument( Position.doc )
+						
+						If ( Position.doc.HasItem( "chief" ) ) Then
+							If ( Position.doc.Getitemvalue("chief")(0) = "1" ) Then ' если есть признак начальник
+								
+								Dim odDB As NotesDatabase
+								Set odDb = Position.doc.Parentdatabase
+								
+								' get department
+								Dim depDoc As NotesDocument
+								Set depDoc = odDb.Getdocumentbyunid(CStr(Position.doc.Getitemvalue("ParentRef")(0)))
+								
+								Dim depFullName As String
+								depFullName = "{" + Join(depDoc.Getitemvalue("FullPath"),"-") + "})"
+								
+								key = {Form *= "DWF03" & (@Text(Delete) != "1") & @Text(isVacancy)!="1"  & @Begins(@Implode(FullPath;"-");} + depFullName
+								
+								Set colODtemp = odDb.search( key , Nothing, 0)
+								
+								'ищем в своем подразделении
+								'key = Join( ObjPath, "-" )
+								'Set colODtemp = ViewOD.GetAllDocumentsByKey( key )
+								Set docOD = colODtemp.Getfirstdocument()
+								While Not docOD Is Nothing
+									If ( docOD.Universalid <> Position.doc.Universalid ) Then
+										Set docTest = colOD.GetDocument(docOD)
+										If ( docTest Is Nothing ) Then
+											Call colOD.AddDocument(docOD)
+										End If
+									End If
+									Set docOD = colODtemp.Getnextdocument( docOD )
+								Wend
+								' get Direct assigned departments
+								
+								Dim dCol As NotesDocumentCollection
+								
+								key =  {Form *= "DWF01" : "DWF02" & (@Text(Delete) != "1")  & @Contains(DepChiefID;"} + CStr(Position.doc.Universalid) +{")}
+								'Set dCol =  odDB.Getview("DepartmentByChief").Getalldocumentsbykey(CStr(Position.doc.Universalid))
+								Set dCol = odDb.search( key , Nothing, 0)
+								Dim docOD2 As NotesDocument
+								Set docOD2 = dCol.Getfirstdocument()
+								
+								While Not docOD2 Is Nothing
+									
+									depFullName = "{" + Join(docOD2.Getitemvalue("FullPath"),"-") + "})"
+									key = {Form *= "DWF03" & (@Text(Delete) != "1") & @Text(isVacancy)!="1"  & @Begins(@Implode(FullPath;"-");} + depFullName
+									
+									Set colODtemp = odDb.search( key , Nothing, 0)
+									Set docOD = colODtemp.Getfirstdocument()
+									While Not docOD Is Nothing
+										If ( docOD.Universalid <> Position.doc.Universalid ) Then
+											Set docTest = colOD.GetDocument(docOD)
+											If ( docTest Is Nothing ) Then
+												'------------------------------------
+												Call colOD.AddDocument(docOD)
+												'------------------------------------
+											End If
+										End If
+										Set docOD = colODtemp.Getnextdocument( docOD )
+									Wend
+									Set docOD2 = dCol.Getnextdocument( docOD2 )
+								Wend
+							End If
+						End If
+						'------------------------------------------------------------------------
+						Set PickObjectGetSubordinates = colOD
+					Else
+						ErrorStr = {В Орг. директории не найдено представление "} & ViewODName & {"}
+					End If
+				Else
+					Error 1001, {Пустое значение в поле "} & PathItemName & {" документа объекта Орг. директории "} & Position.ObjName & {"}
+				End If
+			Else
+				Error 1001, {В документе объекта Орг. директории "} & Position.ObjName & {" нет поля "} & PathItemName & {"}
+			End If
+		Else
+			Error 1001, {Не удалось получить объект 'Должность', относительно которого вычислять руководителей}
+		End If
+		Exit Function
+		
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Function	
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Function GetObjectProperties( ODObj As Variant ) As Variant
+		On Error GoTo error_point	
+		
+		Dim result As New Mixcollection 
+		Set GetObjectProperties = result 
+		
+		Dim dbOD As NotesDatabase, vw As NotesView, viewname As String, dc As NotesDocumentCollection
+		Set dbOD = ODObj.doc.Parentdatabase
+		viewname = "(PropertyByTargetID)"
+		Set vw = dbOD.Getview( viewname )
+		If Not ( vw Is Nothing ) Then
+			Set dc = vw.Getalldocumentsbykey( ODObj.ObjID, True )
+			If ( dc.Count > 0 ) Then
+				Dim doc As NotesDocument
+				Set doc = dc.Getfirstdocument()
+				While Not ( doc Is Nothing )
+					Call result.Append( doc )
+					
+					Set doc = dc.Getnextdocument( doc )
+				Wend
+			End If
+		Else
+			Error 1001, {Не найдено представление "} & viewname & {" в базе Орг. директории ( db path: } & dbOD.Filepath & { )}
+		End If
+		
+		Exit Function
+		
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Function
+	
+	
+	
+	
+	Sub delete()
+	End Sub
+End Class
+
+
+%REM
+Class ODObjUI As ODObj
+	Private ws As NotesUIWorkspace
+	
+	Sub new()
+		Set ws = New NotesUIWorkspace	
+	End Sub
+End Class
+%END REM
+
+
+
+Public Class Person As ODObj
+	Sub new()
+	End Sub
+	
+	Public Function GetUserPosition(ErrorStr As String) As ODObj
+		On Error Goto errh
+		
+		Dim dbOD As NotesDatabase
+		Dim ViewID As NotesView
+		Dim View As NotesView
+		Dim col As NotesDocumentCollection
+		Dim docPos As NotesDocument
+		Dim ODObj As ODObj
+		Dim v As Variant
+		
+		ErrorStr = ""
+		Set dbOD = Me.doc.ParentDatabase
+		Set ViewID = dbOD.GetView("(UNID)")
+		If (ViewID Is Nothing) Then
+			ErrorStr = {Не найдено представление "(UNID)" в базе Орг. директории}
+			Exit Function
+		End If
+		Call ViewID.Refresh
+		ViewID.AutoUpdate = False
+		
+		Set View = dbOD.GetView("(AllPositionByUserID)")
+		If (View Is Nothing) Then
+			ErrorStr = {Не найдено представление "(AllPositionByUserID)" в базе Орг. директории}
+			Exit Function
+		End If
+		Call View.Refresh
+		View.AutoUpdate = False
+		
+		
+		Set col = View.GetAllDocumentsByKey(Me.doc.UniversalID, True)
+		If (col.Count = 0) Then
+			ErrorStr = {Не найдена должность пользователя "} & Me.doc.FullName(0) & {"}
+			Exit Function
+		End If
+		
+		
+		Set docPos = col.GetFirstDocument
+		If (col.Count = 1) Then
+			Set ODObj = New ODObj
+			If (ODObj.Init(docPos, ErrorStr) <>1) Then
+				Exit Function
+			End If
+			
+			Set GetUserPosition = New ODObj
+			Set GetUserPosition = ODObj		
+			Exit Function
+		End If
+		
+%REM
+надо сделать полный путь должности
+%END REM
+		Redim v(0) As String
+		While (Not (docPos Is Nothing))
+			If (v(0) <> "") Then
+				Redim Preserve v(Ubound(v)+1) As String
+			End If
+			v(Ubound(v)) = Join(docPos.FullPath, {/}) & {|} & docPos.UniversalID
+			Set docPos = col.GetNextDocument(docPos)
+		Wend
+		
+		Dim ws As New NotesUIWorkspace
+		Dim session As New NotesSession
+		Dim db As NotesDatabase
+		Dim docTemp As NotesDocument
+		Dim PositionID As String
+		
+		Set db = session.CurrentDatabase
+		Set docTemp = db.CreateDocument
+		docTemp.Members = v
+		docTemp.Promt = "КЛИКНИТЕ МЫШКОЙ ПО НУЖНОЙ ДОЛЖНОСТИ"
+		
+		If Not (ws.DialogBox("DWF104", True, True, False, False, False, False, db.Title, docTemp, True, False, True)) Then
+			Exit Function
+		End If
+		
+		PositionID = docTemp.List(0)
+		If (PositionID = "") Then
+			Exit Function
+		End If
+		Set docPos = dbOD.GetDocumentByUNID(PositionID)
+		If (docPos Is Nothing) Then
+			ErrorStr = {Не найден документ должности пользователя "} & Me.doc.FullName(0) & {"}
+			Exit Function
+		End If
+		
+		
+		Set ODObj = New ODObj
+		If (ODObj.Init(docPos, ErrorStr) <>1) Then
+			Exit Function
+		End If
+		
+		Set GetUserPosition = New ODObj
+		Set GetUserPosition = ODObj
+		
+		
+		
+		Exit Function
+errh:
+		ErrorStr = Error$ & {. Error # } & Cstr(Err) & { on line # } & Cstr(Erl) & { in (GetUserPositions) "Person" class }
+		Resume endh
+endh:
+	End Function
+	
+	Sub delete()
+	End Sub
+End Class
+'======================================================================================================================================
+'	CLASS Position
+'======================================================================================================================================
+Public Class PositionObj As ODObj
+	Private m_person As Variant
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	'	PUBLIC:
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Sub New()
+		Set m_person = Nothing
+	End Sub
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------	
+	Property Get person As Variant 
+		On Error GoTo error_point
+		
+		If ( m_person Is Nothing ) Then
+			If ( Not ( Me.doc Is Nothing ) ) Then
+				Dim dbOD As NotesDatabase, ID As String
+				Set dbOD = Me.doc.ParentDatabase
+				ID = Me.doc.UserID(0)
+				If ( ID <> "" ) Then
+					Dim docUser As NotesDocument
+					On Error 4091 Resume Next 'bad unid 
+					Set docUser = dbOD.Getdocumentbyunid( ID )
+					If ( Not ( docUser Is Nothing ) ) Then
+						Dim p As New Person, ErrorStr As String
+						If ( p.Init( docUser, ErrorStr ) = 1) Then
+							Set m_person = p
+						Else
+							If ( ErrorStr <> "" ) Then
+								MsgBox ErrorStr, 48, ERR_MSG_TITLE
+							End If
+						End If
+					End If
+				End If	
+			End If
+		End If
+		Set person = m_person
+		
+		Exit Property
+error_point:
+		On Error GoTo 0
+		Error Err, TypeName( Me ) & "." & GetThreadInfo(1) & " ( nm: " & Err & ", ln: " & Erl & " ) >> " & Error$
+	End Property
+	'---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	Sub Delete()
+	End Sub
+End Class

@@ -1,0 +1,43 @@
+<?xml version='1.0' encoding='utf-8'?>
+<note class='view' xmlns='http://www.lotus.com/dxl' version='10.0' maintenanceversion='1.0'
+ replicaid='44257D5C002A4928'>
+<noteinfo noteid='8e2' unid='417C0BA244E5A87F43258100002D401E' sequence='4'>
+<created><datetime>20170412T111415,34+03</datetime></created>
+<modified><datetime>20210418T115613,17+03</datetime></modified>
+<revised><datetime>20201016T141612,02+03</datetime></revised>
+<lastaccessed><datetime>20210418T115613,16+03</datetime></lastaccessed>
+<addedtofile><datetime>20210418T115613,16+03</datetime></addedtofile></noteinfo>
+<updatedby><name>CN=Igor Tomnov/O=Cargo</name><name>CN=Igor V Tomnov/O=SVO</name></updatedby>
+<wassignedby><name>CN=Igor V Tomnov/O=SVO</name></wassignedby>
+<item name='$FormulaClass' sign='true'><text>1</text></item>
+<item name='$SourceSeqTime'><datetime>20170412T111415,35+03</datetime></item>
+<item name='$SourceSequence'><text>00000001</text></item>
+<item name='$SourceURL'><textlist><text>Notes:///44257D5C002A4928//417C0BA244E5A87F43258100002D401E</text><text
+>Notes:///44257D5C002A4928:44257D5C002A4928:32880EDD//219E</text></textlist></item>
+<item name='$ClassName'><text>View</text></item>
+<item name='$SourceDbPath'><text>CN=develop/O=tps!!tps\workflow\methodics.nsf</text></item>
+<item name='$CacheDocVersion'><number>1</number></item>
+<item name='$TITLE' sign='true'><text>Number</text></item>
+<item name='$Index' sign='true'><text/></item>
+<item name='$Formula' summary='true' sign='true'><formula compiled='true'>
+dgACAEoAAwAkMTgABQALAE5VTUJFUlRPVEFMAFYBAQAAAAsCrwAkABgABQALAE5VTUJFUlRPVEFM
+AFYBrgAMAAEAAACuAAQAtQMDAAUAHgAaAAMAAwAJAAQAJDE4JENvbmZsaWN0JFJFRgQABAAAAAgA
+ZgADAA==
+</formula></item>
+<item name='$Collation' summary='true'>
+<rawitemdata type='2'>
+EAABAABEgGYAAAADACQxOA==
+</rawitemdata></item>
+<item name='$ViewFormat' summary='true' sign='true'>
+<rawitemdata type='5'>
+AQABAAEACAAQAFZDAQADAAMAXgAAACoAAgAACQAAAAAAAAAAAAICAAAAJDE4BbkgXgACAEoAAwAk
+MTgABQALAE5VTUJFUlRPVEFMAFYBAQAAAAsCrwAkABgABQALAE5VTUJFUlRPVEFMAFYBrgAMAAEA
+AACuAAQAtQMDAAcAEgAMAAk2UzdTOVMyRTE0UyYAAQAAAAEBAAkBAAAKAQEOCgAAAQCtKwEAAQAB
+AAAAAAAAAAAAV0MCAQAJAAAAAAAAAAAAAAAAAAAAAAAABAAAAAAA//8AAAAAAAAAAAAAAAAAAEIA
+AAAAAAEA////AAUA////AAEAAAAAAAAAAAAAAAAAAQD///8AAQD///8AAAABAAAAAAABAAAAAAAB
+AAAAAAAAAAgAAAAAAAEA
+</rawitemdata></item>
+<item name='$Comment' sign='true'><text/></item>
+<item name='$DesignerVersion'><text>8.5.3</text></item>
+<item name='$Flags'><text>^YP</text></item></note>
+
