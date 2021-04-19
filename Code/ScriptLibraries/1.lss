@@ -17,4 +17,5 @@ Declare Sub Initialize
 Sub Initialize
 	' hello quackers !!!
 	' привет
+	' tld-0002
 End Sub
